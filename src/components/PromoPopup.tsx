@@ -50,7 +50,7 @@ export const PromoPopup: React.FC = () => {
         >
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
           <Tag className="w-3.5 h-3.5 text-zinc-300 group-hover:text-white" />
-          <span>15% OFF (code: {promoCode.toUpperCase()})</span>
+          <span>15% OFF (code: {promoCode})</span>
         </button>
       </div>
     );
@@ -86,7 +86,7 @@ export const PromoPopup: React.FC = () => {
             </div>
 
             <p className="text-[11px] text-zinc-300 mt-1 leading-relaxed">
-              First time at MD Development? Use coupon code <strong className="text-white font-mono uppercase font-bold">{promoCode}</strong> to get 15% OFF your order!
+              First time at MD Development? Use coupon code <strong className="text-white font-mono font-bold">{promoCode}</strong> to get 15% OFF your order!
             </p>
           </div>
         </div>
@@ -99,7 +99,7 @@ export const PromoPopup: React.FC = () => {
             title="Click to copy code"
           >
             <span className="font-mono text-xs font-bold text-white tracking-wider">
-              {promoCode.toUpperCase()}
+              {promoCode}
             </span>
             <button className="text-zinc-400 group-hover:text-white transition-colors">
               {copied ? (

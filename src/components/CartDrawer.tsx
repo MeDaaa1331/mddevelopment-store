@@ -148,7 +148,7 @@ export const CartDrawer: React.FC = () => {
                       value={couponInput}
                       onChange={e => { setCouponInput(e.target.value); setCouponMsg(null); }}
                       disabled={isApplyingCoupon}
-                      className="flex-1 px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-white/40 font-mono uppercase disabled:opacity-60"
+                      className="flex-1 px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-white/40 font-mono disabled:opacity-60"
                     />
                     <button
                       type="submit"
