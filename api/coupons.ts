@@ -9,7 +9,7 @@ export default async function handler(req: any, res: any) {
   }
 
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-  const code = (url.searchParams.get('code') || req.query?.code || '').toString().trim().toUpperCase();
+  const rawCode = (url.searchParams.get('code') || req.query?.code || '').toString().trim();
   const secret = process.env.TEBEX_SECRET_KEY || process.env.VITE_TEBEX_SECRET_KEY;
 
   if (!secret) {
@@ -19,7 +19,7 @@ export default async function handler(req: any, res: any) {
     });
   }
 
-  if (!code) {
+  if (!rawCode) {
     return res.status(400).json({ error: 'Query parameter "code" is required.' });
   }
 
@@ -42,7 +42,7 @@ export default async function handler(req: any, res: any) {
     const data = await tebexRes.json();
     const list = Array.isArray(data) ? data : (data?.data || []);
 
-    const found = list.find((c: any) => c.code?.toUpperCase() === code);
+    const found = list.find((c: any) => c.code === rawCode) || list.find((c: any) => c.code?.toLowerCase() === rawCode.toLowerCase());
 
     if (!found) {
       return res.status(404).json({
@@ -84,12 +84,12 @@ export default async function handler(req: any, res: any) {
 
     return res.status(200).json({
       valid: true,
-      code: found.code.toUpperCase(),
+      code: found.code,
       discountPercentage: discountPercentage > 0 ? discountPercentage : 15,
       discountType: found.discount?.type || found.discount_type || 'percentage',
       discountValue: Number(found.discount?.value ?? found.discount_value ?? 0),
       expiresAt: found.expire?.date || found.expires_at || null,
-      message: `Coupon ${found.code.toUpperCase()} applied! ${discountPercentage}% discount.`
+      message: `Coupon ${found.code} applied! ${discountPercentage}% discount.`
     });
 
   } catch (err: any) {

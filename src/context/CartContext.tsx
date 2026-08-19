@@ -160,7 +160,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const clearCart = () => { setItems([]); setAppliedCoupon(null); };
 
   const applyCoupon = async (code: string): Promise<{ success: boolean; message: string }> => {
-    const clean = code.trim().toUpperCase();
+    const clean = code.trim();
     if (!clean) {
       return { success: false, message: 'Please enter a coupon code.' };
     }
@@ -170,12 +170,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (apiRes.ok) {
         const apiData = await apiRes.json();
         if (apiData.valid) {
+          const exactCode = apiData.code || clean;
           const pct = Number(apiData.discountPercentage) || 15;
-          setAppliedCoupon({ code: clean, discountPercentage: pct, description: '' });
+          setAppliedCoupon({ code: exactCode, discountPercentage: pct, description: '' });
           try {
             confetti({ particleCount: 40, spread: 60, origin: { y: 0.8 }, colors: ['#10b981', '#ffffff', '#34d399'] });
           } catch {}
-          return { success: true, message: `Coupon ${clean} applied! ${pct}% discount.` };
+          return { success: true, message: `Coupon ${exactCode} applied! ${pct}% discount.` };
         }
       } else if (apiRes.status === 404 || apiRes.status === 400) {
         const apiErr = await apiRes.json().catch(() => null);
@@ -185,12 +186,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.warn('[Coupon] Backend check skipped, using Headless API validation:', backendErr);
     }
 
+    let exactCode = clean;
     let discountPct = 0;
     const knownMap = TEBEX_CONFIG.coupons || {};
-    if (knownMap[clean]) {
-      discountPct = Number(knownMap[clean]);
+    const mapKey = Object.keys(knownMap).find(k => k.toLowerCase() === clean.toLowerCase());
+    if (mapKey) {
+      exactCode = mapKey;
+      discountPct = Number(knownMap[mapKey]);
     } else {
-
       const match = clean.match(/\d+/);
       if (match) {
         const num = parseInt(match[0], 10);
@@ -223,7 +226,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const cRes = await fetch(`${TEBEX_HEADLESS_BASE}/accounts/${token}/baskets/${ident}/coupons`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-              body: JSON.stringify({ coupon_code: clean })
+              body: JSON.stringify({ coupon_code: exactCode })
             });
 
             const cData = await cRes.json().catch(() => null);
@@ -238,13 +241,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    setAppliedCoupon({ code: clean, discountPercentage: discountPct, description: '' });
+    setAppliedCoupon({ code: exactCode, discountPercentage: discountPct, description: '' });
 
     try {
       confetti({ particleCount: 40, spread: 60, origin: { y: 0.8 }, colors: ['#10b981', '#ffffff', '#34d399'] });
     } catch {}
 
-    const msg = `Coupon ${clean} applied! ${discountPct}% discount.`;
+    const msg = `Coupon ${exactCode} applied! ${discountPct}% discount.`;
     return { success: true, message: msg };
   };
 
