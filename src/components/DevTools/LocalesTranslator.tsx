@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Languages, Copy, Check, Download, Sparkles, RefreshCw, FileCode2, ArrowRight } from 'lucide-react';
+import { Languages, Copy, Check, Download, Sparkles, RefreshCw, FileCode2, ArrowRight, Zap } from 'lucide-react';
 import {
   SupportedLang,
   SUPPORTED_LANGS,
@@ -29,12 +29,15 @@ export const LocalesTranslator: React.FC = () => {
   const [isTranslating, setIsTranslating] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [copied, setCopied] = useState(false);
+  const [stats, setStats] = useState<{ totalKeys: number; durationMs: number } | null>(null);
 
   const handleTranslate = async () => {
     if (!inputText.trim()) return;
 
     setIsTranslating(true);
     setProgress({ current: 0, total: 0 });
+    setStats(null);
+    const startTime = Date.now();
 
     try {
       const { entries, format: detectedFormat } = parseLocalesInput(inputText);
@@ -55,6 +58,10 @@ export const LocalesTranslator: React.FC = () => {
 
       const formatted = formatLocalesOutput(translated, targetLang, activeFormat);
       setOutputText(formatted);
+      setStats({
+        totalKeys: keys.length,
+        durationMs: Date.now() - startTime
+      });
     } catch {
       setOutputText('-- Translation failed. Please check your input format.');
     } finally {
@@ -87,7 +94,10 @@ export const LocalesTranslator: React.FC = () => {
     setTargetLang('cs');
     setFormat('lua');
     setOutputText('');
+    setStats(null);
   };
+
+  const progressPct = progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -97,9 +107,15 @@ export const LocalesTranslator: React.FC = () => {
             <Languages className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-display font-bold text-base text-white">FiveM Locales Auto-Translator</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-display font-bold text-base text-white">FiveM Locales Auto-Translator</h3>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold flex items-center gap-1">
+                <Zap className="w-3 h-3 text-emerald-400" />
+                <span>High-Speed 2000+ Lines</span>
+              </span>
+            </div>
             <p className="text-xs text-zinc-400">
-              Automatically preserves <code className="text-emerald-400 font-mono">%s</code>, <code className="text-emerald-400 font-mono">~r~</code> color codes, and keys.
+              Parallel batch engine preserving <code className="text-emerald-400 font-mono">%s</code>, <code className="text-emerald-400 font-mono">~r~</code> color codes, and keys.
             </p>
           </div>
         </div>
@@ -161,7 +177,7 @@ export const LocalesTranslator: React.FC = () => {
             <textarea
               value={inputText}
               onChange={e => setInputText(e.target.value)}
-              placeholder="Paste your Locales['en'] = { ... } or JSON here..."
+              placeholder="Paste your Locales['en'] = { ... } or JSON here (supports 2000+ lines)..."
               rows={14}
               className="w-full h-full p-4 rounded-2xl bg-zinc-950/80 border border-white/10 text-xs font-mono text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-white/30 resize-none transition-colors"
               spellCheck={false}
@@ -233,11 +249,30 @@ export const LocalesTranslator: React.FC = () => {
         </div>
       </div>
 
+      {isTranslating && progress.total > 0 && (
+        <div className="p-4 rounded-2xl bg-zinc-950/90 border border-emerald-500/30 space-y-2 animate-fadeIn shadow-lg">
+          <div className="flex items-center justify-between text-xs font-mono">
+            <span className="text-emerald-400 font-bold flex items-center gap-1.5">
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              <span>Translating {progress.current} of {progress.total} lines in parallel batches...</span>
+            </span>
+            <span className="text-white font-bold">{progressPct}%</span>
+          </div>
+          <div className="w-full h-2 rounded-full bg-zinc-900 overflow-hidden border border-white/10">
+            <div
+              className="h-full bg-gradient-to-r from-emerald-500 to-emerald-300 transition-all duration-200 shadow-glow-sm"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-        <div className="text-xs text-zinc-500 font-mono">
-          {progress.total > 0 && isTranslating && (
-            <span className="text-emerald-400 font-semibold animate-pulse">
-              Translating entry {progress.current} of {progress.total}...
+        <div className="text-xs text-zinc-400 font-mono">
+          {stats && !isTranslating && (
+            <span className="text-emerald-400 font-semibold flex items-center gap-1">
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Translated {stats.totalKeys} lines in {(stats.durationMs / 1000).toFixed(2)}s!</span>
             </span>
           )}
         </div>
@@ -250,7 +285,7 @@ export const LocalesTranslator: React.FC = () => {
           {isTranslating ? (
             <>
               <RefreshCw className="w-4 h-4 animate-spin text-black" />
-              <span>Translating Locales...</span>
+              <span>Translating ({progressPct}%)...</span>
             </>
           ) : (
             <>
