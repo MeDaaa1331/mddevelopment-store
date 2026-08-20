@@ -300,7 +300,13 @@ html.lenis body {
   scroll-behavior: auto !important;
 }
 
-.lenis.lenis-smooth [data-lenis-prevent] {
+.lenis.lenis-smooth [data-lenis-prevent],
+textarea,
+pre,
+code,
+.overflow-y-auto,
+.overflow-x-auto,
+.overflow-auto {
   overscroll-behavior: contain;
 }
 

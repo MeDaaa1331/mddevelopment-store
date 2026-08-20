@@ -10,7 +10,10 @@ import {
   MessageSquare,
   Gamepad2,
   FileCode,
-  Film
+  Film,
+  Flag,
+  Hash,
+  FileJson
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { LocalesTranslator } from './DevTools/LocalesTranslator';
@@ -20,9 +23,12 @@ import { DiscordWebhookBuilder } from './DevTools/DiscordWebhookBuilder';
 import { ControlsLookup } from './DevTools/ControlsLookup';
 import { ManifestGenerator } from './DevTools/ManifestGenerator';
 import { AnimExplorer } from './DevTools/AnimExplorer';
+import { FlagsGenerator } from './DevTools/FlagsGenerator';
+import { HashConverter } from './DevTools/HashConverter';
+import { JsonFormatter } from './DevTools/JsonFormatter';
 import { Footer } from './Footer';
 
-type ToolTab = 'translator' | 'colors' | 'coords' | 'webhook' | 'controls' | 'manifest' | 'anim';
+type ToolTab = 'translator' | 'colors' | 'coords' | 'webhook' | 'controls' | 'manifest' | 'anim' | 'flags' | 'hash' | 'json';
 
 interface TabItem {
   id: ToolTab;
@@ -32,20 +38,31 @@ interface TabItem {
 
 const DEV_TOOLS_TABS: TabItem[] = [
   { id: 'translator', label: 'Locales Translator', icon: <Languages className="w-3.5 h-3.5" /> },
+  { id: 'json', label: 'JSON Formatter', icon: <FileJson className="w-3.5 h-3.5" /> },
   { id: 'colors', label: 'Color & HEX', icon: <Palette className="w-3.5 h-3.5" /> },
   { id: 'coords', label: 'Coords & Target', icon: <MapPin className="w-3.5 h-3.5" /> },
   { id: 'webhook', label: 'Discord Webhooks', icon: <MessageSquare className="w-3.5 h-3.5" /> },
   { id: 'controls', label: 'GTA Controls', icon: <Gamepad2 className="w-3.5 h-3.5" /> },
   { id: 'manifest', label: 'fxmanifest.lua', icon: <FileCode className="w-3.5 h-3.5" /> },
   { id: 'anim', label: 'Anim Explorer', icon: <Film className="w-3.5 h-3.5" /> },
+  { id: 'flags', label: 'Flags Generator', icon: <Flag className="w-3.5 h-3.5" /> },
+  { id: 'hash', label: 'Hash Converter', icon: <Hash className="w-3.5 h-3.5" /> },
 ];
 
 export const DevToolsPage: React.FC = () => {
   const { navigate } = useStore();
   const [activeTab, setActiveTab] = useState<ToolTab>('translator');
-  const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number; opacity: number }>({
+  const [indicatorStyle, setIndicatorStyle] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+    opacity: number;
+  }>({
     left: 0,
+    top: 0,
     width: 0,
+    height: 0,
     opacity: 0
   });
 
@@ -57,7 +74,9 @@ export const DevToolsPage: React.FC = () => {
     if (activeBtn) {
       setIndicatorStyle({
         left: activeBtn.offsetLeft,
+        top: activeBtn.offsetTop,
         width: activeBtn.offsetWidth,
+        height: activeBtn.offsetHeight,
         opacity: 1
       });
     }
@@ -104,7 +123,7 @@ export const DevToolsPage: React.FC = () => {
               <Terminal className="w-3.5 h-3.5 text-emerald-400" />
               <span className="text-white font-bold">FiveM Developer Hub</span>
               <span className="w-1 h-1 rounded-full bg-zinc-500" />
-              <span className="text-zinc-400">7 Free Utilities</span>
+              <span className="text-zinc-400">10 Free Utilities</span>
             </div>
 
             <h1 className="font-display text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight mb-4">
@@ -112,51 +131,57 @@ export const DevToolsPage: React.FC = () => {
             </h1>
 
             <p className="text-sm sm:text-base text-zinc-400 leading-relaxed max-w-2xl">
-              Professional productivity tools built by MD Development for FiveM developers and server owners. Translate locales, build Discord logs, generate target zones, lookup keybinds, and configure manifests in seconds.
+              Professional productivity tools built by MD Development for FiveM developers and server owners. Translate locales, format JSON, generate target zones, calculate flags, convert hashes, lookup keybinds, and configure manifests in seconds.
             </p>
           </div>
         </div>
 
-        <div className="relative overflow-x-auto pb-3 mb-6 no-scrollbar">
+        <div
+          ref={tabContainerRef}
+          className="relative flex flex-wrap items-center gap-1.5 p-2 bg-zinc-950/80 rounded-2xl border border-white/10 w-full backdrop-blur-md mb-6"
+        >
           <div
-            ref={tabContainerRef}
-            className="relative flex items-center gap-1.5 p-1.5 bg-zinc-950/80 rounded-2xl border border-white/10 w-fit backdrop-blur-md"
-          >
-            <div
-              className="absolute top-1.5 bottom-1.5 rounded-xl bg-white transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] shadow-glow-sm pointer-events-none"
-              style={{
-                left: `${indicatorStyle.left}px`,
-                width: `${indicatorStyle.width}px`,
-                opacity: indicatorStyle.opacity,
-              }}
-            />
+            className="absolute rounded-xl bg-white transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] shadow-glow-sm pointer-events-none"
+            style={{
+              left: `${indicatorStyle.left}px`,
+              top: `${indicatorStyle.top}px`,
+              width: `${indicatorStyle.width}px`,
+              height: `${indicatorStyle.height}px`,
+              opacity: indicatorStyle.opacity,
+            }}
+          />
 
-            {DEV_TOOLS_TABS.map(tab => (
-              <button
-                key={tab.id}
-                data-tool={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`relative z-10 px-4 py-2.5 rounded-xl text-xs font-bold transition-colors duration-200 flex items-center gap-2 select-none whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? 'text-black font-extrabold'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                <span className={activeTab === tab.id ? 'text-black' : ''}>{tab.icon}</span>
-                <span>{tab.label}</span>
-              </button>
-            ))}
-          </div>
+          {DEV_TOOLS_TABS.map(tab => (
+            <button
+              key={tab.id}
+              data-tool={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`relative z-10 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-colors duration-200 flex items-center gap-2 select-none whitespace-nowrap ${
+                activeTab === tab.id
+                  ? 'text-black font-extrabold'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <span className={activeTab === tab.id ? 'text-black' : ''}>{tab.icon}</span>
+              <span>{tab.label}</span>
+            </button>
+          ))}
         </div>
 
-        <div className="p-6 sm:p-8 rounded-3xl bg-[#0b0b10]/90 border border-white/10 backdrop-blur-2xl shadow-2xl transition-all duration-300 animate-fadeIn">
+        <div
+          data-lenis-prevent
+          className="p-6 sm:p-8 rounded-3xl bg-[#0b0b10]/90 border border-white/10 backdrop-blur-2xl shadow-2xl transition-all duration-300 animate-fadeIn"
+        >
           {activeTab === 'translator' && <LocalesTranslator />}
+          {activeTab === 'json' && <JsonFormatter />}
           {activeTab === 'colors' && <ColorGenerator />}
           {activeTab === 'coords' && <CoordsGenerator />}
           {activeTab === 'webhook' && <DiscordWebhookBuilder />}
           {activeTab === 'controls' && <ControlsLookup />}
           {activeTab === 'manifest' && <ManifestGenerator />}
           {activeTab === 'anim' && <AnimExplorer />}
+          {activeTab === 'flags' && <FlagsGenerator />}
+          {activeTab === 'hash' && <HashConverter />}
         </div>
       </div>
 

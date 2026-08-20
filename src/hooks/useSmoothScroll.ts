@@ -13,6 +13,22 @@ export const useSmoothScroll = () => {
       wheelMultiplier: 1.1,
       touchMultiplier: 2.0,
       infinite: false,
+      prevent: (node: any) => {
+        if (!node) return false;
+        if (node.tagName === 'TEXTAREA' || node.tagName === 'PRE' || node.tagName === 'CODE') return true;
+        if (node.hasAttribute?.('data-lenis-prevent')) return true;
+        if (typeof node.closest === 'function') {
+          return Boolean(
+            node.closest('textarea') ||
+            node.closest('pre') ||
+            node.closest('[data-lenis-prevent]') ||
+            node.closest('.overflow-y-auto') ||
+            node.closest('.overflow-x-auto') ||
+            node.closest('.overflow-auto')
+          );
+        }
+        return false;
+      }
     });
 
     let animationFrameId: number;
