@@ -25,11 +25,15 @@ export default async function handler(req: any, res: any) {
     const kvToken = process.env.KV_REST_API_TOKEN || process.env.REDIS_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
     if (kvUrl && kvToken) {
-      await Promise.allSettled([
+      const isCopy = event.action.startsWith('copy_') || event.action === 'format';
+      const promises = [
         fetch(`${kvUrl}/incr/analytics:total_events`, {
           headers: { Authorization: `Bearer ${kvToken}` }
         }),
         fetch(`${kvUrl}/incr/analytics:tool_views:${event.toolId}`, {
+          headers: { Authorization: `Bearer ${kvToken}` }
+        }),
+        fetch(`${kvUrl}/incr/analytics:geo:${country}`, {
           headers: { Authorization: `Bearer ${kvToken}` }
         }),
         fetch(`${kvUrl}/lpush/analytics:recent_events/${encodeURIComponent(JSON.stringify(enrichedEvent))}`, {
@@ -38,7 +42,20 @@ export default async function handler(req: any, res: any) {
         fetch(`${kvUrl}/ltrim/analytics:recent_events/0/99`, {
           headers: { Authorization: `Bearer ${kvToken}` }
         })
-      ]);
+      ];
+
+      if (isCopy) {
+        promises.push(
+          fetch(`${kvUrl}/incr/analytics:total_copies`, {
+            headers: { Authorization: `Bearer ${kvToken}` }
+          }),
+          fetch(`${kvUrl}/incr/analytics:tool_copies:${event.toolId}`, {
+            headers: { Authorization: `Bearer ${kvToken}` }
+          })
+        );
+      }
+
+      await Promise.allSettled(promises);
     }
 
     return res.status(200).json({ success: true });
