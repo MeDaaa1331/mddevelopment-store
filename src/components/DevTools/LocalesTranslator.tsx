@@ -4,7 +4,7 @@ import {
   SupportedLang,
   SUPPORTED_LANGS,
   parseLocalesInput,
-  translateEntries,
+  translateParsedLocales,
   formatLocalesOutput
 } from '../../utils/translator';
 
@@ -40,26 +40,28 @@ export const LocalesTranslator: React.FC = () => {
     const startTime = Date.now();
 
     try {
-      const { entries, format: detectedFormat } = parseLocalesInput(inputText);
-      const activeFormat = format || detectedFormat;
+      const parsedData = parseLocalesInput(inputText);
+      const activeFormat = format || parsedData.format;
+      const count = parsedData.isNestedJson && parsedData.jsonItems
+        ? parsedData.jsonItems.length
+        : Object.keys(parsedData.entries).length;
 
-      const keys = Object.keys(entries);
-      if (keys.length === 0) {
+      if (count === 0) {
         setOutputText('-- No valid key-value pairs detected in input.');
         setIsTranslating(false);
         return;
       }
 
-      setProgress({ current: 0, total: keys.length });
+      setProgress({ current: 0, total: count });
 
-      const translated = await translateEntries(entries, sourceLang, targetLang, (curr, tot) => {
+      const translatedResult = await translateParsedLocales(parsedData, sourceLang, targetLang, (curr, tot) => {
         setProgress({ current: curr, total: tot });
       });
 
-      const formatted = formatLocalesOutput(translated, targetLang, activeFormat);
+      const formatted = formatLocalesOutput(translatedResult, targetLang, activeFormat);
       setOutputText(formatted);
       setStats({
-        totalKeys: keys.length,
+        totalKeys: count,
         durationMs: Date.now() - startTime
       });
     } catch {

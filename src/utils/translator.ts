@@ -17,21 +17,72 @@ export const SUPPORTED_LANGS: LangOption[] = [
 
 const FIVE_M_COLOR_CODES = ['~r~', '~g~', '~b~', '~y~', '~p~', '~o~', '~c~', '~m~', '~u~', '~w~', '~s~', '~h~', '~n~', '~INPUT_CONTEXT~', '~INPUT_ENTER~', '~INPUT_DETONATE~'];
 
-export function parseLocalesInput(input: string): { format: 'lua' | 'json'; entries: Record<string, string> } {
+interface NestedJsonItem {
+  path: (string | number)[];
+  value: string;
+}
+
+export interface ParsedLocalesData {
+  format: 'lua' | 'json';
+  isNestedJson: boolean;
+  jsonData?: any;
+  jsonItems?: NestedJsonItem[];
+  entries: Record<string, string>;
+}
+
+function extractStringsFromJson(obj: any): NestedJsonItem[] {
+  const results: NestedJsonItem[] = [];
+  function walk(current: any, currentPath: (string | number)[]) {
+    if (typeof current === 'string') {
+      results.push({ path: currentPath, value: current });
+    } else if (Array.isArray(current)) {
+      current.forEach((item, idx) => walk(item, [...currentPath, idx]));
+    } else if (typeof current === 'object' && current !== null) {
+      for (const [key, val] of Object.entries(current)) {
+        walk(val, [...currentPath, key]);
+      }
+    }
+  }
+  walk(obj, []);
+  return results;
+}
+
+function setNestedValue(obj: any, path: (string | number)[], value: string) {
+  let curr = obj;
+  for (let i = 0; i < path.length - 1; i++) {
+    curr = curr[path[i]];
+  }
+  curr[path[path.length - 1]] = value;
+}
+
+function cleanJsonString(input: string): string {
+  return input
+    .replace(/,\s*([\]}])/g, '$1')
+    .replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1');
+}
+
+export function parseLocalesInput(input: string): ParsedLocalesData {
   const trimmed = input.trim();
-  
-  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+
+  if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
     try {
-      const parsed = JSON.parse(trimmed);
+      const clean = cleanJsonString(trimmed);
+      const parsed = JSON.parse(clean);
       if (typeof parsed === 'object' && parsed !== null) {
-        const entries: Record<string, string> = {};
-        for (const [k, v] of Object.entries(parsed)) {
-          if (typeof v === 'string') {
-            entries[k] = v;
-          }
-        }
-        if (Object.keys(entries).length > 0) {
-          return { format: 'json', entries };
+        const jsonItems = extractStringsFromJson(parsed);
+        if (jsonItems.length > 0) {
+          const flatEntries: Record<string, string> = {};
+          jsonItems.forEach(item => {
+            const keyPath = item.path.join('.');
+            flatEntries[keyPath] = item.value;
+          });
+          return {
+            format: 'json',
+            isNestedJson: true,
+            jsonData: parsed,
+            jsonItems,
+            entries: flatEntries
+          };
         }
       }
     } catch {}
@@ -46,10 +97,10 @@ export function parseLocalesInput(input: string): { format: 'lua' | 'json'; entr
       continue;
     }
 
-    const luaMatch = trimmedLine.match(/^(?:\[['"]([^'"]+)['"]\]|(\b[\w-]+\b))\s*=\s*['"]((?:\\.|[^'"])*)['"]/);
+    const luaMatch = trimmedLine.match(/^(?:\[['"]([^'"]+)['"]\]|(\b[\w-]+\b)|"([^"]+)"|'([^']+)')\s*(?:=|:)\s*(['"])((?:\\.|(?!\5).)*)\5/);
     if (luaMatch) {
-      const key = luaMatch[1] || luaMatch[2];
-      const value = luaMatch[3];
+      const key = luaMatch[1] || luaMatch[2] || luaMatch[3] || luaMatch[4];
+      const value = luaMatch[6];
       if (key && value !== undefined) {
         entries[key] = value.replace(/\\'/g, "'").replace(/\\"/g, '"');
         continue;
@@ -57,32 +108,36 @@ export function parseLocalesInput(input: string): { format: 'lua' | 'json'; entr
     }
 
     const eqIdx = trimmedLine.indexOf('=');
-    if (eqIdx > 0) {
-      const rawK = trimmedLine.substring(0, eqIdx).trim();
-      const rawV = trimmedLine.substring(eqIdx + 1).trim();
+    const colonIdx = trimmedLine.indexOf(':');
+    const splitIdx = eqIdx !== -1 ? eqIdx : colonIdx;
+
+    if (splitIdx > 0) {
+      const rawK = trimmedLine.substring(0, splitIdx).trim();
+      const rawV = trimmedLine.substring(splitIdx + 1).trim();
       const cleanK = rawK.replace(/^['"[\s]+|['"\]\s]+$/g, '');
       const cleanV = rawV.replace(/^['"\s]+|['",;\s]+$/g, '');
-      if (cleanK && cleanV) {
+      if (cleanK && cleanV && !cleanV.startsWith('{') && !cleanV.startsWith('[')) {
         entries[cleanK] = cleanV;
       }
     }
   }
 
   if (Object.keys(entries).length > 0) {
-    return { format: 'lua', entries };
+    return { format: 'lua', isNestedJson: false, entries };
   }
 
-  const luaRegex = /(?:\[['"]([^'"]+)['"]\]|(\b\w+\b))\s*=\s*['"]((?:\\.|[^'"])*)['"]/g;
+  const regex = /(?:(\[?['"]?[\w-]+['"]?\]?)\s*(?:=|:)\s*)(['"])((?:\\.|(?!\2).)*)\2/g;
   let match;
-  while ((match = luaRegex.exec(input)) !== null) {
-    const key = match[1] || match[2];
+  while ((match = regex.exec(input)) !== null) {
+    const rawKey = match[1];
     const value = match[3];
-    if (key && value !== undefined) {
-      entries[key] = value.replace(/\\'/g, "'").replace(/\\"/g, '"');
+    if (rawKey && value !== undefined) {
+      const cleanKey = rawKey.replace(/^['"[\s]+|['"\]\s]+$/g, '');
+      entries[cleanKey] = value.replace(/\\'/g, "'").replace(/\\"/g, '"');
     }
   }
 
-  return { format: 'lua', entries };
+  return { format: 'lua', isNestedJson: false, entries };
 }
 
 function protectPlaceholders(text: string, tokenStore: string[]): string {
@@ -121,6 +176,9 @@ async function translateBatchWithGoogle(
   fromLang: string,
   toLang: string
 ): Promise<string[]> {
+  if (items.length === 0) return [];
+  if (fromLang === toLang) return items;
+
   const tokenStore: string[] = [];
   const protectedItems = items.map(txt => protectPlaceholders(txt, tokenStore));
   const delimiter = "\n===MD_SPLIT===\n";
@@ -168,17 +226,65 @@ async function translateSingleFallback(text: string, fromLang: string, toLang: s
   return text;
 }
 
-export async function translateEntries(
-  entries: Record<string, string>,
+export async function translateParsedLocales(
+  parsedData: ParsedLocalesData,
   fromLang: SupportedLang,
   toLang: SupportedLang,
   onProgress?: (current: number, total: number) => void
-): Promise<Record<string, string>> {
-  if (fromLang === toLang) return { ...entries };
+): Promise<{ translatedData: any; isNestedJson: boolean; entries: Record<string, string> }> {
+  if (parsedData.isNestedJson && parsedData.jsonData && parsedData.jsonItems) {
+    const total = parsedData.jsonItems.length;
+    const clonedJson = JSON.parse(JSON.stringify(parsedData.jsonData));
+    const translatedEntries: Record<string, string> = {};
 
-  const keys = Object.keys(entries);
+    if (fromLang === toLang) {
+      parsedData.jsonItems.forEach(item => {
+        translatedEntries[item.path.join('.')] = item.value;
+      });
+      return { translatedData: clonedJson, isNestedJson: true, entries: translatedEntries };
+    }
+
+    const CHUNK_SIZE = 35;
+    const itemChunks: NestedJsonItem[][] = [];
+    for (let i = 0; i < total; i += CHUNK_SIZE) {
+      itemChunks.push(parsedData.jsonItems.slice(i, i + CHUNK_SIZE));
+    }
+
+    let completedCount = 0;
+    const CONCURRENCY_LIMIT = 4;
+
+    for (let i = 0; i < itemChunks.length; i += CONCURRENCY_LIMIT) {
+      const activeChunks = itemChunks.slice(i, i + CONCURRENCY_LIMIT);
+
+      await Promise.all(
+        activeChunks.map(async chunk => {
+          const valuesToTranslate = chunk.map(it => it.value);
+          const translatedValues = await translateBatchWithGoogle(valuesToTranslate, fromLang, toLang);
+
+          chunk.forEach((item, idx) => {
+            const newVal = translatedValues[idx] || item.value;
+            setNestedValue(clonedJson, item.path, newVal);
+            translatedEntries[item.path.join('.')] = newVal;
+          });
+
+          completedCount += chunk.length;
+          if (onProgress) {
+            onProgress(Math.min(completedCount, total), total);
+          }
+        })
+      );
+    }
+
+    return { translatedData: clonedJson, isNestedJson: true, entries: translatedEntries };
+  }
+
+  const keys = Object.keys(parsedData.entries);
   const total = keys.length;
-  const translated: Record<string, string> = {};
+  const translatedEntries: Record<string, string> = {};
+
+  if (fromLang === toLang) {
+    return { translatedData: parsedData.entries, isNestedJson: false, entries: parsedData.entries };
+  }
 
   const CHUNK_SIZE = 35;
   const chunks: string[][] = [];
@@ -194,11 +300,11 @@ export async function translateEntries(
 
     await Promise.all(
       activeChunks.map(async chunkKeys => {
-        const chunkValues = chunkKeys.map(k => entries[k]);
+        const chunkValues = chunkKeys.map(k => parsedData.entries[k]);
         const translatedValues = await translateBatchWithGoogle(chunkValues, fromLang, toLang);
 
         chunkKeys.forEach((key, idx) => {
-          translated[key] = translatedValues[idx] || entries[key];
+          translatedEntries[key] = translatedValues[idx] || parsedData.entries[key];
         });
 
         completedCount += chunkKeys.length;
@@ -209,23 +315,49 @@ export async function translateEntries(
     );
   }
 
-  return translated;
+  return { translatedData: translatedEntries, isNestedJson: false, entries: translatedEntries };
 }
 
 export function formatLocalesOutput(
-  entries: Record<string, string>,
+  translatedResult: { translatedData: any; isNestedJson: boolean; entries: Record<string, string> },
   targetLang: SupportedLang,
   format: 'lua' | 'json'
 ): string {
   if (format === 'json') {
-    return JSON.stringify(entries, null, 2);
+    if (translatedResult.isNestedJson && translatedResult.translatedData) {
+      return JSON.stringify(translatedResult.translatedData, null, 2);
+    }
+    return JSON.stringify(translatedResult.entries, null, 2);
+  }
+
+  if (translatedResult.isNestedJson && translatedResult.translatedData) {
+    const formatLuaTable = (obj: any, indent = 1): string => {
+      const pad = '    '.repeat(indent);
+      const closePad = '    '.repeat(indent - 1);
+      const lines: string[] = [];
+
+      for (const [k, v] of Object.entries(obj)) {
+        const keyRepr = /^[a-zA-Z_]\w*$/.test(k) ? `['${k}']` : `['${k}']`;
+        if (typeof v === 'string') {
+          const escaped = v.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+          lines.push(`${pad}${keyRepr} = '${escaped}',`);
+        } else if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
+          lines.push(`${pad}${keyRepr} = {`);
+          lines.push(formatLuaTable(v, indent + 1));
+          lines.push(`${pad}},`);
+        }
+      }
+      return lines.join('\n');
+    };
+
+    return `Locales['${targetLang}'] = {\n${formatLuaTable(translatedResult.translatedData, 1)}\n}`;
   }
 
   const lines = [
     `Locales['${targetLang}'] = {`,
   ];
 
-  for (const [key, value] of Object.entries(entries)) {
+  for (const [key, value] of Object.entries(translatedResult.entries)) {
     const escapedVal = value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     lines.push(`    ['${key}'] = '${escapedVal}',`);
   }
