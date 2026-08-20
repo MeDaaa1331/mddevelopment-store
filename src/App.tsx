@@ -6,14 +6,14 @@ import { CategoryFilter } from './components/CategoryFilter';
 import { ScriptGrid } from './components/ScriptGrid';
 import { FeaturesSection } from './components/FeaturesSection';
 import { RecentPayments } from './components/RecentPayments';
-import { DevToolsSection } from './components/DevToolsSection';
+import { DevToolsPage } from './components/DevToolsPage';
 import { FAQSection } from './components/FAQSection';
 import { Footer } from './components/Footer';
 import { ScriptModal } from './components/ScriptModal';
 import { CartDrawer } from './components/CartDrawer';
 import { PromoPopup } from './components/PromoPopup';
 import { InAppCheckoutModal } from './components/InAppCheckoutModal';
-import { StoreProvider } from './context/StoreContext';
+import { StoreProvider, useStore } from './context/StoreContext';
 import { CartProvider, useCart } from './context/CartContext';
 import { useSmoothScroll } from './hooks/useSmoothScroll';
 
@@ -36,6 +36,7 @@ const AppModals: React.FC = () => {
 const AppContent: React.FC = () => {
   useSmoothScroll();
   const { isCallbackProcessing, callbackError } = useCart();
+  const { currentRoute } = useStore();
 
   if (isCallbackProcessing) {
     return (
@@ -90,6 +91,16 @@ const AppContent: React.FC = () => {
     );
   }
 
+  if (currentRoute === '/devtools') {
+    return (
+      <div className="min-h-screen bg-[#050507] text-zinc-100 flex flex-col font-sans selection:bg-white selection:text-black">
+        <Navbar />
+        <DevToolsPage />
+        <AppModals />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#050507] text-zinc-100 flex flex-col font-sans selection:bg-white selection:text-black">
       <Navbar />
@@ -107,7 +118,6 @@ const AppContent: React.FC = () => {
       </main>
       <RecentPayments />
       <FeaturesSection />
-      <DevToolsSection />
       <FAQSection />
       <Footer />
       <AppModals />

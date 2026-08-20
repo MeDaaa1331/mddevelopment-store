@@ -5,13 +5,23 @@ import { useDiscordStats } from '../hooks/useDiscordStats';
 import { smoothScrollTo } from '../hooks/useSmoothScroll';
 
 export const Footer: React.FC = () => {
-  const { setCategory } = useStore();
+  const { setCategory, currentRoute, navigate } = useStore();
   const discordStats = useDiscordStats();
   const DISCORD_LINK = 'https://discord.gg/Ze4m2Uyxjw';
 
   const scrollTo = (id: string, catSlug?: string) => {
-    if (catSlug) setCategory(catSlug);
-    smoothScrollTo(`#${id}`, { offset: -30, duration: 1.4 });
+    if (id === 'devtools-section') {
+      navigate('/devtools');
+      return;
+    }
+    if (currentRoute === '/devtools') {
+      navigate('/');
+      if (catSlug) setCategory(catSlug);
+      setTimeout(() => smoothScrollTo(`#${id}`, { offset: -30, duration: 1.4 }), 100);
+    } else {
+      if (catSlug) setCategory(catSlug);
+      smoothScrollTo(`#${id}`, { offset: -30, duration: 1.4 });
+    }
   };
 
   return (

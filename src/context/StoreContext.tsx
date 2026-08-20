@@ -20,6 +20,8 @@ interface StoreContextType {
   isLive: boolean;
   isLoading: boolean;
   refreshStore: () => Promise<void>;
+  currentRoute: string;
+  navigate: (path: string) => void;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -40,6 +42,32 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [selectedPackage, setSelectedPackage] = useState<TebexPackage | null>(null);
   const [isLive, setIsLive] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [currentRoute, setCurrentRoute] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname.toLowerCase();
+      if (path.startsWith('/devtools')) return '/devtools';
+      return '/';
+    }
+    return '/';
+  });
+
+  const navigate = (path: string) => {
+    const target = path.toLowerCase().startsWith('/devtools') ? '/devtools' : '/';
+    if (window.location.pathname !== target) {
+      window.history.pushState({}, '', target);
+    }
+    setCurrentRoute(target);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    const onPop = () => {
+      const path = window.location.pathname.toLowerCase();
+      setCurrentRoute(path.startsWith('/devtools') ? '/devtools' : '/');
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   const loadData = async (silent = false) => {
     if (!silent) setIsLoading(true);
@@ -148,6 +176,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isLive,
         isLoading,
         refreshStore: () => loadData(false),
+        currentRoute,
+        navigate,
       }}
     >
       {children}

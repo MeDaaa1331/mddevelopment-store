@@ -8,14 +8,14 @@ import { smoothScrollTo } from '../hooks/useSmoothScroll';
 
 export const Navbar: React.FC = () => {
   const { totalCount, setIsCartOpen } = useCart();
-  const { setCategory, setSearch, filters } = useStore();
+  const { setCategory, setSearch, filters, currentRoute, navigate } = useStore();
   const discordStats = useDiscordStats();
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [localSearch, setLocalSearch] = useState('');
-  const [activeNav, setActiveNav] = useState<string>(filters.category || 'all');
+  const [activeNav, setActiveNav] = useState<string>(() => (currentRoute === '/devtools' ? 'devtools' : filters.category || 'all'));
   const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number; opacity: number }>({ left: 0, width: 0, opacity: 0 });
 
   const navRef = useRef<HTMLElement>(null);
@@ -28,10 +28,12 @@ export const Navbar: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (filters.category && activeNav !== 'devtools' && activeNav !== 'faq') {
-      setActiveNav(filters.category);
+    if (currentRoute === '/devtools') {
+      setActiveNav('devtools');
+    } else {
+      setActiveNav(filters.category || 'all');
     }
-  }, [filters.category]);
+  }, [currentRoute, filters.category]);
 
   const updateIndicator = () => {
     if (!navRef.current) return;
@@ -50,23 +52,34 @@ export const Navbar: React.FC = () => {
     updateIndicator();
     window.addEventListener('resize', updateIndicator);
     return () => window.removeEventListener('resize', updateIndicator);
-  }, [activeNav, filters.category]);
+  }, [activeNav, filters.category, currentRoute]);
 
   const handleCategory = (slug: string) => {
     setActiveNav(slug);
     setMobileOpen(false);
     if (slug === 'devtools') {
-      smoothScrollTo('#devtools-section', { offset: -40, duration: 1.4 });
+      navigate('/devtools');
     } else {
-      setCategory(slug);
-      smoothScrollTo('#scripts-store', { offset: -30, duration: 1.4 });
+      if (currentRoute === '/devtools') {
+        navigate('/');
+        setCategory(slug);
+        setTimeout(() => smoothScrollTo('#scripts-store', { offset: -30, duration: 1.4 }), 100);
+      } else {
+        setCategory(slug);
+        smoothScrollTo('#scripts-store', { offset: -30, duration: 1.4 });
+      }
     }
   };
 
   const handleFAQClick = () => {
     setActiveNav('faq');
     setMobileOpen(false);
-    smoothScrollTo('#faq-section', { offset: -40, duration: 1.4 });
+    if (currentRoute === '/devtools') {
+      navigate('/');
+      setTimeout(() => smoothScrollTo('#faq-section', { offset: -40, duration: 1.4 }), 100);
+    } else {
+      smoothScrollTo('#faq-section', { offset: -40, duration: 1.4 });
+    }
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -74,13 +87,23 @@ export const Navbar: React.FC = () => {
     if (localSearch.trim()) {
       setSearch(localSearch.trim());
       setSearchOpen(false);
-      smoothScrollTo('#scripts-store', { offset: -30, duration: 1.4 });
+      if (currentRoute === '/devtools') {
+        navigate('/');
+        setTimeout(() => smoothScrollTo('#scripts-store', { offset: -30, duration: 1.4 }), 100);
+      } else {
+        smoothScrollTo('#scripts-store', { offset: -30, duration: 1.4 });
+      }
     }
   };
 
   const scrollTo = (id: string) => {
     setMobileOpen(false);
-    smoothScrollTo(`#${id}`, { offset: -30, duration: 1.4 });
+    if (currentRoute === '/devtools') {
+      navigate('/');
+      setTimeout(() => smoothScrollTo(`#${id}`, { offset: -30, duration: 1.4 }), 100);
+    } else {
+      smoothScrollTo(`#${id}`, { offset: -30, duration: 1.4 });
+    }
   };
 
   const navCategories = [
@@ -96,7 +119,7 @@ export const Navbar: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between gap-4">
 
-          <a href="#" onClick={e => { e.preventDefault(); smoothScrollTo(0, { duration: 1.4 }); }} className="flex items-center gap-3.5 group cursor-pointer select-none">
+          <a href="/" onClick={e => { e.preventDefault(); navigate('/'); smoothScrollTo(0, { duration: 1.4 }); }} className="flex items-center gap-3.5 group cursor-pointer select-none">
             <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-black border border-white/15 p-1 flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:border-white/40 shadow-glow-sm">
               <img src="/logo.png" alt="MD Development" className="w-full h-full object-contain" />
             </div>
