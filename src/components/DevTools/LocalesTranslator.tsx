@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Languages, Copy, Check, Download, Sparkles, RefreshCw, FileCode2, ArrowRight, Zap } from 'lucide-react';
+import { Languages, Copy, Check, Download, Sparkles, RefreshCw, FileCode2, ArrowRight } from 'lucide-react';
 import {
   SupportedLang,
   SUPPORTED_LANGS,
@@ -109,13 +109,7 @@ export const LocalesTranslator: React.FC = () => {
             <Languages className="w-5 h-5" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-display font-bold text-base text-white">FiveM Locales Auto-Translator</h3>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold flex items-center gap-1">
-                <Zap className="w-3 h-3 text-emerald-400" />
-                <span>High-Speed 2000+ Lines</span>
-              </span>
-            </div>
+            <h3 className="font-display font-bold text-base text-white">FiveM Locales Auto-Translator</h3>
             <p className="text-xs text-zinc-400">
               Parallel batch engine preserving <code className="text-emerald-400 font-mono">%s</code>, <code className="text-emerald-400 font-mono">~r~</code> color codes, and keys.
             </p>
@@ -179,7 +173,7 @@ export const LocalesTranslator: React.FC = () => {
             <textarea
               value={inputText}
               onChange={e => setInputText(e.target.value)}
-              placeholder="Paste your Locales['en'] = { ... } or JSON here (supports 2000+ lines)..."
+              placeholder="Paste your Locales['en'] = { ... } or JSON here..."
               rows={14}
               className="w-full h-full p-4 rounded-2xl bg-zinc-950/80 border border-white/10 text-xs font-mono text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-white/30 resize-none transition-colors"
               spellCheck={false}
