@@ -13,7 +13,11 @@ import {
   Film,
   Flag,
   Hash,
-  FileJson
+  FileJson,
+  Navigation,
+  Volume2,
+  Crosshair,
+  User
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { LocalesTranslator } from './DevTools/LocalesTranslator';
@@ -26,9 +30,27 @@ import { AnimExplorer } from './DevTools/AnimExplorer';
 import { FlagsGenerator } from './DevTools/FlagsGenerator';
 import { HashConverter } from './DevTools/HashConverter';
 import { JsonFormatter } from './DevTools/JsonFormatter';
+import { BlipDesigner } from './DevTools/BlipDesigner';
+import { AudioExplorer } from './DevTools/AudioExplorer';
+import { WeaponsConfigurator } from './DevTools/WeaponsConfigurator';
+import { PedPropExplorer } from './DevTools/PedPropExplorer';
 import { Footer } from './Footer';
 
-type ToolTab = 'translator' | 'colors' | 'coords' | 'webhook' | 'controls' | 'manifest' | 'anim' | 'flags' | 'hash' | 'json';
+type ToolTab =
+  | 'translator'
+  | 'json'
+  | 'blip'
+  | 'weapons'
+  | 'audio'
+  | 'peds'
+  | 'flags'
+  | 'hash'
+  | 'colors'
+  | 'coords'
+  | 'webhook'
+  | 'controls'
+  | 'manifest'
+  | 'anim';
 
 interface TabItem {
   id: ToolTab;
@@ -39,14 +61,18 @@ interface TabItem {
 const DEV_TOOLS_TABS: TabItem[] = [
   { id: 'translator', label: 'Locales Translator', icon: <Languages className="w-3.5 h-3.5" /> },
   { id: 'json', label: 'JSON Formatter', icon: <FileJson className="w-3.5 h-3.5" /> },
+  { id: 'blip', label: 'Blip & Radar Designer', icon: <Navigation className="w-3.5 h-3.5" /> },
+  { id: 'weapons', label: 'Weapons & Ammo', icon: <Crosshair className="w-3.5 h-3.5" /> },
+  { id: 'audio', label: 'Audio & Sound FX', icon: <Volume2 className="w-3.5 h-3.5" /> },
+  { id: 'peds', label: 'Ped & Prop Spawner', icon: <User className="w-3.5 h-3.5" /> },
+  { id: 'flags', label: 'Flags Generator', icon: <Flag className="w-3.5 h-3.5" /> },
+  { id: 'hash', label: 'Hash Converter', icon: <Hash className="w-3.5 h-3.5" /> },
   { id: 'colors', label: 'Color & HEX', icon: <Palette className="w-3.5 h-3.5" /> },
   { id: 'coords', label: 'Coords & Target', icon: <MapPin className="w-3.5 h-3.5" /> },
   { id: 'webhook', label: 'Discord Webhooks', icon: <MessageSquare className="w-3.5 h-3.5" /> },
   { id: 'controls', label: 'GTA Controls', icon: <Gamepad2 className="w-3.5 h-3.5" /> },
   { id: 'manifest', label: 'fxmanifest.lua', icon: <FileCode className="w-3.5 h-3.5" /> },
   { id: 'anim', label: 'Anim Explorer', icon: <Film className="w-3.5 h-3.5" /> },
-  { id: 'flags', label: 'Flags Generator', icon: <Flag className="w-3.5 h-3.5" /> },
-  { id: 'hash', label: 'Hash Converter', icon: <Hash className="w-3.5 h-3.5" /> },
 ];
 
 export const DevToolsPage: React.FC = () => {
@@ -123,7 +149,7 @@ export const DevToolsPage: React.FC = () => {
               <Terminal className="w-3.5 h-3.5 text-emerald-400" />
               <span className="text-white font-bold">FiveM Developer Hub</span>
               <span className="w-1 h-1 rounded-full bg-zinc-500" />
-              <span className="text-zinc-400">10 Free Utilities</span>
+              <span className="text-zinc-400">14 Free Utilities</span>
             </div>
 
             <h1 className="font-display text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight mb-4">
@@ -131,7 +157,7 @@ export const DevToolsPage: React.FC = () => {
             </h1>
 
             <p className="text-sm sm:text-base text-zinc-400 leading-relaxed max-w-2xl">
-              Professional productivity tools built by MD Development for FiveM developers and server owners. Translate locales, format JSON, generate target zones, calculate flags, convert hashes, lookup keybinds, and configure manifests in seconds.
+              Professional productivity tools built by MD Development for FiveM developers and server owners. Translate locales, design blips, format JSON, inspect weapons, play audio cues, spawn peds, calculate flags, convert hashes, lookup keybinds, and configure manifests in seconds.
             </p>
           </div>
         </div>
@@ -174,14 +200,18 @@ export const DevToolsPage: React.FC = () => {
         >
           {activeTab === 'translator' && <LocalesTranslator />}
           {activeTab === 'json' && <JsonFormatter />}
+          {activeTab === 'blip' && <BlipDesigner />}
+          {activeTab === 'weapons' && <WeaponsConfigurator />}
+          {activeTab === 'audio' && <AudioExplorer />}
+          {activeTab === 'peds' && <PedPropExplorer />}
+          {activeTab === 'flags' && <FlagsGenerator />}
+          {activeTab === 'hash' && <HashConverter />}
           {activeTab === 'colors' && <ColorGenerator />}
           {activeTab === 'coords' && <CoordsGenerator />}
           {activeTab === 'webhook' && <DiscordWebhookBuilder />}
           {activeTab === 'controls' && <ControlsLookup />}
           {activeTab === 'manifest' && <ManifestGenerator />}
           {activeTab === 'anim' && <AnimExplorer />}
-          {activeTab === 'flags' && <FlagsGenerator />}
-          {activeTab === 'hash' && <HashConverter />}
         </div>
       </div>
 
