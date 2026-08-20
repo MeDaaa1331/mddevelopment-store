@@ -148,12 +148,21 @@ export const Navbar: React.FC = () => {
                 key={cat.slug}
                 data-nav={cat.slug}
                 onClick={() => handleCategory(cat.slug)}
-                className={`relative z-10 px-4 py-1.5 text-xs font-semibold rounded-full transition-colors duration-200 flex items-center gap-1.5 select-none ${
+                className={`relative z-10 px-3.5 py-1.5 text-xs font-semibold rounded-full transition-colors duration-200 flex items-center gap-1.5 select-none ${
                   activeNav === cat.slug ? 'text-black font-bold' : 'text-zinc-400 hover:text-white'
                 }`}
               >
                 {cat.icon && <span className={activeNav === cat.slug ? 'text-black' : ''}>{cat.icon}</span>}
                 <span>{cat.label}</span>
+                {cat.slug === 'devtools' && (
+                  <span className={`px-1.5 py-0.2 text-[8px] font-mono font-black rounded-md tracking-wider transition-colors ${
+                    activeNav === 'devtools'
+                      ? 'bg-black text-white'
+                      : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shadow-glow-sm'
+                  }`}>
+                    NEW
+                  </span>
+                )}
               </button>
             ))}
             <button
@@ -238,8 +247,12 @@ export const Navbar: React.FC = () => {
           <div className="md:hidden mt-4 p-4 rounded-2xl bg-zinc-950/95 border border-white/15 backdrop-blur-2xl flex flex-col gap-2 shadow-2xl animate-fadeIn">
             {navCategories.map(cat => (
               <button key={cat.slug} onClick={() => handleCategory(cat.slug)} className={`w-full text-left px-3 py-2 text-sm font-medium rounded-lg flex items-center justify-between transition-colors ${filters.category === cat.slug ? 'bg-white text-black' : 'text-zinc-300 hover:text-white hover:bg-white/5'}`}>
-                <span>{cat.label}</span>
+                <div className="flex items-center gap-2">
+                  {cat.icon && <span>{cat.icon}</span>}
+                  <span>{cat.label}</span>
+                </div>
                 {cat.slug === 'deals' && <span className="px-1.5 py-0.5 text-[10px] font-bold bg-white text-black rounded-full">SALE</span>}
+                {cat.slug === 'devtools' && <span className="px-1.5 py-0.5 text-[9px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-md">NEW</span>}
               </button>
             ))}
             <button onClick={() => scrollTo('faq-section')} className="w-full text-left px-3 py-2 text-sm font-medium text-zinc-300 hover:text-white rounded-lg hover:bg-white/5">FAQ</button>
