@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Volume2, Search, Copy, Check, Sparkles, Play, Code2 } from 'lucide-react';
 import { GTA_AUDIO_DATABASE } from '../../data/gtaAudio';
+import { trackEvent } from '../../utils/analytics';
 
 export const AudioExplorer: React.FC = () => {
   const [search, setSearch] = useState('');
@@ -23,6 +24,7 @@ export const AudioExplorer: React.FC = () => {
   const handleCopy = (id: string, code: string) => {
     navigator.clipboard.writeText(code);
     setCopiedId(id);
+    trackEvent('audio_explorer', 'copy_lua', `Audio ${id}`);
     setTimeout(() => setCopiedId(null), 1800);
   };
 

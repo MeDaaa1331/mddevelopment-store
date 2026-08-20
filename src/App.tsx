@@ -17,6 +17,8 @@ import { StoreProvider, useStore } from './context/StoreContext';
 import { CartProvider, useCart } from './context/CartContext';
 import { useSmoothScroll } from './hooks/useSmoothScroll';
 
+import { AdminStatsPage } from './components/AdminStatsPage';
+
 const AppModals: React.FC = () => {
   const { isCheckoutOpen, setIsCheckoutOpen, checkoutUrl } = useCart();
   return (
@@ -87,6 +89,14 @@ const AppContent: React.FC = () => {
         >
           Continue Browsing MD Development
         </button>
+      </div>
+    );
+  }
+
+  if (currentRoute === '/admin') {
+    return (
+      <div className="min-h-screen bg-[#050507] text-zinc-100 flex flex-col font-sans selection:bg-white selection:text-black">
+        <AdminStatsPage />
       </div>
     );
   }

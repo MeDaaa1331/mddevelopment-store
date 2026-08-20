@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { MapPin, Search, Copy, Check, Radio, Eye, Sliders, Layers, Sparkles } from 'lucide-react';
 import { GTA_BLIP_SPRITES, GTA_BLIP_COLOURS } from '../../data/gtaBlips';
+import { trackEvent } from '../../utils/analytics';
 
 export const BlipDesigner: React.FC = () => {
   const [spriteId, setSpriteId] = useState(357);
@@ -36,6 +37,7 @@ export const BlipDesigner: React.FC = () => {
   const handleCopy = (key: string, code: string) => {
     navigator.clipboard.writeText(code);
     setCopiedKey(key);
+    trackEvent('blip_designer', key === 'ox' ? 'copy_ox' : 'copy_lua', `Blip #${spriteId} (${label})`);
     setTimeout(() => setCopiedKey(null), 1800);
   };
 

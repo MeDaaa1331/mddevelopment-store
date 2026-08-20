@@ -170,8 +170,15 @@ export const Footer: React.FC = () => {
         </div>
 
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-zinc-500 text-[11px]">
-          <div>
-            © {new Date().getFullYear()} MD Development. All rights reserved.
+          <div className="flex items-center gap-3">
+            <span>© {new Date().getFullYear()} MD Development. All rights reserved.</span>
+            <span>·</span>
+            <button
+              onClick={() => navigate('/admin')}
+              className="text-zinc-600 hover:text-zinc-400 transition-colors"
+            >
+              Admin Panel
+            </button>
           </div>
 
           <div className="text-center sm:text-right text-zinc-500">

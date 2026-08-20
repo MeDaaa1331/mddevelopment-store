@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Crosshair, Search, Copy, Check, Shield, Sliders, Layers } from 'lucide-react';
 import { GTA_WEAPONS_DATABASE } from '../../data/gtaWeapons';
+import { trackEvent } from '../../utils/analytics';
 
 const WEAPON_TINTS = [
   { id: 0, name: 'Normal / Stock' },
@@ -52,6 +53,7 @@ export const WeaponsConfigurator: React.FC = () => {
   const handleCopy = (key: string, code: string) => {
     navigator.clipboard.writeText(code);
     setCopiedKey(key);
+    trackEvent('weapons_configurator', key === 'ox' ? 'copy_ox' : 'copy_lua', selectedWeapon.name);
     setTimeout(() => setCopiedKey(null), 1800);
   };
 

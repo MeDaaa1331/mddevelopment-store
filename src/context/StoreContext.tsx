@@ -45,6 +45,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [currentRoute, setCurrentRoute] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname.toLowerCase();
+      if (path.startsWith('/admin')) return '/admin';
       if (path.startsWith('/devtools')) return '/devtools';
       return '/';
     }
@@ -52,7 +53,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
 
   const navigate = (path: string) => {
-    const target = path.toLowerCase().startsWith('/devtools') ? '/devtools' : '/';
+    const lower = path.toLowerCase();
+    const target = lower.startsWith('/admin')
+      ? '/admin'
+      : lower.startsWith('/devtools')
+      ? '/devtools'
+      : '/';
+
     if (window.location.pathname !== target) {
       window.history.pushState({}, '', target);
     }
@@ -63,7 +70,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     const onPop = () => {
       const path = window.location.pathname.toLowerCase();
-      setCurrentRoute(path.startsWith('/devtools') ? '/devtools' : '/');
+      if (path.startsWith('/admin')) {
+        setCurrentRoute('/admin');
+      } else if (path.startsWith('/devtools')) {
+        setCurrentRoute('/devtools');
+      } else {
+        setCurrentRoute('/');
+      }
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);

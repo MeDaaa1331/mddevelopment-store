@@ -34,6 +34,7 @@ import { BlipDesigner } from './DevTools/BlipDesigner';
 import { AudioExplorer } from './DevTools/AudioExplorer';
 import { WeaponsConfigurator } from './DevTools/WeaponsConfigurator';
 import { PedPropExplorer } from './DevTools/PedPropExplorer';
+import { trackEvent } from '../utils/analytics';
 import { Footer } from './Footer';
 
 type ToolTab =
@@ -110,6 +111,7 @@ export const DevToolsPage: React.FC = () => {
 
   useEffect(() => {
     updateIndicator();
+    trackEvent(activeTab, 'view');
     window.addEventListener('resize', updateIndicator);
     return () => window.removeEventListener('resize', updateIndicator);
   }, [activeTab]);

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { FileJson, Copy, Check, Download, Sparkles, Minimize2, Maximize2, ArrowUpDown, Wand2, ArrowRightLeft, Code2, AlertTriangle } from 'lucide-react';
+import { trackEvent } from '../../utils/analytics';
 
 const SAMPLE_MINIFIED_JSON = `{"server":{"name":"MD Development Roleplay","slots":128,"locale":"cs","tags":["roleplay","custom","economy"]},"economy":{"startingMoney":5000,"currencySymbol":"$","banks":[{"id":"legion","name":"Pacific Standard Bank","coords":{"x":234.12,"y":217.45,"z":106.28},"open247":true},{"id":"blaine","name":"Blaine County Savings","coords":{"x":-112.5,"y":6467.2,"z":31.6},"open247":false}]},"jobs":{"police":{"label":"Police Department","ranks":[{"grade":0,"title":"Cadet","salary":1200},{"grade":1,"title":"Officer","salary":1800},{"grade":2,"title":"Chief","salary":3500}]}}}`;
 
@@ -181,6 +182,7 @@ export const JsonFormatter: React.FC = () => {
     if (!textToCopy) return;
     navigator.clipboard.writeText(textToCopy);
     setCopied(true);
+    trackEvent('json_formatter', outputMode === 'lua' ? 'copy_lua' : 'copy_json', `${outputMode.toUpperCase()} formatted text`);
     setTimeout(() => setCopied(false), 1800);
   };
 
