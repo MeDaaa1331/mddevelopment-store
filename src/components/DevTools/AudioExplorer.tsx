@@ -1,77 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { Volume2, Search, Copy, Check, Sparkles, Play, Code2 } from 'lucide-react';
-
-interface SoundEntry {
-  id: string;
-  name: string;
-  soundset: string;
-  category: 'HUD' | 'Economy' | 'Heists' | 'Police' | 'Phone' | 'Weapons' | 'Vehicles' | 'Casino';
-  description: string;
-}
-
-const SOUND_DATABASE: SoundEntry[] = [
-  { id: '1', name: 'SELECT', soundset: 'HUD_FRONTEND_DEFAULT_SOUNDSET', category: 'HUD', description: 'Standard menu selection click' },
-  { id: '2', name: 'NAV_UP_DOWN', soundset: 'HUD_FRONTEND_DEFAULT_SOUNDSET', category: 'HUD', description: 'Navigating up or down in a menu' },
-  { id: '3', name: 'BACK', soundset: 'HUD_FRONTEND_DEFAULT_SOUNDSET', category: 'HUD', description: 'Menu cancel or back button tone' },
-  { id: '4', name: 'QUIT', soundset: 'HUD_FRONTEND_DEFAULT_SOUNDSET', category: 'HUD', description: 'Menu exit sound' },
-  { id: '5', name: 'ERROR', soundset: 'HUD_FRONTEND_DEFAULT_SOUNDSET', category: 'HUD', description: 'Action denied or error beep' },
-  { id: '6', name: 'CONFIRM_BEEP', soundset: 'HUD_MINI_GAME_SOUNDSET', category: 'HUD', description: 'Minigame confirmation tone' },
-  { id: '7', name: 'CONTINUE', soundset: 'HUD_FRONTEND_DEFAULT_SOUNDSET', category: 'HUD', description: 'Positive continuation sound' },
-  { id: '8', name: 'LEADERBOARD', soundset: 'HUD_MINI_GAME_SOUNDSET', category: 'HUD', description: 'Highscore or leaderboard reveal' },
-  { id: '9', name: 'TIMER_STOP', soundset: 'HUD_MINI_GAME_SOUNDSET', category: 'HUD', description: 'Timer countdown completion chime' },
-
-  { id: '10', name: 'LOCAL_PLYR_CASH_COUNTER_COMPLETE', soundset: 'DLC_HEISTS_GENERAL_FRONTEND_SOUNDS', category: 'Economy', description: 'Cash received / money counting finished' },
-  { id: '11', name: 'PURCHASE', soundset: 'HUD_LIQUOR_STORE_SOUNDSET', category: 'Economy', description: 'Cash register till ding on purchase' },
-  { id: '12', name: 'PROPERTY_PURCHASE', soundset: 'HUD_AWARDS', category: 'Economy', description: 'Triumphant property purchase fanfare' },
-  { id: '13', name: 'WEAPON_PURCHASE', soundset: 'HUD_AMMO_SHOP_SOUNDSET', category: 'Economy', description: 'Ammu-Nation weapon buy chime' },
-  { id: '14', name: 'ATM_WINDOW', soundset: 'HUD_FRONTEND_DEFAULT_SOUNDSET', category: 'Economy', description: 'ATM screen interaction beep' },
-
-  { id: '15', name: 'HACKING_CLICK', soundset: 'DLC_HEIST_HACKING_SNAKE_SOUNDS', category: 'Heists', description: 'Hacking terminal keypress' },
-  { id: '16', name: 'HACKING_SUCCESS', soundset: 'DLC_HEIST_HACKING_SNAKE_SOUNDS', category: 'Heists', description: 'Hacking minigame completed successfully' },
-  { id: '17', name: 'HACKING_FAILURE', soundset: 'DLC_HEIST_HACKING_SNAKE_SOUNDS', category: 'Heists', description: 'Hacking minigame failed / alarm trigger' },
-  { id: '18', name: 'Pin_Bad', soundset: 'DLC_HEIST_FLEECA_SOUNDSET', category: 'Heists', description: 'Safe drilling pin bad resistance' },
-  { id: '19', name: 'Pin_Centred', soundset: 'DLC_HEIST_FLEECA_SOUNDSET', category: 'Heists', description: 'Safe drilling sweet spot tone' },
-  { id: '20', name: 'Drill_Pin_Break', soundset: 'DLC_HEIST_FLEECA_SOUNDSET', category: 'Heists', description: 'Drill bit snapping / overheated' },
-  { id: '21', name: 'Vault_Door_Unlock', soundset: 'DLC_HEISTS_GENERIC_SOUNDS', category: 'Heists', description: 'Heavy vault door unlocking mechanism' },
-  { id: '22', name: 'Keycard_Success', soundset: 'DLC_HEISTS_BIOLAB_FINALE_SOUNDS', category: 'Heists', description: 'Keycard swipe accepted beep' },
-  { id: '23', name: 'Keycard_Fail', soundset: 'DLC_HEISTS_BIOLAB_FINALE_SOUNDS', category: 'Heists', description: 'Keycard swipe rejected buzzer' },
-
-  { id: '24', name: 'POLICE_REPORT_ABORT', soundset: 'DLC_HEISTS_GENERAL_FRONTEND_SOUNDS', category: 'Police', description: 'Police scanner radio alert cancel' },
-  { id: '25', name: 'Bank_Alarm_Loop', soundset: 'RES_SECURITY_ALARM_SOUNDSET', category: 'Police', description: 'Loud bank security alarm siren' },
-  { id: '26', name: 'Prison_Alarm_Loop', soundset: 'DLC_HEIST_PRISON_BREAK_SOUNDS', category: 'Police', description: 'Bolingbroke penitentiary prison break siren' },
-  { id: '27', name: 'COP_CAR_ALARM', soundset: 'DLC_HEISTS_GENERAL_FRONTEND_SOUNDS', category: 'Police', description: 'Emergency vehicle alarm' },
-  { id: '28', name: 'Scanner_Static', soundset: 'DLC_HEIST_BIOLAB_SOUNDS', category: 'Police', description: 'Police radio dispatch static burst' },
-  { id: '29', name: 'Handcuff_Click', soundset: 'DLC_HEISTS_GENERIC_SOUNDS', category: 'Police', description: 'Handcuffs locking around wrists' },
-
-  { id: '30', name: 'Menu_Accept', soundset: 'Phone_SoundSet_Default', category: 'Phone', description: 'Smartphone menu item selected' },
-  { id: '31', name: 'Text_Arrive_Tone', soundset: 'Phone_SoundSet_Default', category: 'Phone', description: 'Incoming text message notification' },
-  { id: '32', name: 'Hang_Up', soundset: 'Phone_SoundSet_Default', category: 'Phone', description: 'Phone call disconnected / ended' },
-  { id: '33', name: 'Dial_and_Remote_Ring', soundset: 'Phone_SoundSet_Default', category: 'Phone', description: 'Outgoing phone ringing tone' },
-  { id: '34', name: 'Camera_Shoot', soundset: 'Phone_SoundSet_Default', category: 'Phone', description: 'Phone camera shutter click' },
-
-  { id: '35', name: 'Reload', soundset: 'DLC_GR_Generic_Soundset', category: 'Weapons', description: 'Weapon magazine reload sound' },
-  { id: '36', name: 'Weapon_Upgrade', soundset: 'DLC_GR_Generic_Soundset', category: 'Weapons', description: 'Weapon attachment installed' },
-  { id: '37', name: 'KILL_STREAK', soundset: 'HUD_AWARDS', category: 'Weapons', description: 'Killstreak / Headshot award chime' },
-  { id: '38', name: 'Armor_Equip', soundset: 'DLC_HEISTS_GENERIC_SOUNDS', category: 'Weapons', description: 'Body armor vest equipped sound' },
-
-  { id: '39', name: 'Remote_Vehicle_Lock', soundset: 'GTAO_ImpExp_Soundset', category: 'Vehicles', description: 'Key fob vehicle lock beep-beep' },
-  { id: '40', name: 'Engine_Start', soundset: 'DLC_Biker_Generic_Soundset', category: 'Vehicles', description: 'Vehicle ignition startup crank' },
-  { id: '41', name: 'Airhorn_Loop', soundset: 'DLC_AW_Airhorn_Sounds', category: 'Vehicles', description: 'Loud stadium airhorn blast' },
-  { id: '42', name: 'Garage_Door_Open', soundset: 'GTAO_ImpExp_Soundset', category: 'Vehicles', description: 'Electric garage shutter door rolling up' },
-
-  { id: '43', name: 'Wheel_Spin', soundset: 'dlc_vw_casino_lucky_wheel_sounds', category: 'Casino', description: 'Casino lucky wheel spinning ticker' },
-  { id: '44', name: 'Jackpot', soundset: 'DLC_VW_Casino_General_Sounds', category: 'Casino', description: 'Slot machine grand jackpot celebration' },
-  { id: '45', name: 'Card_Deal', soundset: 'DLC_VW_Casino_General_Sounds', category: 'Casino', description: 'Blackjack / Poker card dealing sound' },
-  { id: '46', name: 'Chips_Win', soundset: 'DLC_VW_Casino_General_Sounds', category: 'Casino', description: 'Casino chips payout sliding' }
-];
+import { GTA_AUDIO_DATABASE } from '../../data/gtaAudio';
 
 export const AudioExplorer: React.FC = () => {
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState<'All' | 'HUD' | 'Economy' | 'Heists' | 'Police' | 'Phone' | 'Weapons' | 'Vehicles' | 'Casino'>('All');
+  const [category, setCategory] = useState<'All' | 'HUD & UI' | 'Economy & Shops' | 'Heists & Hacking' | 'Police & Alarms' | 'Phone & Pager' | 'Weapons & Combat' | 'Vehicles & Horns' | 'Casino & Minigames'>('All');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const filteredSounds = useMemo(() => {
-    return SOUND_DATABASE.filter(s => {
+    return GTA_AUDIO_DATABASE.filter(s => {
       if (category !== 'All' && s.category !== category) return false;
       if (!search.trim()) return true;
       const q = search.toLowerCase();
@@ -119,7 +56,7 @@ export const AudioExplorer: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-1.5 p-1 bg-zinc-900 rounded-xl border border-white/10 text-xs w-fit flex-wrap">
-        {(['All', 'HUD', 'Economy', 'Heists', 'Police', 'Phone', 'Weapons', 'Vehicles', 'Casino'] as const).map(cat => (
+        {(['All', 'HUD & UI', 'Economy & Shops', 'Heists & Hacking', 'Police & Alarms', 'Phone & Pager', 'Weapons & Combat', 'Vehicles & Horns', 'Casino & Minigames'] as const).map(cat => (
           <button
             key={cat}
             onClick={() => setCategory(cat)}

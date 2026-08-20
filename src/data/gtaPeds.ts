@@ -1,0 +1,112 @@
+export interface ModelEntry {
+  id: string;
+  name: string;
+  hash: string;
+  category: 'Law & Military' | 'EMS & Fire' | 'Services & Jobs' | 'Gangs & Crime' | 'Story Characters' | 'Ambient Civilians' | 'Animals' | 'Props & Objects';
+  type: 'ped' | 'prop';
+  description: string;
+}
+
+export const GTA_PED_PROP_DATABASE: ModelEntry[] = [
+  // LAW ENFORCEMENT & MILITARY
+  { id: 's_m_y_cop_01', name: 'LSPD Police Officer Male', hash: '0x5E34C216', category: 'Law & Military', type: 'ped', description: 'Los Santos Police Department patrol officer male' },
+  { id: 's_f_y_cop_01', name: 'LSPD Police Officer Female', hash: '0x15F8700D', category: 'Law & Military', type: 'ped', description: 'Los Santos Police Department patrol officer female' },
+  { id: 's_m_y_sheriff_01', name: 'LSSD Sheriff Deputy Male', hash: '0xD8048714', category: 'Law & Military', type: 'ped', description: 'Los Santos County Sheriff deputy male' },
+  { id: 's_f_y_sheriff_01', name: 'LSSD Sheriff Deputy Female', hash: '0x99502D62', category: 'Law & Military', type: 'ped', description: 'Los Santos County Sheriff deputy female' },
+  { id: 's_m_y_hwaycop_01', name: 'Highway Patrol Trooper', hash: '0x3235658F', category: 'Law & Military', type: 'ped', description: 'San Andreas Highway Patrol highway cop' },
+  { id: 's_m_y_swat_01', name: 'NOOSE SWAT Tactical', hash: '0x8D8F1B10', category: 'Law & Military', type: 'ped', description: 'NOOSE tactical response unit' },
+  { id: 's_m_m_security_01', name: 'Gruppe 6 Security Guard', hash: '0xE497B239', category: 'Law & Military', type: 'ped', description: 'Gruppe Sechs armored cash security guard' },
+  { id: 's_m_m_prisguard_01', name: 'Bolingbroke Prison Guard', hash: '0x53460A7C', category: 'Law & Military', type: 'ped', description: 'State penitentiary correction officer' },
+  { id: 's_m_m_armoured_01', name: 'Armored Truck Guard', hash: '0xFB5448C0', category: 'Law & Military', type: 'ped', description: 'Armored cash transport guard' },
+  { id: 's_m_m_fiboffice_01', name: 'FIB Special Agent Male', hash: '0x3AC3A92A', category: 'Law & Military', type: 'ped', description: 'Federal Investigation Bureau field agent' },
+  { id: 's_f_m_fembarber', name: 'FIB Agent Female', hash: '0xD2B1DB15', category: 'Law & Military', type: 'ped', description: 'FIB federal investigator female' },
+  { id: 's_m_m_ciasec_01', name: 'IAA Special Agent', hash: '0x3275CA49', category: 'Law & Military', type: 'ped', description: 'International Affairs Agency agent' },
+  { id: 's_m_m_marine_01', name: 'Fort Zancudo Marine Soldier', hash: '0x62CA9A0C', category: 'Law & Military', type: 'ped', description: 'US Military soldier marine' },
+  { id: 's_m_m_marine_02', name: 'Army Soldier Tactical', hash: '0x5B3BD996', category: 'Law & Military', type: 'ped', description: 'Military infantry unit' },
+  { id: 's_m_y_blackops_01', name: 'Merryweather Mercenary', hash: '0xDF85655D', category: 'Law & Military', type: 'ped', description: 'Merryweather private security contractor' },
+  { id: 's_m_y_blackops_02', name: 'Merryweather Heavy Assault', hash: '0x356CE929', category: 'Law & Military', type: 'ped', description: 'Merryweather tactical operative' },
+  { id: 's_m_y_uscg_01', name: 'Coast Guard Officer', hash: '0x4386760B', category: 'Law & Military', type: 'ped', description: 'San Andreas Coast Guard officer' },
+
+  // EMS & FIRE
+  { id: 's_m_m_paramedic_01', name: 'Paramedic / EMS Male', hash: '0x11D121FE', category: 'EMS & Fire', type: 'ped', description: 'LSFD paramedic medical responder' },
+  { id: 's_m_y_fireman_01', name: 'Firefighter Male', hash: '0xD63CE169', category: 'EMS & Fire', type: 'ped', description: 'Los Santos Fire Department firefighter' },
+  { id: 's_m_m_doctor_01', name: 'Hospital Doctor / Surgeon', hash: '0xD47DA357', category: 'EMS & Fire', type: 'ped', description: 'Pillbox Hill Medical Center doctor' },
+  { id: 's_f_y_scrubs_01', name: 'Hospital Nurse / Scrubs Female', hash: '0x50C3A013', category: 'EMS & Fire', type: 'ped', description: 'Hospital nurse in scrubs' },
+  { id: 's_m_m_lifeinvad_01', name: 'Hospital Attendant', hash: '0xA924F087', category: 'EMS & Fire', type: 'ped', description: 'Medical orderly / clinic staff' },
+
+  // SERVICES & WORKERS
+  { id: 's_m_m_autoshop_01', name: 'Mechanic Bennys', hash: '0x99564EB2', category: 'Services & Jobs', type: 'ped', description: 'Bennys Original Motorworks mechanic' },
+  { id: 's_m_m_autoshop_02', name: 'Mechanic Los Santos Customs', hash: '0x2649B283', category: 'Services & Jobs', type: 'ped', description: 'LSC vehicle tuner technician' },
+  { id: 's_m_y_garbage', name: 'Sanitation Trash Collector', hash: '0x6A8D08D2', category: 'Services & Jobs', type: 'ped', description: 'City sanitation trash worker' },
+  { id: 's_m_m_postal_01', name: 'PostOP Delivery Driver Male', hash: '0x68076632', category: 'Services & Jobs', type: 'ped', description: 'Post OP courier driver' },
+  { id: 's_m_m_postal_02', name: 'GoPostal Delivery Courier', hash: '0x1C13E784', category: 'Services & Jobs', type: 'ped', description: 'GoPostal parcel courier' },
+  { id: 's_m_m_valet_01', name: 'Casino Valet Attendant', hash: '0x904323E5', category: 'Services & Jobs', type: 'ped', description: 'Diamond Casino valet parking attendant' },
+  { id: 's_m_y_ammucity_01', name: 'Ammu-Nation Gunsmith Male', hash: '0x106D9A99', category: 'Services & Jobs', type: 'ped', description: 'Ammu-Nation weapon store clerk' },
+  { id: 's_m_m_ammucountry', name: 'Country Gun Store Clerk', hash: '0x2C40B8F8', category: 'Services & Jobs', type: 'ped', description: 'Rural Blaine County weapon dealer' },
+  { id: 's_f_y_shop_low', name: '24/7 Store Cashier Female', hash: '0x9D92BE02', category: 'Services & Jobs', type: 'ped', description: 'Supermarket / grocery store cashier' },
+  { id: 's_f_y_shop_mid', name: 'Clothing Store Clerk Female', hash: '0xAA6F32A3', category: 'Services & Jobs', type: 'ped', description: 'Suburban / Ponsonbys fashion clerk' },
+  { id: 's_m_y_shop_mask', name: 'Vespucci Mask Vendor', hash: '0x88DC6D82', category: 'Services & Jobs', type: 'ped', description: 'Vespucci beach mask shop clerk' },
+  { id: 's_m_m_dockwork_01', name: 'Dock Crane Operator / Stevedore', hash: '0x2287FC2A', category: 'Services & Jobs', type: 'ped', description: 'Port of Los Santos dockworker' },
+  { id: 's_m_m_linecook', name: 'Fast Food Line Cook', hash: '0x5C4A456C', category: 'Services & Jobs', type: 'ped', description: 'Cluckin Bell / Burgershot kitchen chef' },
+  { id: 's_m_y_waiter_01', name: 'Restaurant Waiter', hash: '0x0D09B661', category: 'Services & Jobs', type: 'ped', description: 'Luxury restaurant waiter server' },
+  { id: 's_f_y_bartender_01', name: 'Nightclub Bartender Female', hash: '0x4386760B', category: 'Services & Jobs', type: 'ped', description: 'Bar / club cocktail bartender' },
+  { id: 's_m_y_construct_01', name: 'Construction Worker Male', hash: '0xD7DA9E99', category: 'Services & Jobs', type: 'ped', description: 'Mile High Club building site worker' },
+  { id: 's_m_y_busboy_01', name: 'Hotel Bellhop / Busboy', hash: '0x65F93DA2', category: 'Services & Jobs', type: 'ped', description: 'Richman Hotel luggage attendant' },
+
+  // GANGS & CRIME
+  { id: 'g_m_y_ballaeast_01', name: 'East Ballas Gangster', hash: '0x23180323', category: 'Gangs & Crime', type: 'ped', description: 'East Los Santos Ballas member' },
+  { id: 'g_m_y_ballaorig_01', name: 'Original Ballas Leader', hash: '0x23180323', category: 'Gangs & Crime', type: 'ped', description: 'South Los Santos Ballas OG' },
+  { id: 'g_m_y_famca_01', name: 'Families Carson Ave Member', hash: '0x7E6A7D97', category: 'Gangs & Crime', type: 'ped', description: 'Chamberlain Gangster Families' },
+  { id: 'g_m_y_famdn_01', name: 'Families Forum Drive Member', hash: '0x8B321356', category: 'Gangs & Crime', type: 'ped', description: 'Grove Street Families gangster' },
+  { id: 'g_m_y_salvagoon_01', name: 'Vagos Street Soldier', hash: '0x960A7C7A', category: 'Gangs & Crime', type: 'ped', description: 'Los Santos Vagos member' },
+  { id: 'g_m_y_mexgoon_01', name: 'Madrazo Cartel Enforcer', hash: '0x3235658F', category: 'Gangs & Crime', type: 'ped', description: 'Martin Madrazo cartel hitman' },
+  { id: 'g_m_y_lost_01', name: 'The Lost MC Road Captain', hash: '0x6B626786', category: 'Gangs & Crime', type: 'ped', description: 'The Lost Motorcycle Club biker' },
+  { id: 'g_m_y_lost_02', name: 'The Lost MC Enforcer', hash: '0x2BE6766B', category: 'Gangs & Crime', type: 'ped', description: 'The Lost MC biker gang member' },
+  { id: 'g_m_y_korean_01', name: 'Kkangpae Korean Mobster', hash: '0x8D9E8F66', category: 'Gangs & Crime', type: 'ped', description: 'Little Seoul Korean syndicate' },
+  { id: 'g_m_y_pologoon_01', name: 'Marabunta Grande Gangster', hash: '0x5C4A456C', category: 'Gangs & Crime', type: 'ped', description: 'El Burro Heights Marabunta member' },
+  { id: 'g_m_y_armgoon_02', name: 'Armenian Mob Hitman', hash: '0xE899F139', category: 'Gangs & Crime', type: 'ped', description: 'La Puerta Armenian mobster' },
+  { id: 'g_f_y_vagos_01', name: 'Vagos Female Gangster', hash: '0xA924F087', category: 'Gangs & Crime', type: 'ped', description: 'Vagos female member' },
+
+  // STORY CHARACTERS
+  { id: 'player_zero', name: 'Michael De Santa', hash: '0x0D7114C9', category: 'Story Characters', type: 'ped', description: 'Protagonist Michael De Santa' },
+  { id: 'player_one', name: 'Franklin Clinton', hash: '0x9B22DBAF', category: 'Story Characters', type: 'ped', description: 'Protagonist Franklin Clinton' },
+  { id: 'player_two', name: 'Trevor Philips', hash: '0x9B810FA2', category: 'Story Characters', type: 'ped', description: 'Protagonist Trevor Philips' },
+  { id: 'mp_m_freemode_01', name: 'Multiplayer Male Base', hash: '0x705E61F2', category: 'Story Characters', type: 'ped', description: 'GTA Online / FiveM male player model' },
+  { id: 'mp_f_freemode_01', name: 'Multiplayer Female Base', hash: '0x9C9EFFD8', category: 'Story Characters', type: 'ped', description: 'GTA Online / FiveM female player model' },
+  { id: 'ig_lestercrest', name: 'Lester Crest', hash: '0xD44040A5', category: 'Story Characters', type: 'ped', description: 'Heist mastermind Lester Crest' },
+  { id: 'ig_lamardavis', name: 'Lamar Davis', hash: '0x74868516', category: 'Story Characters', type: 'ped', description: 'LD Organics owner Lamar Davis' },
+  { id: 'ig_benny', name: 'Benny', hash: '0x3AC3A92A', category: 'Story Characters', type: 'ped', description: 'Bennys workshop mastermind' },
+  { id: 'ig_tonyprince', name: 'Gay Tony Prince', hash: '0x02C26732', category: 'Story Characters', type: 'ped', description: 'After Hours nightclub kingpin' },
+  { id: 'ig_chef', name: 'Chef (Meth Cook)', hash: '0x1C13E784', category: 'Story Characters', type: 'ped', description: 'Trevor Philips Enterprises chemist' },
+  { id: 'ig_paige', name: 'Paige Harris', hash: '0xD2B1DB15', category: 'Story Characters', type: 'ped', description: 'Expert heist hacker operative' },
+  { id: 'ig_agatha', name: 'Agatha Baker', hash: '0xAA6F32A3', category: 'Story Characters', type: 'ped', description: 'Diamond Casino & Resort general manager' },
+
+  // ANIMALS
+  { id: 'a_c_husky', name: 'Siberian Husky Dog', hash: '0x4E89C1D9', category: 'Animals', type: 'ped', description: 'Siberian husky domestic dog' },
+  { id: 'a_c_rottweiler', name: 'Rottweiler Dog (Chop)', hash: '0x9563221D', category: 'Animals', type: 'ped', description: 'Rottweiler canine companion' },
+  { id: 'a_c_shepherd', name: 'German Shepherd Dog', hash: '0x25557DA1', category: 'Animals', type: 'ped', description: 'K9 police patrol dog' },
+  { id: 'a_c_retriever', name: 'Golden Retriever', hash: '0x349F33E1', category: 'Animals', type: 'ped', description: 'Domestic retriever dog' },
+  { id: 'a_c_cat_01', name: 'Domestic Cat', hash: '0x573201B8', category: 'Animals', type: 'ped', description: 'Domestic feline cat' },
+  { id: 'a_c_chimp', name: 'Chimpanzee Ape', hash: '0xA8683715', category: 'Animals', type: 'ped', description: 'Primate chimp animal' },
+  { id: 'a_c_cow', name: 'Farm Dairy Cow', hash: '0xFC55C24', category: 'Animals', type: 'ped', description: 'Rural farm livestock cow' },
+  { id: 'a_c_deer', name: 'Wild Forest Deer', hash: '0xD86B5A95', category: 'Animals', type: 'ped', description: 'Wild wilderness deer' },
+  { id: 'a_c_pig', name: 'Farm Pig', hash: '0xB11BAB56', category: 'Animals', type: 'ped', description: 'Domestic farm swine' },
+  { id: 'a_c_coyote', name: 'Desert Coyote', hash: '0x644AC79E', category: 'Animals', type: 'ped', description: 'Senora Desert wild coyote' },
+  { id: 'a_c_mtlion', name: 'Mountain Lion / Cougar', hash: '0x12572952', category: 'Animals', type: 'ped', description: 'Wild mountain cougar feline predator' },
+
+  // PROPS & OBJECTS
+  { id: 'prop_atm_01', name: 'Fleeca Street ATM', hash: '0x27C50C20', category: 'Props & Objects', type: 'prop', description: 'Standard city Fleeca cash machine' },
+  { id: 'prop_atm_02', name: 'Bank of Liberty Wall ATM', hash: '0x99276926', category: 'Props & Objects', type: 'prop', description: 'Wall mounted red bank ATM' },
+  { id: 'prop_ld_vault_door', name: 'Bank Vault Door Heavy', hash: '0x40316279', category: 'Props & Objects', type: 'prop', description: 'Massive bank vault locking door' },
+  { id: 'prop_barrier_work05', name: 'Road Work Barrier', hash: '0x9EE2FEF1', category: 'Props & Objects', type: 'prop', description: 'Road construction warning barrier' },
+  { id: 'prop_mp_cone_02', name: 'Traffic Safety Cone', hash: '0x22FEAEB7', category: 'Props & Objects', type: 'prop', description: 'Orange reflective street cone' },
+  { id: 'prop_tool_bench02', name: 'Crafting / Tool Workbench', hash: '0x2052C8F3', category: 'Props & Objects', type: 'prop', description: 'Industrial wooden workbench with vise' },
+  { id: 'prop_laptop_lester', name: 'Hacking Laptop Open', hash: '0x6FBD4EC3', category: 'Props & Objects', type: 'prop', description: 'Open terminal laptop computer' },
+  { id: 'prop_security_case_01', name: 'Cash Briefcase Armored', hash: '0x6295C197', category: 'Props & Objects', type: 'prop', description: 'Heavy security money carrier' },
+  { id: 'prop_med_bag_01', name: 'First Aid Medical Kit', hash: '0x0DE393A7', category: 'Props & Objects', type: 'prop', description: 'Emergency trauma medical bag' },
+  { id: 'prop_gas_pump_1d', name: 'Gas Station Fuel Pump', hash: '0xC968C090', category: 'Props & Objects', type: 'prop', description: 'Electronic fuel dispenser pump' },
+  { id: 'prop_vend_soda_01', name: 'eCola Vending Machine', hash: '0x4386760B', category: 'Props & Objects', type: 'prop', description: 'eCola soft drink dispenser' },
+  { id: 'prop_vend_snak_01', name: 'Snack Vending Machine', hash: '0x3235658F', category: 'Props & Objects', type: 'prop', description: 'Meteorite candy & chips vending machine' },
+  { id: 'prop_dumpster_01a', name: 'Street Dumpster Bin', hash: '0x2BE6766B', category: 'Props & Objects', type: 'prop', description: 'Large blue alleyway dumpster' },
+  { id: 'prop_cctv_cam_01a', name: 'Surveillance Security Camera', hash: '0x5C4A456C', category: 'Props & Objects', type: 'prop', description: 'Wall mounted 360 security dome camera' }
+];

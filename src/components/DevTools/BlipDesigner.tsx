@@ -1,88 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { MapPin, Search, Copy, Check, Radio, Eye, Sliders, Layers, Sparkles } from 'lucide-react';
-
-interface BlipSprite {
-  id: number;
-  name: string;
-  category: 'General' | 'Shops' | 'Services' | 'Crime' | 'Vehicles' | 'Properties' | 'Activities';
-  description: string;
-}
-
-interface BlipColour {
-  id: number;
-  name: string;
-  hex: string;
-}
-
-const BLIP_SPRITES: BlipSprite[] = [
-  { id: 1, name: 'Standard / Destination', category: 'General', description: 'Standard waypoint marker' },
-  { id: 2, name: 'Big Blip', category: 'General', description: 'Large destination marker' },
-  { id: 3, name: 'Police / Heli', category: 'Services', description: 'Police helicopter' },
-  { id: 6, name: 'Chop / Dog', category: 'General', description: 'Dog / pet icon' },
-  { id: 8, name: 'Robbery / Skull', category: 'Crime', description: 'Active robbery / crime scene' },
-  { id: 40, name: 'Safehouse', category: 'Properties', description: 'Safehouse / Apartment' },
-  { id: 50, name: 'Garage', category: 'Vehicles', description: 'Vehicle storage garage' },
-  { id: 52, name: 'Heliport', category: 'Vehicles', description: 'Helipad landing zone' },
-  { id: 60, name: 'Police Station', category: 'Services', description: 'LSPD Police precinct' },
-  { id: 61, name: 'Hospital / EMS', category: 'Services', description: 'Hospital / Medical center' },
-  { id: 68, name: 'Tow Truck', category: 'Services', description: 'Impound & towing service' },
-  { id: 72, name: 'Airport', category: 'Vehicles', description: 'International Airport terminal' },
-  { id: 73, name: 'Convenience Store', category: 'Shops', description: '24/7 Store / Gas station' },
-  { id: 84, name: 'Ammu-Nation', category: 'Shops', description: 'Gun shop & shooting range' },
-  { id: 89, name: 'Bar / Club', category: 'Activities', description: 'Nightclub / Bar' },
-  { id: 93, name: 'Cinema', category: 'Activities', description: 'Movie theater' },
-  { id: 108, name: 'Bank / Pacific', category: 'Shops', description: 'Bank branch / ATM' },
-  { id: 110, name: 'Gun Shop Small', category: 'Shops', description: 'Weapon dealer' },
-  { id: 134, name: 'Helicopter', category: 'Vehicles', description: 'Helicopter vehicle' },
-  { id: 140, name: 'Clothing Store', category: 'Shops', description: 'Suburban / Binco / Ponsonbys' },
-  { id: 143, name: 'Barber Shop', category: 'Shops', description: 'Hairdresser & tattoos' },
-  { id: 148, name: 'Car Wash', category: 'Services', description: 'Vehicle detailing & wash' },
-  { id: 156, name: 'Los Santos Customs', category: 'Services', description: 'Mechanic / Tuning shop' },
-  { id: 162, name: 'Street Race', category: 'Activities', description: 'Racing checkpoint' },
-  { id: 176, name: 'Vanilla Unicorn', category: 'Activities', description: 'Strip club' },
-  { id: 225, name: 'Personal Vehicle', category: 'Vehicles', description: 'Player personal car' },
-  { id: 226, name: 'Boat / Marina', category: 'Vehicles', description: 'Docks / Sea vehicle' },
-  { id: 279, name: 'Armored Truck', category: 'Crime', description: 'Securicar cash transport' },
-  { id: 318, name: 'Garages Public', category: 'Vehicles', description: 'Multi-story public parking' },
-  { id: 357, name: 'Garage Parking (P)', category: 'Vehicles', description: 'Valet / Parking lot blip' },
-  { id: 402, name: 'Mechanic Repair', category: 'Services', description: 'Bennys / Auto repair' },
-  { id: 431, name: 'Drug Drop', category: 'Crime', description: 'Contraband / Weed delivery' },
-  { id: 459, name: 'Weed Farm', category: 'Crime', description: 'Weed cultivation lab' },
-  { id: 478, name: 'Super Yacht', category: 'Properties', description: 'Galaxy super yacht' },
-  { id: 480, name: 'Office / CEO', category: 'Properties', description: 'Executive office building' },
-  { id: 500, name: 'Import / Export', category: 'Vehicles', description: 'Vehicle warehouse' },
-  { id: 521, name: 'Bunker', category: 'Properties', description: 'Underground military bunker' },
-  { id: 567, name: 'Hangar', category: 'Properties', description: 'Aircraft storage hangar' },
-  { id: 590, name: 'Nightclub Hub', category: 'Properties', description: 'After Hours nightclub' },
-  { id: 643, name: 'Diamond Casino', category: 'Activities', description: 'Casino & Resort' },
-  { id: 679, name: 'Arcade', category: 'Activities', description: 'Retro arcade property' },
-  { id: 761, name: 'Kosatka Submarine', category: 'Vehicles', description: 'Military submarine' },
-  { id: 825, name: 'Auto Shop LS', category: 'Shops', description: 'Los Santos Tuners auto shop' },
-  { id: 835, name: 'Agency Office', category: 'Properties', description: 'The Contract celebrity agency' },
-  { id: 840, name: 'Acid Lab', category: 'Crime', description: 'Mobile drug laboratory' }
-];
-
-const BLIP_COLOURS: BlipColour[] = [
-  { id: 0, name: 'White / Default', hex: '#FFFFFF' },
-  { id: 1, name: 'Red', hex: '#E03232' },
-  { id: 2, name: 'Green', hex: '#70C24B' },
-  { id: 3, name: 'Blue', hex: '#3787DF' },
-  { id: 4, name: 'White Bright', hex: '#F0F0F0' },
-  { id: 5, name: 'Yellow', hex: '#ECC832' },
-  { id: 6, name: 'Orange', hex: '#D87A24' },
-  { id: 8, name: 'Pink', hex: '#DC6FA3' },
-  { id: 9, name: 'Light Red', hex: '#E46B6B' },
-  { id: 15, name: 'Cyan / Teal', hex: '#3BC1B9' },
-  { id: 25, name: 'Dark Green', hex: '#267332' },
-  { id: 27, name: 'Purple', hex: '#8732A8' },
-  { id: 38, name: 'Navy Blue', hex: '#1E3C78' },
-  { id: 46, name: 'Gold', hex: '#D4AF37' },
-  { id: 49, name: 'Vibrant Purple', hex: '#9C27B0' },
-  { id: 66, name: 'Lime Green', hex: '#8BC34A' },
-  { id: 75, name: 'Dark Red / Crimson', hex: '#8B0000' },
-  { id: 81, name: 'Amber Orange', hex: '#FF9800' },
-  { id: 83, name: 'Dark Grey', hex: '#4A4A4A' }
-];
+import { GTA_BLIP_SPRITES, GTA_BLIP_COLOURS } from '../../data/gtaBlips';
 
 export const BlipDesigner: React.FC = () => {
   const [spriteId, setSpriteId] = useState(357);
@@ -95,23 +13,23 @@ export const BlipDesigner: React.FC = () => {
   const [alpha, setAlpha] = useState(255);
   const [coords, setCoords] = useState({ x: '215.34', y: '-805.12', z: '30.82' });
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState<'All' | 'Shops' | 'Services' | 'Crime' | 'Vehicles' | 'Properties' | 'Activities'>('All');
+  const [category, setCategory] = useState<'All' | 'Shops' | 'Services' | 'Crime' | 'Vehicles' | 'Properties' | 'Activities' | 'DLC & Special'>('All');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const selectedSprite = useMemo(() => {
-    return BLIP_SPRITES.find(s => s.id === spriteId) || BLIP_SPRITES[0];
+    return GTA_BLIP_SPRITES.find(s => s.id === spriteId) || GTA_BLIP_SPRITES[0];
   }, [spriteId]);
 
   const selectedColour = useMemo(() => {
-    return BLIP_COLOURS.find(c => c.id === colourId) || BLIP_COLOURS[0];
+    return GTA_BLIP_COLOURS.find(c => c.id === colourId) || GTA_BLIP_COLOURS[0];
   }, [colourId]);
 
   const filteredSprites = useMemo(() => {
-    return BLIP_SPRITES.filter(s => {
+    return GTA_BLIP_SPRITES.filter(s => {
       if (category !== 'All' && s.category !== category) return false;
       if (!search.trim()) return true;
       const q = search.toLowerCase();
-      return s.name.toLowerCase().includes(q) || s.id.toString().includes(q) || s.description.toLowerCase().includes(q);
+      return s.name.toLowerCase().includes(q) || s.id.toString().includes(q);
     });
   }, [category, search]);
 
@@ -244,7 +162,7 @@ end)`;
                 Blip Colour: <span style={{ color: selectedColour.hex }}>{selectedColour.name} (#{colourId})</span>
               </label>
               <div className="grid grid-cols-6 sm:grid-cols-9 gap-1.5 p-2 rounded-xl bg-zinc-900/60 border border-white/5 max-h-32 overflow-y-auto">
-                {BLIP_COLOURS.map(c => (
+                {GTA_BLIP_COLOURS.map(c => (
                   <button
                     key={c.id}
                     onClick={() => setColourId(c.id)}
@@ -373,7 +291,7 @@ end)`;
                       </div>
                       <div className="truncate">
                         <span className="text-xs font-bold text-white block truncate">{sprite.name}</span>
-                        <span className="text-[10px] text-zinc-400 truncate block">{sprite.description}</span>
+                        <span className="text-[10px] text-zinc-400 truncate block">{sprite.category}</span>
                       </div>
                     </div>
 

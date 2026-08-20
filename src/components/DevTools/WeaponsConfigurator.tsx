@@ -1,278 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Crosshair, Search, Copy, Check, Shield, Sliders, Layers } from 'lucide-react';
-
-interface WeaponComponent {
-  name: string;
-  hash: string;
-  description: string;
-}
-
-interface WeaponData {
-  id: string;
-  name: string;
-  hashName: string;
-  hexHash: string;
-  decHash: number;
-  category: 'Handguns' | 'SMG' | 'Shotguns' | 'Rifles' | 'MG' | 'Snipers' | 'Heavy' | 'Melee' | 'Throwables';
-  ammoType: string;
-  clipSize: number;
-  damage: number;
-  components: WeaponComponent[];
-}
-
-const WEAPONS_DATABASE: WeaponData[] = [
-  {
-    id: 'weapon_pistol',
-    name: 'Pistol 9mm',
-    hashName: 'WEAPON_PISTOL',
-    hexHash: '0x1B06D571',
-    decHash: 453432689,
-    category: 'Handguns',
-    ammoType: 'AMMO_PISTOL',
-    clipSize: 12,
-    damage: 26,
-    components: [
-      { name: 'Default Clip', hash: 'COMPONENT_PISTOL_CLIP_01', description: 'Standard 12-round magazine' },
-      { name: 'Extended Clip', hash: 'COMPONENT_PISTOL_CLIP_02', description: 'Extended 16-round magazine' },
-      { name: 'Flashlight', hash: 'COMPONENT_AT_PI_FLSH', description: 'Tactical rail mounted flashlight' },
-      { name: 'Suppressor', hash: 'COMPONENT_AT_PI_SUPP_02', description: 'Sound suppressor for stealth' },
-      { name: 'Yusuf Amir Luxury Finish', hash: 'COMPONENT_PISTOL_VARMOD_LUXE', description: 'Engraved gold finish' }
-    ]
-  },
-  {
-    id: 'weapon_combatpistol',
-    name: 'Combat Pistol',
-    hashName: 'WEAPON_COMBATPISTOL',
-    hexHash: '0x5EF9FCDE',
-    decHash: 1593441988,
-    category: 'Handguns',
-    ammoType: 'AMMO_PISTOL',
-    clipSize: 16,
-    damage: 27,
-    components: [
-      { name: 'Default Clip', hash: 'COMPONENT_COMBATPISTOL_CLIP_01', description: 'Standard 16-round magazine' },
-      { name: 'Extended Clip', hash: 'COMPONENT_COMBATPISTOL_CLIP_02', description: 'Extended 20-round magazine' },
-      { name: 'Flashlight', hash: 'COMPONENT_AT_PI_FLSH', description: 'Tactical weapon flashlight' },
-      { name: 'Suppressor', hash: 'COMPONENT_AT_PI_SUPP', description: 'Tactical suppressor' },
-      { name: 'Luxury Finish', hash: 'COMPONENT_COMBATPISTOL_VARMOD_LOWRIDER', description: 'Lowrider custom engraving' }
-    ]
-  },
-  {
-    id: 'weapon_appistol',
-    name: 'AP Pistol (Automatic)',
-    hashName: 'WEAPON_APPISTOL',
-    hexHash: '0x22D8FE39',
-    decHash: 584646201,
-    category: 'Handguns',
-    ammoType: 'AMMO_PISTOL',
-    clipSize: 18,
-    damage: 29,
-    components: [
-      { name: 'Default Clip', hash: 'COMPONENT_APPISTOL_CLIP_01', description: '18-round automatic mag' },
-      { name: 'Extended Clip', hash: 'COMPONENT_APPISTOL_CLIP_02', description: '36-round extended mag' },
-      { name: 'Flashlight', hash: 'COMPONENT_AT_PI_FLSH', description: 'Weapon mounted light' },
-      { name: 'Suppressor', hash: 'COMPONENT_AT_PI_SUPP', description: 'AP suppressor' },
-      { name: 'Luxury Finish', hash: 'COMPONENT_APPISTOL_VARMOD_LUXE', description: 'Gilded luxury finish' }
-    ]
-  },
-  {
-    id: 'weapon_pistol50',
-    name: 'Pistol .50 (Desert Eagle)',
-    hashName: 'WEAPON_PISTOL50',
-    hexHash: '0x99AEEB3B',
-    decHash: -1716589765,
-    category: 'Handguns',
-    ammoType: 'AMMO_PISTOL',
-    clipSize: 9,
-    damage: 51,
-    components: [
-      { name: 'Default Clip', hash: 'COMPONENT_PISTOL50_CLIP_01', description: '9-round high caliber mag' },
-      { name: 'Extended Clip', hash: 'COMPONENT_PISTOL50_CLIP_02', description: '12-round extended mag' },
-      { name: 'Flashlight', hash: 'COMPONENT_AT_PI_FLSH', description: 'Tactical light' },
-      { name: 'Suppressor', hash: 'COMPONENT_AT_AR_SUPP_02', description: 'Heavy .50 suppressor' }
-    ]
-  },
-  {
-    id: 'weapon_stungun',
-    name: 'Taser / Stun Gun',
-    hashName: 'WEAPON_STUNGUN',
-    hexHash: '0x365604D0',
-    decHash: 911657153,
-    category: 'Handguns',
-    ammoType: 'AMMO_STUNGUN',
-    clipSize: 1,
-    damage: 1,
-    components: []
-  },
-  {
-    id: 'weapon_smg',
-    name: 'SMG (MP5)',
-    hashName: 'WEAPON_SMG',
-    hexHash: '0x2BE6766B',
-    decHash: 736523883,
-    category: 'SMG',
-    ammoType: 'AMMO_SMG',
-    clipSize: 30,
-    damage: 22,
-    components: [
-      { name: 'Default Clip', hash: 'COMPONENT_SMG_CLIP_01', description: '30-round box magazine' },
-      { name: 'Extended Clip', hash: 'COMPONENT_SMG_CLIP_02', description: '45-round extended magazine' },
-      { name: 'Drum Magazine', hash: 'COMPONENT_SMG_CLIP_03', description: '100-round drum magazine' },
-      { name: 'Flashlight', hash: 'COMPONENT_AT_AR_FLSH', description: 'Tactical weapon light' },
-      { name: 'Scope', hash: 'COMPONENT_AT_SCOPE_MACRO_02', description: 'Red dot holographic sight' },
-      { name: 'Suppressor', hash: 'COMPONENT_AT_PI_SUPP', description: 'Tactical SMG suppressor' },
-      { name: 'Yusuf Amir Finish', hash: 'COMPONENT_SMG_VARMOD_LUXE', description: 'Luxury gold finish' }
-    ]
-  },
-  {
-    id: 'weapon_microsmg',
-    name: 'Micro SMG (Uzi)',
-    hashName: 'WEAPON_MICROSMG',
-    hexHash: '0x13532244',
-    decHash: 324215364,
-    category: 'SMG',
-    ammoType: 'AMMO_SMG',
-    clipSize: 16,
-    damage: 21,
-    components: [
-      { name: 'Default Clip', hash: 'COMPONENT_MICROSMG_CLIP_01', description: '16-round magazine' },
-      { name: 'Extended Clip', hash: 'COMPONENT_MICROSMG_CLIP_02', description: '30-round magazine' },
-      { name: 'Flashlight', hash: 'COMPONENT_AT_PI_FLSH', description: 'Weapon light' },
-      { name: 'Scope', hash: 'COMPONENT_AT_SCOPE_MACRO', description: 'Holographic sight' },
-      { name: 'Suppressor', hash: 'COMPONENT_AT_AR_SUPP_02', description: 'Micro SMG suppressor' }
-    ]
-  },
-  {
-    id: 'weapon_pumpshotgun',
-    name: 'Pump Shotgun',
-    hashName: 'WEAPON_PUMPSHOTGUN',
-    hexHash: '0x1D073A89',
-    decHash: 487013001,
-    category: 'Shotguns',
-    ammoType: 'AMMO_SHOTGUN',
-    clipSize: 8,
-    damage: 67,
-    components: [
-      { name: 'Flashlight', hash: 'COMPONENT_AT_AR_FLSH', description: 'Mounted shotgun flashlight' },
-      { name: 'Suppressor', hash: 'COMPONENT_AT_SR_SUPP', description: '12-gauge shotgun suppressor' },
-      { name: 'Luxury Finish', hash: 'COMPONENT_PUMPSHOTGUN_VARMOD_LOWRIDER', description: 'Lowrider custom engraving' }
-    ]
-  },
-  {
-    id: 'weapon_carbinerifle',
-    name: 'Carbine Rifle (M4A1)',
-    hashName: 'WEAPON_CARBINERIFLE',
-    hexHash: '0x83BF0278',
-    decHash: -2084633992,
-    category: 'Rifles',
-    ammoType: 'AMMO_RIFLE',
-    clipSize: 30,
-    damage: 32,
-    components: [
-      { name: 'Default Mag', hash: 'COMPONENT_CARBINERIFLE_CLIP_01', description: 'Standard 30-round mag' },
-      { name: 'Extended Mag', hash: 'COMPONENT_CARBINERIFLE_CLIP_02', description: 'Extended 60-round mag' },
-      { name: 'Drum Magazine', hash: 'COMPONENT_CARBINERIFLE_CLIP_03', description: '100-round drum mag' },
-      { name: 'Flashlight', hash: 'COMPONENT_AT_AR_FLSH', description: 'Tactical rail light' },
-      { name: 'Medium Scope', hash: 'COMPONENT_AT_SCOPE_MEDIUM', description: 'ACOG 4x medium optic' },
-      { name: 'Suppressor', hash: 'COMPONENT_AT_AR_SUPP', description: '5.56 tactical suppressor' },
-      { name: 'Grip', hash: 'COMPONENT_AT_AR_AFGRIP', description: 'Vertical foregrip' },
-      { name: 'Yusuf Amir Finish', hash: 'COMPONENT_CARBINERIFLE_VARMOD_LUXE', description: 'Gold plated luxury finish' }
-    ]
-  },
-  {
-    id: 'weapon_assaultrifle',
-    name: 'Assault Rifle (AK-47)',
-    hashName: 'WEAPON_ASSAULTRIFLE',
-    hexHash: '0xBFEFFF6D',
-    decHash: -1074790547,
-    category: 'Rifles',
-    ammoType: 'AMMO_RIFLE',
-    clipSize: 30,
-    damage: 30,
-    components: [
-      { name: 'Default Mag', hash: 'COMPONENT_ASSAULTRIFLE_CLIP_01', description: '30-round banana mag' },
-      { name: 'Extended Mag', hash: 'COMPONENT_ASSAULTRIFLE_CLIP_02', description: '60-round extended mag' },
-      { name: 'Drum Mag', hash: 'COMPONENT_ASSAULTRIFLE_CLIP_03', description: '100-round drum mag' },
-      { name: 'Flashlight', hash: 'COMPONENT_AT_AR_FLSH', description: 'Tactical weapon light' },
-      { name: 'Scope', hash: 'COMPONENT_AT_SCOPE_MACRO', description: 'Cobra red dot optic' },
-      { name: 'Suppressor', hash: 'COMPONENT_AT_AR_SUPP_02', description: '7.62 heavy suppressor' },
-      { name: 'Grip', hash: 'COMPONENT_AT_AR_AFGRIP', description: 'Tactical angled grip' }
-    ]
-  },
-  {
-    id: 'weapon_specialcarbine',
-    name: 'Special Carbine (G36C)',
-    hashName: 'WEAPON_SPECIALCARBINE',
-    hexHash: '0xC0A3098D',
-    decHash: -1063025011,
-    category: 'Rifles',
-    ammoType: 'AMMO_RIFLE',
-    clipSize: 30,
-    damage: 34,
-    components: [
-      { name: 'Default Mag', hash: 'COMPONENT_SPECIALCARBINE_CLIP_01', description: '30-round mag' },
-      { name: 'Extended Mag', hash: 'COMPONENT_SPECIALCARBINE_CLIP_02', description: '60-round mag' },
-      { name: 'Drum Mag', hash: 'COMPONENT_SPECIALCARBINE_CLIP_03', description: '100-round drum mag' },
-      { name: 'Flashlight', hash: 'COMPONENT_AT_AR_FLSH', description: 'Weapon light' },
-      { name: 'Medium Scope', hash: 'COMPONENT_AT_SCOPE_MEDIUM', description: 'Tactical optic' },
-      { name: 'Suppressor', hash: 'COMPONENT_AT_AR_SUPP_02', description: 'Suppressor' },
-      { name: 'Grip', hash: 'COMPONENT_AT_AR_AFGRIP', description: 'Foregrip' }
-    ]
-  },
-  {
-    id: 'weapon_sniperrifle',
-    name: 'Sniper Rifle',
-    hashName: 'WEAPON_SNIPERRIFLE',
-    hexHash: '0x05FC3C11',
-    decHash: 100416529,
-    category: 'Snipers',
-    ammoType: 'AMMO_SNIPER',
-    clipSize: 10,
-    damage: 101,
-    components: [
-      { name: 'Advanced Scope', hash: 'COMPONENT_AT_SCOPE_MAX', description: 'High magnification variable zoom scope' },
-      { name: 'Suppressor', hash: 'COMPONENT_AT_AR_SUPP_02', description: 'Heavy caliber sniper suppressor' }
-    ]
-  },
-  {
-    id: 'weapon_heavysniper',
-    name: 'Heavy Sniper (.50 BMG)',
-    hashName: 'WEAPON_HEAVYSNIPER',
-    hexHash: '0x0C472FE2',
-    decHash: 205991906,
-    category: 'Snipers',
-    ammoType: 'AMMO_SNIPER',
-    clipSize: 6,
-    damage: 216,
-    components: [
-      { name: 'Advanced Scope', hash: 'COMPONENT_AT_SCOPE_MAX', description: 'Max magnification optic' }
-    ]
-  },
-  {
-    id: 'weapon_knife',
-    name: 'Combat Knife',
-    hashName: 'WEAPON_KNIFE',
-    hexHash: '0x99B507EA',
-    decHash: -1716189206,
-    category: 'Melee',
-    ammoType: 'AMMO_MELEE',
-    clipSize: 0,
-    damage: 30,
-    components: []
-  },
-  {
-    id: 'weapon_bat',
-    name: 'Baseball Bat',
-    hashName: 'WEAPON_BAT',
-    hexHash: '0x958798FB',
-    decHash: -1786099057,
-    category: 'Melee',
-    ammoType: 'AMMO_MELEE',
-    clipSize: 0,
-    damage: 30,
-    components: []
-  }
-];
+import { GTA_WEAPONS_DATABASE } from '../../data/gtaWeapons';
 
 const WEAPON_TINTS = [
   { id: 0, name: 'Normal / Stock' },
@@ -295,11 +23,11 @@ export const WeaponsConfigurator: React.FC = () => {
   const [tintIndex, setTintIndex] = useState(0);
   const [ammoAmount, setAmmoAmount] = useState(250);
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState<'All' | 'Handguns' | 'SMG' | 'Shotguns' | 'Rifles' | 'Snipers' | 'Melee'>('All');
+  const [category, setCategory] = useState<'All' | 'Handguns' | 'SMG' | 'Shotguns' | 'Rifles' | 'MG' | 'Snipers' | 'Heavy' | 'Melee' | 'Throwables' | 'Mk II Weapons'>('All');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const selectedWeapon = useMemo(() => {
-    return WEAPONS_DATABASE.find(w => w.id === selectedWeaponId) || WEAPONS_DATABASE[0];
+    return GTA_WEAPONS_DATABASE.find(w => w.id === selectedWeaponId) || GTA_WEAPONS_DATABASE[0];
   }, [selectedWeaponId]);
 
   const toggleComponent = (compHash: string) => {
@@ -309,7 +37,7 @@ export const WeaponsConfigurator: React.FC = () => {
   };
 
   const filteredWeapons = useMemo(() => {
-    return WEAPONS_DATABASE.filter(w => {
+    return GTA_WEAPONS_DATABASE.filter(w => {
       if (category !== 'All' && w.category !== category) return false;
       if (!search.trim()) return true;
       const q = search.toLowerCase();
@@ -391,7 +119,7 @@ ${compLines || '    -- No components selected'}`;
             </div>
 
             <div className="flex items-center gap-1 overflow-x-auto pb-1">
-              {(['All', 'Handguns', 'SMG', 'Shotguns', 'Rifles', 'Snipers', 'Melee'] as const).map(cat => (
+              {(['All', 'Handguns', 'SMG', 'Shotguns', 'Rifles', 'MG', 'Snipers', 'Heavy', 'Melee', 'Throwables', 'Mk II Weapons'] as const).map(cat => (
                 <button
                   key={cat}
                   onClick={() => setCategory(cat)}
