@@ -255,9 +255,9 @@ export const FlagsGenerator: React.FC = () => {
   }, [selectedCategoryId]);
 
   const handleDecimalChange = (valStr: string) => {
-    const parsed = parseInt(valStr, 10);
+    const parsed = Number(valStr);
     if (!isNaN(parsed) && parsed >= 0) {
-      setFlagValue(parsed);
+      setFlagValue(parsed >>> 0);
     } else if (valStr === '') {
       setFlagValue(0);
     }
@@ -267,19 +267,26 @@ export const FlagsGenerator: React.FC = () => {
     const clean = hexStr.replace(/^0x/i, '');
     const parsed = parseInt(clean, 16);
     if (!isNaN(parsed) && parsed >= 0) {
-      setFlagValue(parsed);
+      setFlagValue(parsed >>> 0);
     } else if (clean === '') {
       setFlagValue(0);
     }
   };
 
   const toggleFlag = (dec: number) => {
-    setFlagValue(prev => (prev & dec ? prev & ~dec : prev | dec));
+    setFlagValue(prev => {
+      const uPrev = prev >>> 0;
+      const uDec = dec >>> 0;
+      const isActive = (uPrev & uDec) !== 0;
+      return isActive ? (uPrev & ~uDec) >>> 0 : (uPrev | uDec) >>> 0;
+    });
   };
 
   const isFlagActive = (dec: number) => {
-    return (flagValue & dec) !== 0;
+    return ((flagValue >>> 0) & (dec >>> 0)) !== 0;
   };
+
+  const unsignedFlagValue = flagValue >>> 0;
 
   const activeCount = useMemo(() => {
     return currentCategory.flags.filter(f => isFlagActive(f.dec)).length;
@@ -304,8 +311,8 @@ export const FlagsGenerator: React.FC = () => {
     setTimeout(() => setCopiedKey(null), 1800);
   };
 
-  const hexString = '0x' + (flagValue >>> 0).toString(16).toUpperCase().padStart(8, '0');
-  const binaryString = (flagValue >>> 0).toString(2).padStart(32, '0').match(/.{1,4}/g)?.join(' ') || '';
+  const hexString = '0x' + unsignedFlagValue.toString(16).toUpperCase().padStart(8, '0');
+  const binaryString = unsignedFlagValue.toString(2).padStart(32, '0').match(/.{1,4}/g)?.join(' ') || '';
 
   return (
     <div className="flex flex-col gap-6">
@@ -374,12 +381,12 @@ export const FlagsGenerator: React.FC = () => {
             <div className="relative">
               <input
                 type="number"
-                value={flagValue}
+                value={unsignedFlagValue}
                 onChange={e => handleDecimalChange(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 font-mono text-sm font-bold text-white focus:outline-none focus:border-white/30"
               />
               <button
-                onClick={() => handleCopy('dec', flagValue.toString())}
+                onClick={() => handleCopy('dec', unsignedFlagValue.toString())}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors"
                 title="Copy Decimal"
               >
@@ -426,10 +433,10 @@ export const FlagsGenerator: React.FC = () => {
             <div className="space-y-2">
               <div className="p-2.5 rounded-xl bg-zinc-900/90 border border-white/5 flex items-center justify-between gap-2">
                 <span className="text-[10px] font-mono text-zinc-400 truncate">
-                  &lt;flags value="{flagValue}"/&gt;
+                  &lt;flags value="{unsignedFlagValue}"/&gt;
                 </span>
                 <button
-                  onClick={() => handleCopy('xml', `<flags value="${flagValue}"/>`)}
+                  onClick={() => handleCopy('xml', `<flags value="${unsignedFlagValue}"/>`)}
                   className="p-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-colors"
                   title="Copy XML tag"
                 >
@@ -439,10 +446,10 @@ export const FlagsGenerator: React.FC = () => {
 
               <div className="p-2.5 rounded-xl bg-zinc-900/90 border border-white/5 flex items-center justify-between gap-2">
                 <span className="text-[10px] font-mono text-zinc-400 truncate">
-                  flags = {flagValue}
+                  flags = {unsignedFlagValue}
                 </span>
                 <button
-                  onClick={() => handleCopy('lua', `flags = ${flagValue}`)}
+                  onClick={() => handleCopy('lua', `flags = ${unsignedFlagValue}`)}
                   className="p-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-colors"
                   title="Copy Lua code"
                 >
