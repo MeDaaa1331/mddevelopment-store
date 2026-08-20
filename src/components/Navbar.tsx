@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Search, MessageSquare, Menu, X, Flame, Code2, Crown } from 'lucide-react';
+import { ShoppingCart, Search, MessageSquare, Menu, X, Flame, Code2, Crown, Wrench } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useStore } from '../context/StoreContext';
 import { TEBEX_CONFIG } from '../config/tebex';
@@ -28,7 +28,7 @@ export const Navbar: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (filters.category) {
+    if (filters.category && activeNav !== 'devtools' && activeNav !== 'faq') {
       setActiveNav(filters.category);
     }
   }, [filters.category]);
@@ -54,9 +54,13 @@ export const Navbar: React.FC = () => {
 
   const handleCategory = (slug: string) => {
     setActiveNav(slug);
-    setCategory(slug);
     setMobileOpen(false);
-    smoothScrollTo('#scripts-store', { offset: -30, duration: 1.4 });
+    if (slug === 'devtools') {
+      smoothScrollTo('#devtools-section', { offset: -40, duration: 1.4 });
+    } else {
+      setCategory(slug);
+      smoothScrollTo('#scripts-store', { offset: -30, duration: 1.4 });
+    }
   };
 
   const handleFAQClick = () => {
@@ -84,6 +88,7 @@ export const Navbar: React.FC = () => {
     { slug: 'paid', label: 'Paid', icon: <Crown className="w-3.5 h-3.5" /> },
     { slug: 'deals', label: 'Deals', icon: <Flame className="w-3.5 h-3.5" /> },
     { slug: 'opensource', label: 'Open Source', icon: <Code2 className="w-3.5 h-3.5" /> },
+    { slug: 'devtools', label: 'DEV Tools', icon: <Wrench className="w-3.5 h-3.5" /> },
   ];
 
   return (

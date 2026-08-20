@@ -6,6 +6,7 @@ import { CategoryFilter } from './components/CategoryFilter';
 import { ScriptGrid } from './components/ScriptGrid';
 import { FeaturesSection } from './components/FeaturesSection';
 import { RecentPayments } from './components/RecentPayments';
+import { DevToolsSection } from './components/DevToolsSection';
 import { FAQSection } from './components/FAQSection';
 import { Footer } from './components/Footer';
 import { ScriptModal } from './components/ScriptModal';
@@ -106,6 +107,7 @@ const AppContent: React.FC = () => {
       </main>
       <RecentPayments />
       <FeaturesSection />
+      <DevToolsSection />
       <FAQSection />
       <Footer />
       <AppModals />

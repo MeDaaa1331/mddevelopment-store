@@ -101,6 +101,12 @@ export const Footer: React.FC = () => {
                   Open Source Code
                 </button>
               </li>
+              <li>
+                <button onClick={() => scrollTo('devtools-section')} className="hover:text-white transition-colors duration-200 text-emerald-400 font-semibold flex items-center gap-1">
+                  <span>DEV Tools Hub</span>
+                  <span className="px-1 py-0.2 text-[9px] bg-emerald-500/20 text-emerald-300 font-bold rounded border border-emerald-500/30">NEW</span>
+                </button>
+              </li>
             </ul>
           </div>
 
