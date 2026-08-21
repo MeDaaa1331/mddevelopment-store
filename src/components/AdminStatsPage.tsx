@@ -28,7 +28,7 @@ import {
 import { getStoredAnalytics, resetAllAnalytics, AnalyticsSummary, DevToolEvent } from '../utils/analytics';
 import { useStore } from '../context/StoreContext';
 
-const ADMIN_PIN = '1331';
+const ADMIN_PIN = '8616';
 
 export const AdminStatsPage: React.FC = () => {
   const { navigate } = useStore();
@@ -67,7 +67,7 @@ export const AdminStatsPage: React.FC = () => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pinInput === ADMIN_PIN || pinInput.toLowerCase() === 'admin1331') {
+    if (pinInput === ADMIN_PIN) {
       setIsAuthenticated(true);
       setPinError(false);
       if (typeof window !== 'undefined') {
@@ -131,7 +131,7 @@ export const AdminStatsPage: React.FC = () => {
                   setPinInput(e.target.value);
                   if (pinError) setPinError(false);
                 }}
-                placeholder="Enter PIN (e.g. 1331)"
+                placeholder=""
                 autoFocus
                 className={`w-full px-4 py-3 rounded-xl bg-zinc-900 border text-center font-mono text-lg font-bold tracking-widest text-white placeholder-zinc-600 focus:outline-none transition-colors ${
                   pinError ? 'border-red-500/60 bg-red-950/20 text-red-300' : 'border-white/10 focus:border-white/30'
