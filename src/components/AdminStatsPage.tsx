@@ -32,12 +32,7 @@ const ADMIN_PIN = '8616';
 
 export const AdminStatsPage: React.FC = () => {
   const { navigate } = useStore();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('md_admin_auth') === 'true';
-    }
-    return false;
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
   const [data, setData] = useState<AnalyticsSummary | null>(null);
@@ -46,6 +41,12 @@ export const AdminStatsPage: React.FC = () => {
   const [timeRange, setTimeRange] = useState<'all' | 'today' | '7d' | '30d'>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('md_admin_auth');
+    }
+  }, []);
 
   const loadStats = async () => {
     setIsRefreshing(true);
@@ -70,9 +71,6 @@ export const AdminStatsPage: React.FC = () => {
     if (pinInput === ADMIN_PIN) {
       setIsAuthenticated(true);
       setPinError(false);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('md_admin_auth', 'true');
-      }
     } else {
       setPinError(true);
       setPinInput('');
@@ -81,9 +79,7 @@ export const AdminStatsPage: React.FC = () => {
 
   const handleLogout = () => {
     setIsAuthenticated(false);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('md_admin_auth');
-    }
+    setPinInput('');
   };
 
   const handleResetData = async () => {
