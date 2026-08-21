@@ -46,7 +46,7 @@ export const PedPropExplorer: React.FC = () => {
   const handleCopy = (key: string, code: string) => {
     navigator.clipboard.writeText(code);
     setCopiedKey(key);
-    trackEvent('ped_spawner', key === 'ox' ? 'copy_ox' : 'copy_lua', selectedModel.name);
+    trackEvent('peds', key === 'ox' ? 'copy_ox' : 'copy_lua', selectedModel.name);
     setTimeout(() => setCopiedKey(null), 1800);
   };
 

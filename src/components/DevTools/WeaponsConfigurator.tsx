@@ -53,7 +53,7 @@ export const WeaponsConfigurator: React.FC = () => {
   const handleCopy = (key: string, code: string) => {
     navigator.clipboard.writeText(code);
     setCopiedKey(key);
-    trackEvent('weapons_configurator', key === 'ox' ? 'copy_ox' : 'copy_lua', selectedWeapon.name);
+    trackEvent('weapons', key === 'ox' ? 'copy_ox' : 'copy_lua', selectedWeapon.name);
     setTimeout(() => setCopiedKey(null), 1800);
   };
 

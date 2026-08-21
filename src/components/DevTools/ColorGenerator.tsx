@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Palette, Copy, Check, MessageSquare, Bell, Sparkles } from 'lucide-react';
+import { trackEvent } from '../../utils/analytics';
 
 interface PresetColor {
   name: string;
@@ -55,6 +56,7 @@ export const ColorGenerator: React.FC = () => {
   const handleCopy = (key: string, val: string) => {
     navigator.clipboard.writeText(val);
     setCopiedKey(key);
+    trackEvent('colors', 'copy_hex', `${key.toUpperCase()}: ${val}`);
     setTimeout(() => setCopiedKey(null), 1800);
   };
 

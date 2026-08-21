@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { MapPin, Copy, Check, Sparkles, Code2, Box, Eye } from 'lucide-react';
+import { trackEvent } from '../../utils/analytics';
 
 export const CoordsGenerator: React.FC = () => {
   const [coordsInput, setCoordsInput] = useState('vec3(215.34, -810.12, 30.73)');
@@ -126,6 +127,7 @@ end)`;
   const handleCopy = () => {
     navigator.clipboard.writeText(outputCode);
     setCopied(true);
+    trackEvent('coords', 'copy_lua', `${targetType} (${coords.x}, ${coords.y}, ${coords.z})`);
     setTimeout(() => setCopied(false), 2000);
   };
 

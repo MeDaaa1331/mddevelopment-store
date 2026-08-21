@@ -7,6 +7,7 @@ import {
   translateParsedLocales,
   formatLocalesOutput
 } from '../../utils/translator';
+import { trackEvent } from '../../utils/analytics';
 
 const SAMPLE_LUA = `Locales['en'] = {
   ['welcome'] = 'Welcome to the server, %s!',
@@ -64,6 +65,7 @@ export const LocalesTranslator: React.FC = () => {
         totalKeys: count,
         durationMs: Date.now() - startTime
       });
+      trackEvent('translator', 'format', `${sourceLang.toUpperCase()} ➔ ${targetLang.toUpperCase()} (${count} keys translated)`);
     } catch {
       setOutputText('-- Translation failed. Please check your input format.');
     } finally {
@@ -75,6 +77,7 @@ export const LocalesTranslator: React.FC = () => {
     if (!outputText) return;
     navigator.clipboard.writeText(outputText);
     setCopied(true);
+    trackEvent('translator', format === 'json' ? 'copy_json' : 'copy_lua', `${targetLang.toUpperCase()} Locales (${stats?.totalKeys || 0} keys)`);
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -87,6 +90,7 @@ export const LocalesTranslator: React.FC = () => {
     link.href = url;
     link.download = filename;
     link.click();
+    trackEvent('translator', format === 'json' ? 'copy_json' : 'copy_lua', `Exported ${filename}`);
     URL.revokeObjectURL(url);
   };
 

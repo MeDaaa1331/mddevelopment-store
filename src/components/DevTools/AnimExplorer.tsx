@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Film, Search, Copy, Check, Code2, Sparkles, Activity } from 'lucide-react';
+import { trackEvent } from '../../utils/analytics';
 
 interface AnimEntry {
   id: string;
@@ -56,6 +57,8 @@ export const AnimExplorer: React.FC = () => {
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
+    const item = ANIM_DATA.find(a => a.id === id);
+    trackEvent('anim', 'copy_lua', item ? `${item.name} (${item.dict || item.scenario})` : `Animation #${id}`);
     setTimeout(() => setCopiedId(null), 1800);
   };
 

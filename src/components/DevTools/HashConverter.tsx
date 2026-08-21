@@ -327,7 +327,7 @@ export const HashConverter: React.FC = () => {
   const handleCopy = (key: string, val: string) => {
     navigator.clipboard.writeText(val);
     setCopiedKey(key);
-    trackEvent('hash_converter', 'copy_hash', `${key}: ${val}`);
+    trackEvent('hash', 'copy_hash', `${key}: ${val}`);
     setTimeout(() => setCopiedKey(null), 1800);
   };
 

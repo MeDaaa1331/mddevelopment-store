@@ -37,7 +37,7 @@ export const BlipDesigner: React.FC = () => {
   const handleCopy = (key: string, code: string) => {
     navigator.clipboard.writeText(code);
     setCopiedKey(key);
-    trackEvent('blip_designer', key === 'ox' ? 'copy_ox' : 'copy_lua', `Blip #${spriteId} (${label})`);
+    trackEvent('blip', key === 'ox' ? 'copy_ox' : 'copy_lua', `Blip #${spriteId} (${label})`);
     setTimeout(() => setCopiedKey(null), 1800);
   };
 

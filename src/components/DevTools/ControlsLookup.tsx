@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Gamepad2, Search, Copy, Check, Code2, Sparkles } from 'lucide-react';
+import { trackEvent } from '../../utils/analytics';
 
 interface GTAControl {
   id: number;
@@ -64,6 +65,7 @@ export const ControlsLookup: React.FC = () => {
   const handleCopy = (key: string, text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(key);
+    trackEvent('controls', 'copy_lua', `Control ${key}: ${text}`);
     setTimeout(() => setCopiedId(null), 1800);
   };
 

@@ -147,6 +147,7 @@ export const JsonFormatter: React.FC = () => {
     try {
       const parsed = JSON.parse(inputText);
       setInputText(JSON.stringify(parsed));
+      trackEvent('json', 'format', 'Minified JSON');
     } catch (e: any) {
       setErrorMsg('Cannot minify invalid JSON. Try "Auto Repair" first.');
     }
@@ -160,6 +161,7 @@ export const JsonFormatter: React.FC = () => {
       const sorted = sortObjectKeys(parsed);
       const indentStr = indentSize === 'tab' ? '\t' : indentSize;
       setInputText(JSON.stringify(sorted, null, indentStr));
+      trackEvent('json', 'format', 'Sorted JSON Keys');
     } catch (e: any) {
       setErrorMsg('Cannot sort invalid JSON. Try "Auto Repair" first.');
     }
@@ -172,6 +174,7 @@ export const JsonFormatter: React.FC = () => {
       const parsed = JSON.parse(repaired);
       const indentStr = indentSize === 'tab' ? '\t' : indentSize;
       setInputText(JSON.stringify(parsed, null, indentStr));
+      trackEvent('json', 'format', 'Auto-Repaired Broken JSON');
     } catch (e: any) {
       setErrorMsg('Auto-repair failed. Please check quotes or brackets.');
     }
@@ -182,7 +185,7 @@ export const JsonFormatter: React.FC = () => {
     if (!textToCopy) return;
     navigator.clipboard.writeText(textToCopy);
     setCopied(true);
-    trackEvent('json_formatter', outputMode === 'lua' ? 'copy_lua' : 'copy_json', `${outputMode.toUpperCase()} formatted text`);
+    trackEvent('json', outputMode === 'lua' ? 'copy_lua' : 'copy_json', `${outputMode.toUpperCase()} formatted text`);
     setTimeout(() => setCopied(false), 1800);
   };
 
@@ -196,6 +199,7 @@ export const JsonFormatter: React.FC = () => {
     link.href = url;
     link.download = filename;
     link.click();
+    trackEvent('json', outputMode === 'lua' ? 'copy_lua' : 'copy_json', `Downloaded ${filename}`);
     URL.revokeObjectURL(url);
   };
 

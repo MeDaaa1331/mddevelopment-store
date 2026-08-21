@@ -24,7 +24,7 @@ export const AudioExplorer: React.FC = () => {
   const handleCopy = (id: string, code: string) => {
     navigator.clipboard.writeText(code);
     setCopiedId(id);
-    trackEvent('audio_explorer', 'copy_lua', `Audio ${id}`);
+    trackEvent('audio', 'copy_lua', `Audio ${id}`);
     setTimeout(() => setCopiedId(null), 1800);
   };
 

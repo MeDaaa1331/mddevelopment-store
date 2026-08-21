@@ -34,29 +34,45 @@ export interface AnalyticsSummary {
 const LOCAL_STORAGE_KEY = 'md_dev_analytics_events_v2';
 
 export const TOOL_NAMES: Record<string, string> = {
-  flags_generator: 'Flags Generator',
-  blip_designer: 'Blip & Radar Designer',
-  weapons_configurator: 'Weapons & Ammo Config',
-  ped_spawner: 'Ped & Prop Spawner',
-  audio_explorer: 'Audio & Sound FX',
-  json_formatter: 'JSON Formatter',
-  hash_converter: 'Hash Converter',
-  vehicle_handling: 'Vehicle Handling Editor',
-  polyzone_generator: 'PolyZone Generator',
-  item_config: 'Item & Inventory Config',
-  door_lock: 'Doorlock Configurator',
-  car_cols: 'CarCols & Siren Designer',
-  weapon_meta: 'Weapon.meta Editor',
-  color_picker: 'RGBA / Hex & GTA Palette'
+  translator: 'Locales Translator',
+  json: 'JSON Formatter',
+  blip: 'Blip & Radar Designer',
+  weapons: 'Weapons & Ammo',
+  audio: 'Audio & Sound FX',
+  peds: 'Ped & Prop Spawner',
+  flags: 'Flags Generator',
+  hash: 'Hash Converter',
+  colors: 'Color & HEX',
+  coords: 'Coords & Target',
+  webhook: 'Discord Webhooks',
+  controls: 'GTA Controls',
+  manifest: 'fxmanifest.lua',
+  anim: 'Anim Explorer'
+};
+
+export const normalizeToolId = (id: string): string => {
+  const map: Record<string, string> = {
+    flags_generator: 'flags',
+    blip_designer: 'blip',
+    weapons_configurator: 'weapons',
+    ped_spawner: 'peds',
+    audio_explorer: 'audio',
+    json_formatter: 'json',
+    hash_converter: 'hash',
+    color_picker: 'colors',
+    locales_translator: 'translator'
+  };
+  return map[id] || id;
 };
 
 export const trackEvent = async (
-  toolId: string,
+  rawToolId: string,
   action: DevToolEvent['action'],
   label?: string,
   meta?: Record<string, any>
 ) => {
   try {
+    const toolId = normalizeToolId(rawToolId);
     const event: DevToolEvent = {
       id: 'ev-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 6),
       timestamp: Date.now(),
@@ -113,22 +129,30 @@ export const buildAnalyticsSummary = (allEvents: DevToolEvent[], serverTotalEven
     if (isView) totalViews++;
     if (isCopy) totalCopies++;
 
-    if (!toolStatsMap[e.toolId]) {
-      toolStatsMap[e.toolId] = { views: 0, copies: 0 };
+    const tid = normalizeToolId(e.toolId);
+    if (!toolStatsMap[tid]) {
+      toolStatsMap[tid] = { views: 0, copies: 0 };
     }
-    if (isView) toolStatsMap[e.toolId].views++;
-    if (isCopy) toolStatsMap[e.toolId].copies++;
+    if (isView) toolStatsMap[tid].views++;
+    if (isCopy) toolStatsMap[tid].copies++;
 
     if (e.label) {
       const cleanLabel = e.label.trim();
       let type = 'Item';
-      if (e.toolId === 'weapons_configurator') type = 'Weapon';
-      else if (e.toolId === 'ped_spawner') type = 'Ped / Prop';
-      else if (e.toolId === 'blip_designer') type = 'Blip';
-      else if (e.toolId === 'flags_generator') type = 'Flag';
-      else if (e.toolId === 'audio_explorer') type = 'Sound';
-      else if (e.toolId === 'json_formatter') type = 'JSON';
-      else if (e.toolId === 'hash_converter') type = 'Hash';
+      if (tid === 'weapons') type = 'Weapon';
+      else if (tid === 'peds') type = 'Ped / Prop';
+      else if (tid === 'blip') type = 'Blip';
+      else if (tid === 'flags') type = 'Flag';
+      else if (tid === 'audio') type = 'Sound';
+      else if (tid === 'json') type = 'JSON';
+      else if (tid === 'hash') type = 'Hash';
+      else if (tid === 'translator') type = 'Locale';
+      else if (tid === 'colors') type = 'Color';
+      else if (tid === 'coords') type = 'Coord / Zone';
+      else if (tid === 'webhook') type = 'Webhook';
+      else if (tid === 'controls') type = 'Control';
+      else if (tid === 'manifest') type = 'Manifest';
+      else if (tid === 'anim') type = 'Animation';
 
       if (e.action === 'search') {
         searchCounts[cleanLabel] = (searchCounts[cleanLabel] || 0) + 1;

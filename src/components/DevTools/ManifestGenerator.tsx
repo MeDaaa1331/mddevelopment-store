@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FileCode, Copy, Check, Download, Layers, Shield } from 'lucide-react';
+import { trackEvent } from '../../utils/analytics';
 
 export const ManifestGenerator: React.FC = () => {
   const [fxVersion, setFxVersion] = useState('cerulean');
@@ -101,6 +102,7 @@ export const ManifestGenerator: React.FC = () => {
   const handleCopy = () => {
     navigator.clipboard.writeText(outputManifest);
     setCopied(true);
+    trackEvent('manifest', 'copy_lua', `fxmanifest.lua (${author} - ${version})`);
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -111,6 +113,7 @@ export const ManifestGenerator: React.FC = () => {
     link.href = url;
     link.download = 'fxmanifest.lua';
     link.click();
+    trackEvent('manifest', 'copy_lua', `Downloaded fxmanifest.lua (${version})`);
     URL.revokeObjectURL(url);
   };
 

@@ -309,7 +309,7 @@ export const FlagsGenerator: React.FC = () => {
   const handleCopy = (key: string, val: string) => {
     navigator.clipboard.writeText(val);
     setCopiedKey(key);
-    trackEvent('flags_generator', key === 'xml' ? 'copy_xml' : 'copy_hex', `${currentCategory.id}: ${val}`);
+    trackEvent('flags', key === 'xml' ? 'copy_xml' : 'copy_hex', `${currentCategory.id}: ${val}`);
     setTimeout(() => setCopiedKey(null), 1800);
   };
 

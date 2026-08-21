@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { MessageSquare, Copy, Check, Plus, Trash2, Code2, Sparkles, Send } from 'lucide-react';
+import { trackEvent } from '../../utils/analytics';
 
 interface EmbedField {
   id: string;
@@ -84,6 +85,7 @@ end
   const handleCopy = () => {
     navigator.clipboard.writeText(outputCode);
     setCopied(true);
+    trackEvent('webhook', 'copy_lua', `Discord Embed (${title})`);
     setTimeout(() => setCopied(false), 2000);
   };
 
