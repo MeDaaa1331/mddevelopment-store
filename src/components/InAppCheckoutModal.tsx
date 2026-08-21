@@ -109,7 +109,11 @@ export const InAppCheckoutModal: React.FC<InAppCheckoutModalProps> = ({ isOpen, 
               <p className="text-[11px] text-zinc-500 font-mono">CFX.re • Official Gateway</p>
             </div>
           </div>
-          <button onClick={handleClose} className="p-2 rounded-xl text-zinc-400 hover:text-white bg-zinc-900 border border-white/10 transition-colors">
+          <button 
+            onClick={handleClose} 
+            aria-label="Close checkout modal"
+            className="p-2 rounded-xl text-zinc-400 hover:text-white bg-zinc-900 border border-white/10 transition-colors"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>

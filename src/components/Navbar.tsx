@@ -218,7 +218,11 @@ export const Navbar: React.FC = () => {
               )}
             </button>
 
-            <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden p-2.5 rounded-xl text-zinc-300 hover:text-white bg-zinc-900 border border-white/10 transition-colors">
+            <button 
+              onClick={() => setMobileOpen(!mobileOpen)} 
+              aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
+              className="md:hidden p-2.5 rounded-xl text-zinc-300 hover:text-white bg-zinc-900 border border-white/10 transition-colors"
+            >
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>

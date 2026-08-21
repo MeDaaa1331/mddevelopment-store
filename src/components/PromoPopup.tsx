@@ -93,25 +93,29 @@ export const PromoPopup: React.FC = () => {
 
         <div className="mt-3 pt-3 border-t border-white/10 flex items-center gap-2">
 
-          <div 
+          <button 
             onClick={handleCopy}
+            type="button"
+            aria-label={`Copy discount code ${promoCode}`}
             className="flex-1 px-2.5 py-1.5 rounded-xl bg-black/60 border border-white/15 flex items-center justify-between cursor-pointer hover:border-white/40 transition-colors group"
             title="Click to copy code"
           >
             <span className="font-mono text-xs font-bold text-white tracking-wider">
               {promoCode}
             </span>
-            <button className="text-zinc-400 group-hover:text-white transition-colors">
+            <span className="text-zinc-400 group-hover:text-white transition-colors">
               {copied ? (
                 <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />
               ) : (
                 <Copy className="w-3.5 h-3.5" />
               )}
-            </button>
-          </div>
+            </span>
+          </button>
 
           <button
             onClick={handleCopy}
+            type="button"
+            aria-label="Copy discount promo code"
             className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all border ${
               copied
                 ? 'bg-emerald-500 text-black border-emerald-400'
@@ -123,6 +127,8 @@ export const PromoPopup: React.FC = () => {
 
           <button
             onClick={handleApplyAndOpenCart}
+            type="button"
+            aria-label="Apply discount directly to basket"
             className="p-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/10 transition-colors"
             title="Apply directly to basket"
           >
