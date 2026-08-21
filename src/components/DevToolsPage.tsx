@@ -118,9 +118,9 @@ export const DevToolsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#050507] text-zinc-100 flex flex-col font-sans selection:bg-white selection:text-black">
-      <div className="relative z-10 pt-28 pb-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1">
+      <div className="relative z-10 pt-24 pb-14 max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1">
         
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
             <button
               onClick={() => navigate('/')}
@@ -135,38 +135,42 @@ export const DevToolsPage: React.FC = () => {
 
           <button
             onClick={() => navigate('/')}
-            className="w-fit px-4 py-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 border border-white/10 text-xs font-semibold text-zinc-300 hover:text-white transition-all flex items-center gap-2 group"
+            className="w-fit px-3.5 py-1.5 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 border border-white/10 text-xs font-semibold text-zinc-300 hover:text-white transition-all flex items-center gap-1.5 group"
           >
             <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" />
             <span>Back to Scripts Store</span>
           </button>
         </div>
 
-        <div className="relative p-8 sm:p-12 rounded-3xl bg-gradient-to-b from-[#111118]/90 to-[#0b0b10]/95 border border-white/15 overflow-hidden shadow-2xl mb-10">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-white/[0.03] rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-emerald-500/[0.03] rounded-full blur-3xl pointer-events-none" />
+        {/* Compact Header */}
+        <div className="relative p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-[#111118]/90 via-[#0e0e14]/90 to-[#0b0b10]/95 border border-white/10 overflow-hidden shadow-xl mb-5">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-white/[0.02] rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute bottom-0 left-1/3 w-48 h-48 bg-emerald-500/[0.02] rounded-full blur-2xl pointer-events-none" />
 
-          <div className="relative z-10 max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900/90 border border-white/15 text-xs font-mono text-zinc-300 mb-4 shadow-sm">
-              <Terminal className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-white font-bold">FiveM Developer Hub</span>
-              <span className="w-1 h-1 rounded-full bg-zinc-500" />
-              <span className="text-zinc-400">14 Free Utilities</span>
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-zinc-900/90 border border-white/10 text-[11px] font-mono text-zinc-300 mb-2 shadow-sm">
+                <Terminal className="w-3 h-3 text-emerald-400" />
+                <span className="text-white font-bold">FiveM Developer Hub</span>
+                <span className="w-1 h-1 rounded-full bg-zinc-500" />
+                <span className="text-zinc-400">14 Free Utilities</span>
+              </div>
+
+              <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
+                DEVELOPER <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-200 to-zinc-500">TOOLS</span>
+              </h1>
             </div>
 
-            <h1 className="font-display text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight mb-4">
-              DEVELOPER <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-200 to-zinc-500">TOOLS</span>
-            </h1>
-
-            <p className="text-sm sm:text-base text-zinc-400 leading-relaxed max-w-2xl">
-              Professional productivity tools built by MD Development for FiveM developers and server owners. Translate locales, design blips, format JSON, inspect weapons, play audio cues, spawn peds, calculate flags, convert hashes, lookup keybinds, and configure manifests in seconds.
+            <p className="text-xs text-zinc-400 leading-relaxed max-w-xl md:text-right">
+              Professional productivity tools engineered for FiveM developers. Translate locales, inspect weapons & peds, design blips, format JSON, generate flags & hashes in seconds.
             </p>
           </div>
         </div>
 
+        {/* Tab Navigation */}
         <div
           ref={tabContainerRef}
-          className="relative flex flex-wrap items-center gap-1.5 p-2 bg-zinc-950/80 rounded-2xl border border-white/10 w-full backdrop-blur-md mb-6"
+          className="relative flex flex-wrap items-center gap-1.5 p-1.5 bg-zinc-950/80 rounded-2xl border border-white/10 w-full backdrop-blur-md mb-5"
         >
           <div
             className="absolute rounded-xl bg-white transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] shadow-glow-sm pointer-events-none"
@@ -184,7 +188,7 @@ export const DevToolsPage: React.FC = () => {
               key={tab.id}
               data-tool={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`relative z-10 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-colors duration-200 flex items-center gap-2 select-none whitespace-nowrap ${
+              className={`relative z-10 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors duration-200 flex items-center gap-2 select-none whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'text-black font-extrabold'
                   : 'text-zinc-400 hover:text-white'
@@ -196,9 +200,10 @@ export const DevToolsPage: React.FC = () => {
           ))}
         </div>
 
+        {/* Enlarged Tool Window */}
         <div
           data-lenis-prevent
-          className="p-6 sm:p-8 rounded-3xl bg-[#0b0b10]/90 border border-white/10 backdrop-blur-2xl shadow-2xl transition-all duration-300 animate-fadeIn"
+          className="p-6 sm:p-9 rounded-3xl bg-[#0b0b10]/95 border border-white/12 backdrop-blur-2xl shadow-2xl transition-all duration-300 animate-fadeIn min-h-[600px]"
         >
           {activeTab === 'translator' && <LocalesTranslator />}
           {activeTab === 'json' && <JsonFormatter />}
