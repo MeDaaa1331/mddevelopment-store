@@ -15,7 +15,7 @@ export interface AnalyticsSummary {
   totalEvents: number;
   totalViews: number;
   totalCopies: number;
-  activeToday: number;
+  activeInteractions: number;
   toolRankings: {
     toolId: string;
     toolName: string;
@@ -31,7 +31,7 @@ export interface AnalyticsSummary {
   recentEvents: DevToolEvent[];
 }
 
-const LOCAL_STORAGE_KEY = 'md_dev_analytics_events_v1';
+const LOCAL_STORAGE_KEY = 'md_dev_analytics_events_v2';
 
 export const TOOL_NAMES: Record<string, string> = {
   flags_generator: 'Flags Generator',
@@ -50,16 +50,6 @@ export const TOOL_NAMES: Record<string, string> = {
   color_picker: 'RGBA / Hex & GTA Palette'
 };
 
-const SEED_EVENTS: DevToolEvent[] = [
-  { id: 'ev-1', timestamp: Date.now() - 1000 * 60 * 2, toolId: 'flags_generator', toolName: 'Flags Generator', action: 'copy_xml', label: 'CBaseArchetypeDefFlags (0x80000000)', country: 'CZ', device: 'Desktop', referrer: 'Direct' },
-  { id: 'ev-2', timestamp: Date.now() - 1000 * 60 * 5, toolId: 'blip_designer', toolName: 'Blip & Radar Designer', action: 'copy_lua', label: 'Sprite #357 (Garage)', country: 'SK', device: 'Desktop', referrer: 'Discord' },
-  { id: 'ev-3', timestamp: Date.now() - 1000 * 60 * 8, toolId: 'weapons_configurator', toolName: 'Weapons & Ammo Config', action: 'copy_ox', label: 'weapon_heavysniper', country: 'DE', device: 'Desktop', referrer: 'Cfx.re Forum' },
-  { id: 'ev-4', timestamp: Date.now() - 1000 * 60 * 12, toolId: 'json_formatter', toolName: 'JSON Formatter', action: 'format', label: 'Formatted 3.8 KB JSON', country: 'US', device: 'Desktop', referrer: 'Google' },
-  { id: 'ev-5', timestamp: Date.now() - 1000 * 60 * 15, toolId: 'ped_spawner', toolName: 'Ped & Prop Spawner', action: 'copy_lua', label: 's_m_y_cop_01 (LSPD Officer)', country: 'CZ', device: 'Desktop', referrer: 'Direct' },
-  { id: 'ev-6', timestamp: Date.now() - 1000 * 60 * 22, toolId: 'audio_explorer', toolName: 'Audio & Sound FX', action: 'copy_lua', label: 'PURCHASE (HUD_LIQUOR_STORE)', country: 'FR', device: 'Desktop', referrer: 'Cfx.re Forum' },
-  { id: 'ev-7', timestamp: Date.now() - 1000 * 60 * 30, toolId: 'hash_converter', toolName: 'Hash Converter', action: 'copy_hash', label: 'mp_m_freemode_01 -> 0x705E61F2', country: 'CZ', device: 'Desktop', referrer: 'Discord' }
-];
-
 export const trackEvent = async (
   toolId: string,
   action: DevToolEvent['action'],
@@ -68,7 +58,7 @@ export const trackEvent = async (
 ) => {
   try {
     const event: DevToolEvent = {
-      id: 'ev-' + Math.random().toString(36).substring(2, 9),
+      id: 'ev-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 6),
       timestamp: Date.now(),
       toolId,
       toolName: TOOL_NAMES[toolId] || toolId,
@@ -76,15 +66,15 @@ export const trackEvent = async (
       label,
       meta,
       country: Intl.DateTimeFormat().resolvedOptions().timeZone.includes('Europe') ? 'CZ' : 'Global',
-      device: window.innerWidth > 1024 ? 'Desktop' : 'Mobile',
-      referrer: document.referrer ? (new URL(document.referrer).hostname || 'Direct') : 'Direct'
+      device: typeof window !== 'undefined' && window.innerWidth > 1024 ? 'Desktop' : 'Mobile',
+      referrer: typeof document !== 'undefined' && document.referrer ? (new URL(document.referrer).hostname || 'Direct') : 'Direct'
     };
 
     if (typeof window !== 'undefined') {
       const existingStr = localStorage.getItem(LOCAL_STORAGE_KEY);
       const events: DevToolEvent[] = existingStr ? JSON.parse(existingStr) : [];
       events.unshift(event);
-      if (events.length > 200) events.pop();
+      if (events.length > 500) events.pop();
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(events));
     }
 
@@ -96,103 +86,188 @@ export const trackEvent = async (
   } catch (err) {}
 };
 
-export const getStoredAnalytics = async (): Promise<AnalyticsSummary> => {
-  try {
-    const res = await fetch('/api/stats');
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.totalEvents) return data;
-    }
-  } catch (err) {}
+export const buildAnalyticsSummary = (allEvents: DevToolEvent[], serverTotalEvents = 0, serverTotalCopies = 0): AnalyticsSummary => {
+  const sortedEvents = [...allEvents].sort((a, b) => b.timestamp - a.timestamp);
 
-  let events: DevToolEvent[] = [];
-  if (typeof window !== 'undefined') {
-    const existingStr = localStorage.getItem(LOCAL_STORAGE_KEY);
-    events = existingStr ? JSON.parse(existingStr) : [];
-  }
-
-  const allEvents = [...events, ...SEED_EVENTS];
-
-  const totalEvents = allEvents.length;
-  const totalViews = allEvents.filter(e => e.action === 'view').length;
-  const totalCopies = allEvents.filter(e => e.action.startsWith('copy_') || e.action === 'format').length;
+  const totalEvents = Math.max(allEvents.length, serverTotalEvents);
+  
+  let totalViews = 0;
+  let totalCopies = 0;
 
   const toolStatsMap: Record<string, { views: number; copies: number }> = {};
   Object.keys(TOOL_NAMES).forEach(id => {
     toolStatsMap[id] = { views: 0, copies: 0 };
   });
 
-  allEvents.forEach(e => {
+  const searchCounts: Record<string, number> = {};
+  const itemCounts: Record<string, { name: string; type: string; count: number }> = {};
+  const countryCounts: Record<string, number> = {};
+  const referrerCounts: Record<string, number> = {};
+  let desktopCount = 0;
+  let mobileCount = 0;
+
+  sortedEvents.forEach(e => {
+    const isCopy = e.action.startsWith('copy_') || e.action === 'format';
+    const isView = e.action === 'view';
+
+    if (isView) totalViews++;
+    if (isCopy) totalCopies++;
+
     if (!toolStatsMap[e.toolId]) {
       toolStatsMap[e.toolId] = { views: 0, copies: 0 };
     }
-    if (e.action === 'view') toolStatsMap[e.toolId].views++;
-    if (e.action.startsWith('copy_') || e.action === 'format') toolStatsMap[e.toolId].copies++;
+    if (isView) toolStatsMap[e.toolId].views++;
+    if (isCopy) toolStatsMap[e.toolId].copies++;
+
+    if (e.label) {
+      const cleanLabel = e.label.trim();
+      let type = 'Item';
+      if (e.toolId === 'weapons_configurator') type = 'Weapon';
+      else if (e.toolId === 'ped_spawner') type = 'Ped / Prop';
+      else if (e.toolId === 'blip_designer') type = 'Blip';
+      else if (e.toolId === 'flags_generator') type = 'Flag';
+      else if (e.toolId === 'audio_explorer') type = 'Sound';
+      else if (e.toolId === 'json_formatter') type = 'JSON';
+      else if (e.toolId === 'hash_converter') type = 'Hash';
+
+      if (e.action === 'search') {
+        searchCounts[cleanLabel] = (searchCounts[cleanLabel] || 0) + 1;
+      } else if (cleanLabel) {
+        if (!itemCounts[cleanLabel]) {
+          itemCounts[cleanLabel] = { name: cleanLabel, type, count: 0 };
+        }
+        itemCounts[cleanLabel].count++;
+      }
+    }
+
+    const c = e.country || 'CZ';
+    countryCounts[c] = (countryCounts[c] || 0) + 1;
+
+    const r = e.referrer || 'Direct';
+    referrerCounts[r] = (referrerCounts[r] || 0) + 1;
+
+    if (e.device === 'Mobile') mobileCount++;
+    else desktopCount++;
   });
+
+  if (serverTotalCopies > totalCopies) {
+    totalCopies = serverTotalCopies;
+  }
 
   const toolRankings = Object.entries(toolStatsMap)
     .map(([toolId, stats]) => ({
       toolId,
       toolName: TOOL_NAMES[toolId] || toolId,
-      views: stats.views + Math.floor(stats.copies * 1.6) + 12,
-      copies: stats.copies + 8,
-      copyRate: Math.min(100, Math.round(((stats.copies + 8) / (stats.views + Math.floor(stats.copies * 1.6) + 12)) * 100))
+      views: stats.views,
+      copies: stats.copies,
+      copyRate: stats.views > 0 ? Math.min(100, Math.round((stats.copies / stats.views) * 100)) : 0
     }))
-    .sort((a, b) => b.copies - a.copies);
+    .sort((a, b) => b.copies - a.copies || b.views - a.views);
 
-  const topSearches = [
-    { query: 'CBaseArchetypeDefFlags', count: 184 },
-    { query: 'Heavy Sniper Mk II', count: 142 },
-    { query: 'LSPD Officer male', count: 119 },
-    { query: 'Garage Blip 357', count: 98 },
-    { query: 'JSON beautifier', count: 87 },
-    { query: 'Jenkins hash mp_m_freemode_01', count: 76 },
-    { query: 'diamond casino valet', count: 64 },
-    { query: 'ModelFlags MF_ABS_STD', count: 53 }
-  ];
+  const topSearches = Object.entries(searchCounts)
+    .map(([query, count]) => ({ query, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
 
-  const topItems = [
-    { name: 'Heavy Sniper (.50 BMG)', type: 'Weapon', count: 164 },
-    { name: 'LSPD Police Officer (s_m_y_cop_01)', type: 'Ped', count: 138 },
-    { name: 'Garage Parking Blip (#357)', type: 'Blip', count: 112 },
-    { name: 'FLAG_HAS_ALPHA_SHADOW (Bit 31)', type: 'Flag', count: 95 },
-    { name: 'Carbine Rifle (M4A1)', type: 'Weapon', count: 88 },
-    { name: 'Michael De Santa (player_zero)', type: 'Ped', count: 72 },
-    { name: 'Fleeca ATM Machine (prop_atm_01)', type: 'Prop', count: 69 },
-    { name: 'PURCHASE (HUD_LIQUOR_STORE)', type: 'Sound', count: 61 }
-  ];
+  const topItems = Object.values(itemCounts)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
 
-  const topCountries = [
-    { code: 'CZ', name: 'Czech Republic', count: 540, percentage: 46 },
-    { code: 'SK', name: 'Slovakia', count: 230, percentage: 20 },
-    { code: 'DE', name: 'Germany', count: 140, percentage: 12 },
-    { code: 'US', name: 'United States', count: 110, percentage: 9 },
-    { code: 'FR', name: 'France', count: 85, percentage: 7 },
-    { code: 'PL', name: 'Poland', count: 70, percentage: 6 }
-  ];
+  const countryNames: Record<string, string> = {
+    CZ: 'Czech Republic',
+    SK: 'Slovakia',
+    DE: 'Germany',
+    US: 'United States',
+    FR: 'France',
+    PL: 'Poland',
+    GB: 'United Kingdom',
+    Global: 'Global / Other'
+  };
 
-  const topReferrers = [
-    { source: 'Direct / Bookmarks', count: 620, percentage: 52 },
-    { source: 'Discord Server (discord.gg/md)', count: 310, percentage: 26 },
-    { source: 'FiveM Forum (Cfx.re)', count: 160, percentage: 13 },
-    { source: 'Google Search', count: 110, percentage: 9 }
-  ];
+  const totalGeoEvents = Math.max(1, Object.values(countryCounts).reduce((a, b) => a + b, 0));
+  const topCountries = Object.entries(countryCounts)
+    .map(([code, count]) => ({
+      code,
+      name: countryNames[code] || code,
+      count,
+      percentage: Math.round((count / totalGeoEvents) * 100)
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const totalRefEvents = Math.max(1, Object.values(referrerCounts).reduce((a, b) => a + b, 0));
+  const topReferrers = Object.entries(referrerCounts)
+    .map(([source, count]) => ({
+      source,
+      count,
+      percentage: Math.round((count / totalRefEvents) * 100)
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const totalDev = Math.max(1, desktopCount + mobileCount);
 
   return {
-    totalEvents: totalEvents + 1175,
-    totalViews: totalViews + 720,
-    totalCopies: totalCopies + 455,
-    activeToday: 42 + events.length,
+    totalEvents,
+    totalViews,
+    totalCopies,
+    activeInteractions: totalEvents,
     toolRankings,
     topSearches,
     topItems,
     topCountries,
     topReferrers,
     deviceBreakdown: {
-      desktop: 88,
-      mobile: 10,
-      tablet: 2
+      desktop: Math.round((desktopCount / totalDev) * 100),
+      mobile: Math.round((mobileCount / totalDev) * 100),
+      tablet: 0
     },
-    recentEvents: allEvents.slice(0, 30)
+    recentEvents: sortedEvents.slice(0, 50)
   };
+};
+
+export const getStoredAnalytics = async (): Promise<AnalyticsSummary> => {
+  let serverEvents: DevToolEvent[] = [];
+  let serverTotalEvents = 0;
+  let serverTotalCopies = 0;
+
+  try {
+    const res = await fetch('/api/stats');
+    if (res.ok) {
+      const data = await res.json();
+      if (data && Array.isArray(data.recentEvents)) {
+        serverEvents = data.recentEvents;
+      }
+      if (data && typeof data.totalEvents === 'number') {
+        serverTotalEvents = data.totalEvents;
+      }
+      if (data && typeof data.totalCopies === 'number') {
+        serverTotalCopies = data.totalCopies;
+      }
+    }
+  } catch (err) {}
+
+  let localEvents: DevToolEvent[] = [];
+  if (typeof window !== 'undefined') {
+    const existingStr = localStorage.getItem(LOCAL_STORAGE_KEY);
+    localEvents = existingStr ? JSON.parse(existingStr) : [];
+  }
+
+  const mergedEventsMap = new Map<string, DevToolEvent>();
+  [...serverEvents, ...localEvents].forEach(ev => {
+    if (ev && ev.id) mergedEventsMap.set(ev.id, ev);
+  });
+
+  const allMergedEvents = Array.from(mergedEventsMap.values());
+
+  return buildAnalyticsSummary(allMergedEvents, serverTotalEvents, serverTotalCopies);
+};
+
+export const resetAllAnalytics = async (): Promise<void> => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(LOCAL_STORAGE_KEY);
+    localStorage.removeItem('md_dev_analytics_events_v1');
+  }
+
+  try {
+    await fetch('/api/reset', { method: 'POST' });
+  } catch (err) {}
 };

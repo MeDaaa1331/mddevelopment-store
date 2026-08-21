@@ -35,11 +35,9 @@ export default async function handler(req: any, res: any) {
     const totalCopies = parseInt(totalCopiesData.result || '0', 10);
 
     return res.status(200).json({
-      totalEvents: Math.max(totalEvents, 1200 + recentEvents.length),
-      totalViews: Math.max(totalEvents - totalCopies, 750),
-      totalCopies: Math.max(totalCopies, 450),
-      activeToday: 42 + recentEvents.length,
-      recentEvents: recentEvents.length > 0 ? recentEvents : undefined
+      totalEvents,
+      totalCopies,
+      recentEvents: recentEvents || []
     });
   } catch (err: any) {
     return res.status(200).json({ status: 'offline_fallback' });

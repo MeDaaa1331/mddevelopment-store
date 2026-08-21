@@ -21,9 +21,11 @@ import {
   CheckCircle2,
   ExternalLink,
   ChevronRight,
-  Database
+  Database,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
-import { getStoredAnalytics, AnalyticsSummary, DevToolEvent } from '../utils/analytics';
+import { getStoredAnalytics, resetAllAnalytics, AnalyticsSummary, DevToolEvent } from '../utils/analytics';
 import { useStore } from '../context/StoreContext';
 
 const ADMIN_PIN = '1331';
@@ -43,6 +45,7 @@ export const AdminStatsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'tools' | 'items' | 'live' | 'geo'>('overview');
   const [timeRange, setTimeRange] = useState<'all' | 'today' | '7d' | '30d'>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const loadStats = async () => {
     setIsRefreshing(true);
@@ -81,6 +84,12 @@ export const AdminStatsPage: React.FC = () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('md_admin_auth');
     }
+  };
+
+  const handleResetData = async () => {
+    await resetAllAnalytics();
+    setShowResetConfirm(false);
+    await loadStats();
   };
 
   const handleExportJson = () => {
@@ -158,8 +167,41 @@ export const AdminStatsPage: React.FC = () => {
     );
   }
 
+  const sortedRecentEvents = (data?.recentEvents || []).slice().sort((a, b) => b.timestamp - a.timestamp);
+
   return (
     <div className="min-h-screen bg-[#050507] text-white flex flex-col font-sans selection:bg-white selection:text-black">
+      {/* Reset Confirmation Modal */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-sm p-6 rounded-3xl bg-zinc-950 border border-red-500/30 text-center space-y-4 shadow-2xl">
+            <div className="w-12 h-12 rounded-2xl bg-red-950/50 border border-red-500/30 flex items-center justify-center text-red-400 mx-auto">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-display font-bold text-base text-white">Vynulovat všechny statistiky?</h3>
+              <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                Tímto smažeš všechna zaznamenaná data z Upstash databáze i lokální paměti a počítání začne od 0.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <button
+                onClick={() => setShowResetConfirm(false)}
+                className="py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-xs font-semibold text-zinc-300"
+              >
+                Zrušit
+              </button>
+              <button
+                onClick={handleResetData}
+                className="py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all shadow-glow-sm"
+              >
+                Ano, vynulovat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header Bar */}
       <header className="sticky top-0 z-40 bg-zinc-950/80 backdrop-blur-xl border-b border-white/10 px-6 py-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -213,8 +255,17 @@ export const AdminStatsPage: React.FC = () => {
             </button>
 
             <button
-              onClick={handleLogout}
+              onClick={() => setShowResetConfirm(true)}
               className="px-3 py-2 rounded-xl bg-red-950/40 hover:bg-red-900/50 border border-red-500/30 text-xs font-semibold text-red-300 transition-all flex items-center gap-1.5"
+              title="Reset All Data to 0"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Vynulovat</span>
+            </button>
+
+            <button
+              onClick={handleLogout}
+              className="px-3 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-xs font-semibold text-zinc-400 hover:text-white transition-all flex items-center gap-1.5"
             >
               <Lock className="w-3.5 h-3.5" />
               <span>Lock</span>
@@ -238,7 +289,7 @@ export const AdminStatsPage: React.FC = () => {
               </span>
               <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium mt-1">
                 <TrendingUp className="w-3.5 h-3.5" />
-                <span>+18.4% this week</span>
+                <span>Zaznamenané akce</span>
               </div>
             </div>
           </div>
@@ -265,25 +316,25 @@ export const AdminStatsPage: React.FC = () => {
             </div>
             <div className="mt-3">
               <span className="font-display font-black text-3xl text-white">
-                {data?.totalViews ? Math.round((data.totalCopies / data.totalViews) * 100) : 63}%
+                {data?.totalViews && data.totalViews > 0 ? Math.round((data.totalCopies / data.totalViews) * 100) : 0}%
               </span>
               <div className="flex items-center gap-1.5 text-xs text-amber-400 font-medium mt-1">
-                <span>High developer engagement</span>
+                <span>Poměr zkopírování / zobrazení</span>
               </div>
             </div>
           </div>
 
           <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 relative overflow-hidden flex flex-col justify-between">
             <div className="flex items-center justify-between text-zinc-400 text-xs font-mono font-bold uppercase tracking-wider">
-              <span>Active Developers Today</span>
+              <span>Celková aktivita</span>
               <Users className="w-4 h-4 text-violet-400" />
             </div>
             <div className="mt-3">
               <span className="font-display font-black text-3xl text-white">
-                {(data?.activeToday || 42).toLocaleString()}
+                {(data?.activeInteractions || 0).toLocaleString()}
               </span>
               <div className="flex items-center gap-1.5 text-xs text-violet-400 font-medium mt-1">
-                <span>Unique sessions</span>
+                <span>Celkový počet interakcí</span>
               </div>
             </div>
           </div>
@@ -338,8 +389,8 @@ export const AdminStatsPage: React.FC = () => {
 
               <div className="space-y-3">
                 {(data?.toolRankings || []).slice(0, 6).map((tool, idx) => {
-                  const maxCopies = data?.toolRankings[0]?.copies || 1;
-                  const pct = Math.round((tool.copies / maxCopies) * 100);
+                  const maxCopies = Math.max(1, data?.toolRankings[0]?.copies || 1);
+                  const pct = tool.copies > 0 ? Math.round((tool.copies / maxCopies) * 100) : 0;
                   return (
                     <div key={tool.toolId} className="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-2">
                       <div className="flex items-center justify-between text-xs">
@@ -381,23 +432,30 @@ export const AdminStatsPage: React.FC = () => {
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                 </div>
 
-                <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
-                  {(data?.recentEvents || []).slice(0, 6).map(ev => (
-                    <div key={ev.id} className="p-2.5 rounded-xl bg-zinc-900/60 border border-white/5 text-xs flex flex-col gap-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono text-[10px] font-bold text-emerald-400 px-1.5 py-0.2 rounded bg-emerald-950/40">
-                          {ev.toolName}
-                        </span>
-                        <span className="text-[10px] text-zinc-500 font-mono">
-                          {Math.floor((Date.now() - ev.timestamp) / 60000)}m ago
+                {sortedRecentEvents.length === 0 ? (
+                  <div className="p-8 rounded-2xl bg-zinc-900/40 border border-white/5 text-center">
+                    <p className="text-xs text-zinc-400 font-mono">Zatím žádné zaznamenané akce.</p>
+                    <p className="text-[11px] text-zinc-500 mt-1">Otevři jakoukoliv toolku a zkopíruj kód pro otestování.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                    {sortedRecentEvents.slice(0, 6).map(ev => (
+                      <div key={ev.id} className="p-2.5 rounded-xl bg-zinc-900/60 border border-white/5 text-xs flex flex-col gap-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-[10px] font-bold text-emerald-400 px-1.5 py-0.2 rounded bg-emerald-950/40">
+                            {ev.toolName}
+                          </span>
+                          <span className="text-[10px] text-zinc-500 font-mono">
+                            {Math.max(0, Math.floor((Date.now() - ev.timestamp) / 1000))}s ago
+                          </span>
+                        </div>
+                        <span className="text-white font-medium text-[11px] truncate">
+                          {ev.label || ev.action}
                         </span>
                       </div>
-                      <span className="text-white font-medium text-[11px] truncate">
-                        {ev.label || ev.action}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
 
                 <button
                   onClick={() => setActiveTab('live')}
@@ -407,14 +465,14 @@ export const AdminStatsPage: React.FC = () => {
                 </button>
               </div>
 
-              {/* Vercel KV Status Box */}
+              {/* Upstash Redis Status Box */}
               <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-3">
                 <div className="flex items-center gap-2">
-                  <Database className="w-4 h-4 text-violet-400" />
-                  <h4 className="font-display font-extrabold text-sm text-white">Vercel KV Status</h4>
+                  <Database className="w-4 h-4 text-emerald-400" />
+                  <h4 className="font-display font-extrabold text-sm text-white">Upstash Redis Status</h4>
                 </div>
                 <p className="text-xs text-zinc-400 leading-relaxed">
-                  Analytics engine running in high-speed hybrid mode (Local Storage Cache + Vercel Edge API).
+                  Analytics engine running live in production mode connected to Upstash Cloud Redis.
                 </p>
                 <div className="p-2.5 rounded-xl bg-black/60 border border-white/5 font-mono text-[11px] text-zinc-300 flex items-center justify-between">
                   <span>Target:</span>
@@ -500,22 +558,29 @@ export const AdminStatsPage: React.FC = () => {
                 <p className="text-xs text-zinc-400">Most configured weapons, peds, blips and flag codes</p>
               </div>
 
-              <div className="space-y-2.5">
-                {(data?.topItems || []).map((item, idx) => (
-                  <div key={idx} className="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/5 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-white/10 text-zinc-300">
-                        {item.type}
-                      </span>
-                      <span className="text-xs font-bold text-white truncate">{item.name}</span>
-                    </div>
+              {(data?.topItems || []).length === 0 ? (
+                <div className="p-8 rounded-2xl bg-zinc-900/40 border border-white/5 text-center">
+                  <p className="text-xs text-zinc-400 font-mono">Zatím žádné vybrané položky.</p>
+                  <p className="text-[11px] text-zinc-500 mt-1">Zkopíruj kód v některé toolce a položka se zde okamžitě objeví.</p>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {(data?.topItems || []).map((item, idx) => (
+                    <div key={idx} className="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/5 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-white/10 text-zinc-300">
+                          {item.type}
+                        </span>
+                        <span className="text-xs font-bold text-white truncate">{item.name}</span>
+                      </div>
 
-                    <span className="font-mono font-bold text-xs text-emerald-400 shrink-0">
-                      {item.count}× configured
-                    </span>
-                  </div>
-                ))}
-              </div>
+                      <span className="font-mono font-bold text-xs text-emerald-400 shrink-0">
+                        {item.count}× configured
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-4">
@@ -524,20 +589,26 @@ export const AdminStatsPage: React.FC = () => {
                 <p className="text-xs text-zinc-400">What developers are actively searching for inside your DevTools</p>
               </div>
 
-              <div className="space-y-2.5">
-                {(data?.topSearches || []).map((searchItem, idx) => (
-                  <div key={idx} className="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/5 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <Search className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                      <span className="text-xs font-mono font-semibold text-white truncate">"{searchItem.query}"</span>
-                    </div>
+              {(data?.topSearches || []).length === 0 ? (
+                <div className="p-8 rounded-2xl bg-zinc-900/40 border border-white/5 text-center">
+                  <p className="text-xs text-zinc-400 font-mono">Zatím žádná vyhledávání.</p>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {(data?.topSearches || []).map((searchItem, idx) => (
+                    <div key={idx} className="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/5 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Search className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                        <span className="text-xs font-mono font-semibold text-white truncate">"{searchItem.query}"</span>
+                      </div>
 
-                    <span className="font-mono font-bold text-xs text-zinc-400 shrink-0">
-                      {searchItem.count} searches
-                    </span>
-                  </div>
-                ))}
-              </div>
+                      <span className="font-mono font-bold text-xs text-zinc-400 shrink-0">
+                        {searchItem.count} searches
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -551,7 +622,7 @@ export const AdminStatsPage: React.FC = () => {
                   <Activity className="w-5 h-5 text-emerald-400" />
                   <span>Real-time Live Activity Stream</span>
                 </h3>
-                <p className="text-xs text-zinc-400">Live stream of developer interactions, code generation & exports</p>
+                <p className="text-xs text-zinc-400">Live stream of developer interactions, code generation & exports (nejnovější nahoře)</p>
               </div>
 
               <span className="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-xs font-mono font-bold text-emerald-400 flex items-center gap-1.5">
@@ -560,41 +631,48 @@ export const AdminStatsPage: React.FC = () => {
               </span>
             </div>
 
-            <div className="space-y-2">
-              {(data?.recentEvents || []).map(ev => (
-                <div key={ev.id} className="p-4 rounded-2xl bg-zinc-900/70 border border-white/5 flex items-center justify-between gap-4 flex-wrap hover:border-white/15 transition-all">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-xl bg-zinc-800 border border-white/10 flex items-center justify-center text-white shrink-0">
-                      {ev.action.startsWith('copy') ? <Copy className="w-4 h-4 text-emerald-400" /> : <Eye className="w-4 h-4 text-cyan-400" />}
-                    </div>
-
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-xs text-white">{ev.toolName}</span>
-                        <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-white/10 text-zinc-300">
-                          {ev.action}
-                        </span>
+            {sortedRecentEvents.length === 0 ? (
+              <div className="p-12 rounded-2xl bg-zinc-900/40 border border-white/5 text-center">
+                <p className="text-sm font-bold text-white mb-1">Žádné zaznamenané akce</p>
+                <p className="text-xs text-zinc-400">Jakmile někdo otevře toolku nebo zkopíruje kód, akce se okamžitě zobrazí zde.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {sortedRecentEvents.map(ev => (
+                  <div key={ev.id} className="p-4 rounded-2xl bg-zinc-900/70 border border-white/5 flex items-center justify-between gap-4 flex-wrap hover:border-white/15 transition-all">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-xl bg-zinc-800 border border-white/10 flex items-center justify-center text-white shrink-0">
+                        {ev.action.startsWith('copy') ? <Copy className="w-4 h-4 text-emerald-400" /> : <Eye className="w-4 h-4 text-cyan-400" />}
                       </div>
-                      <p className="text-xs text-zinc-400 font-mono mt-0.5">{ev.label || 'Tool interaction'}</p>
+
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-xs text-white">{ev.toolName}</span>
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-white/10 text-zinc-300">
+                            {ev.action}
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-400 font-mono mt-0.5">{ev.label || 'Tool interaction'}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 text-xs font-mono text-zinc-500">
+                      <span className="flex items-center gap-1">
+                        <Globe className="w-3.5 h-3.5" />
+                        <span>{ev.country || 'CZ'}</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Monitor className="w-3.5 h-3.5" />
+                        <span>{ev.device || 'Desktop'}</span>
+                      </span>
+                      <span className="text-zinc-400">
+                        {new Date(ev.timestamp).toLocaleTimeString()}
+                      </span>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-4 text-xs font-mono text-zinc-500">
-                    <span className="flex items-center gap-1">
-                      <Globe className="w-3.5 h-3.5" />
-                      <span>{ev.country || 'CZ'}</span>
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Monitor className="w-3.5 h-3.5" />
-                      <span>{ev.device || 'Desktop'}</span>
-                    </span>
-                    <span className="text-zinc-400">
-                      {new Date(ev.timestamp).toLocaleTimeString()}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -607,26 +685,32 @@ export const AdminStatsPage: React.FC = () => {
                 <p className="text-xs text-zinc-400">Where developers are accessing your tools from</p>
               </div>
 
-              <div className="space-y-3">
-                {(data?.topCountries || []).map(country => (
-                  <div key={country.code} className="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2 font-bold text-white">
-                        <span className="font-mono text-zinc-400">[{country.code}]</span>
-                        <span>{country.name}</span>
+              {(data?.topCountries || []).length === 0 ? (
+                <div className="p-8 rounded-2xl bg-zinc-900/40 border border-white/5 text-center">
+                  <p className="text-xs text-zinc-400 font-mono">Zatím žádná geolokační data.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {(data?.topCountries || []).map(country => (
+                    <div key={country.code} className="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 font-bold text-white">
+                          <span className="font-mono text-zinc-400">[{country.code}]</span>
+                          <span>{country.name}</span>
+                        </div>
+                        <span className="font-mono text-emerald-400 font-bold">{country.count} ({country.percentage}%)</span>
                       </div>
-                      <span className="font-mono text-emerald-400 font-bold">{country.count} ({country.percentage}%)</span>
-                    </div>
 
-                    <div className="w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-emerald-400"
-                        style={{ width: `${country.percentage}%` }}
-                      />
+                      <div className="w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-emerald-400"
+                          style={{ width: `${country.percentage}%` }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-4">
@@ -635,23 +719,29 @@ export const AdminStatsPage: React.FC = () => {
                 <p className="text-xs text-zinc-400">How developers found your DevTools suite</p>
               </div>
 
-              <div className="space-y-3">
-                {(data?.topReferrers || []).map((ref, idx) => (
-                  <div key={idx} className="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-white">{ref.source}</span>
-                      <span className="font-mono text-cyan-400 font-bold">{ref.count} ({ref.percentage}%)</span>
-                    </div>
+              {(data?.topReferrers || []).length === 0 ? (
+                <div className="p-8 rounded-2xl bg-zinc-900/40 border border-white/5 text-center">
+                  <p className="text-xs text-zinc-400 font-mono">Zatím žádná referenční data.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {(data?.topReferrers || []).map((ref, idx) => (
+                    <div key={idx} className="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-white">{ref.source}</span>
+                        <span className="font-mono text-cyan-400 font-bold">{ref.count} ({ref.percentage}%)</span>
+                      </div>
 
-                    <div className="w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-cyan-400"
-                        style={{ width: `${ref.percentage}%` }}
-                      />
+                      <div className="w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-cyan-400"
+                          style={{ width: `${ref.percentage}%` }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
