@@ -76,9 +76,78 @@ const DEV_TOOLS_TABS: TabItem[] = [
   { id: 'anim', label: 'Anim Explorer', icon: <Film className="w-3.5 h-3.5" /> },
 ];
 
+const TOOL_SEO_METADATA: Record<ToolTab, { title: string; description: string }> = {
+  flags: {
+    title: 'FiveM Flags Generator & Bitwise Calculator (YTYP, Handling, AI Styles) | FiveM Dev Tools',
+    description: 'Accurate bitwise flag calculator for FiveM & GTA V. Calculate YTYP archetypes, vehicle model flags, handling flags, damage flags, and AI driving styles.'
+  },
+  translator: {
+    title: 'FiveM Locales & Script Translator (Auto Lua / JSON) | FiveM Dev Tools',
+    description: 'Auto-translate FiveM script locales to 12+ languages (Czech, Slovak, German, French, Spanish, etc.) and export directly to Lua tables or JSON.'
+  },
+  json: {
+    title: 'FiveM JSON Formatter, Auto-Repair & Lua Converter | FiveM Dev Tools',
+    description: 'Format, validate, and auto-repair broken FiveM JSON configs with trailing commas and unquoted keys. Convert JSON into optimized FiveM Lua tables.'
+  },
+  blip: {
+    title: 'FiveM Blip & Radar Designer (Lua & ox_lib Generator) | FiveM Dev Tools',
+    description: 'Visual FiveM map blip configurator. Search all 800+ GTA V blip sprite IDs, colors, displays, and generate native or ox_lib blip codes.'
+  },
+  weapons: {
+    title: 'FiveM Weapons & Ammo Configurator (ox_inventory & QB) | FiveM Dev Tools',
+    description: 'Interactive GTA V weapon explorer. Generate ammo configurations, recoil multipliers, weapon component attachments, and ox_inventory items.'
+  },
+  audio: {
+    title: 'FiveM Audio & Sound FX Explorer (PlaySoundFrontend) | FiveM Dev Tools',
+    description: 'Interactive GTA V audio bank explorer. Search soundsets, frontend audio cues, and copy PlaySoundFrontend & PlaySoundFromEntity native codes.'
+  },
+  peds: {
+    title: 'FiveM Ped & Prop Spawner (ox_target & Native Code) | FiveM Dev Tools',
+    description: 'Complete GTA V ped model and prop hash directory. Generate spawning codes, scenario loops, and ox_target / qb-target interactions.'
+  },
+  hash: {
+    title: 'FiveM Hash Converter (JOAAT, Hex, Signed Int32) | FiveM Dev Tools',
+    description: 'Convert strings, vehicle spawn names, and weapon names into GTA V Jenkins One-At-A-Time (JOAAT) hashes, signed/unsigned int32, and hex format.'
+  },
+  colors: {
+    title: 'FiveM Color & HEX / RGBA / Vector4 Generator | FiveM Dev Tools',
+    description: 'Convert and generate FiveM colors in Hex, RGB, RGBA, Vector4, and Lua table formats. Includes GTA V HUD & Radar color palettes.'
+  },
+  coords: {
+    title: 'FiveM Coords & PolyZone Generator (ox_target & Markers) | FiveM Dev Tools',
+    description: 'Convert in-game vectors into ox_target box zones, sphere zones, DrawMarker loops, and ped spawn coordinate snippets.'
+  },
+  webhook: {
+    title: 'FiveM Discord Webhook Builder (Lua Embed Logger) | FiveM Dev Tools',
+    description: 'Design professional Discord embed loggers for FiveM server scripts. Export ready-to-use PerformHttpRequest Lua logging functions.'
+  },
+  controls: {
+    title: 'FiveM GTA Controls & Keybinds Lookup (IsControlJustPressed) | FiveM Dev Tools',
+    description: 'Complete FiveM control codes reference. Search all GTA V pad control IDs, input tags (~INPUT_CONTEXT~), and copy IsControlJustPressed snippets.'
+  },
+  manifest: {
+    title: 'FiveM fxmanifest.lua Generator & Validator | FiveM Dev Tools',
+    description: 'Quickly create valid fxmanifest.lua files for FiveM resources. Configure client_scripts, server_scripts, UI files, dependencies, and ox_lib.'
+  },
+  anim: {
+    title: 'FiveM Animation & Scenario Explorer (ox_lib & Natives) | FiveM Dev Tools',
+    description: 'Search thousands of GTA V animation dicts, animation names, and world scenarios. Generate TaskPlayAnim and ox_lib anim configurations.'
+  }
+};
+
 export const DevToolsPage: React.FC = () => {
   const { navigate } = useStore();
-  const [activeTab, setActiveTab] = useState<ToolTab>('translator');
+  const [activeTab, setActiveTab] = useState<ToolTab>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const toolParam = params.get('tool') as ToolTab | null;
+      if (toolParam && DEV_TOOLS_TABS.some(t => t.id === toolParam)) {
+        return toolParam;
+      }
+    }
+    return 'translator';
+  });
+
   const [indicatorStyle, setIndicatorStyle] = useState<{
     left: number;
     top: number;
@@ -112,6 +181,26 @@ export const DevToolsPage: React.FC = () => {
   useEffect(() => {
     updateIndicator();
     trackEvent(activeTab, 'view');
+
+    if (typeof window !== 'undefined') {
+      const seo = TOOL_SEO_METADATA[activeTab];
+      if (seo) {
+        document.title = `${seo.title} - MD Development`;
+        const metaDesc = document.querySelector('meta[name="description"]');
+        if (metaDesc) {
+          metaDesc.setAttribute('content', seo.description);
+        }
+      }
+
+      const currentUrl = new URL(window.location.href);
+      if (activeTab === 'translator') {
+        currentUrl.searchParams.delete('tool');
+      } else {
+        currentUrl.searchParams.set('tool', activeTab);
+      }
+      window.history.replaceState(null, '', currentUrl.pathname + currentUrl.search);
+    }
+
     window.addEventListener('resize', updateIndicator);
     return () => window.removeEventListener('resize', updateIndicator);
   }, [activeTab]);
@@ -220,6 +309,63 @@ export const DevToolsPage: React.FC = () => {
           {activeTab === 'manifest' && <ManifestGenerator />}
           {activeTab === 'anim' && <AnimExplorer />}
         </div>
+
+        {/* SEO Knowledge & Tool Directory Section */}
+        <section aria-labelledby="devtools-overview-heading" className="mt-12 pt-10 border-t border-white/10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="p-5 rounded-2xl bg-zinc-950/60 border border-white/10">
+              <div className="flex items-center gap-2.5 mb-2.5 text-white font-bold text-sm">
+                <Terminal className="w-4 h-4 text-emerald-400" />
+                <h3>100% Free FiveM Utilities</h3>
+              </div>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                All 14 developer utilities run instantly in your browser with zero latency. No downloads or signups required.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-zinc-950/60 border border-white/10">
+              <div className="flex items-center gap-2.5 mb-2.5 text-white font-bold text-sm">
+                <FileCode className="w-4 h-4 text-emerald-400" />
+                <h3>Ready-to-use Code Snippets</h3>
+              </div>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Generate clean code for modern FiveM frameworks: ox_lib, ox_target, ox_inventory, ESX Legacy, and QBCore.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-zinc-950/60 border border-white/10">
+              <div className="flex items-center gap-2.5 mb-2.5 text-white font-bold text-sm">
+                <Flag className="w-4 h-4 text-emerald-400" />
+                <h3>Authentic GTA V Game Data</h3>
+              </div>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Calculates precise 32-bit flags for YTYP archetypes, vehicle models, handling, damage, animations, and controls.
+              </p>
+            </div>
+          </div>
+
+          <div className="p-6 rounded-2xl bg-zinc-950/40 border border-white/10">
+            <h2 id="devtools-overview-heading" className="font-display font-bold text-base text-white mb-3">
+              FiveM Developer Tools & Reference Index
+            </h2>
+            <p className="text-xs text-zinc-400 leading-relaxed mb-4">
+              Explore the complete suite of FiveM developer tools built by MD Development to accelerate script development, server customization, and resource optimization:
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-xs font-mono">
+              {DEV_TOOLS_TABS.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className="p-2.5 rounded-xl bg-zinc-900/60 hover:bg-zinc-800 border border-white/5 hover:border-white/20 text-zinc-300 hover:text-white transition-all text-left flex items-center gap-2"
+                >
+                  <span className="text-emerald-400">{tab.icon}</span>
+                  <span className="truncate">{tab.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
       </div>
 
       <Footer />
