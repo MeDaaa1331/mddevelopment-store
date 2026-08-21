@@ -236,7 +236,9 @@ export const AdminStatsPage: React.FC = () => {
               onClick={loadStats}
               disabled={isRefreshing}
               className="p-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-300 hover:text-white transition-all"
-              title="Refresh Stats"
+              data-tooltip="Refresh live stats"
+              data-tooltip-pos="bottom"
+              aria-label="Refresh stats"
             >
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-emerald-400' : ''}`} />
             </button>
@@ -244,7 +246,9 @@ export const AdminStatsPage: React.FC = () => {
             <button
               onClick={handleExportJson}
               className="px-3 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-xs font-semibold text-zinc-300 hover:text-white transition-all flex items-center gap-1.5"
-              title="Export JSON"
+              data-tooltip="Export stats to JSON"
+              data-tooltip-pos="bottom"
+              aria-label="Export JSON"
             >
               <Download className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Export</span>
@@ -253,7 +257,9 @@ export const AdminStatsPage: React.FC = () => {
             <button
               onClick={() => setShowResetConfirm(true)}
               className="px-3 py-2 rounded-xl bg-red-950/40 hover:bg-red-900/50 border border-red-500/30 text-xs font-semibold text-red-300 transition-all flex items-center gap-1.5"
-              title="Reset All Data to 0"
+              data-tooltip="Vynulovat všechny statistiky"
+              data-tooltip-pos="bottom"
+              aria-label="Reset stats"
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Vynulovat</span>

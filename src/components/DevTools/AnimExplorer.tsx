@@ -168,7 +168,9 @@ TaskPlayAnim(PlayerPedId(), '${a.dict}', '${a.clip}', 8.0, -8.0, -1, ${a.flag ||
               <button
                 onClick={() => handleCopy(`ox-${anim.id}`, getOxLibAnimCode(anim))}
                 className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-[11px] font-mono font-semibold text-zinc-300 hover:text-white transition-all flex items-center gap-1 active:scale-95"
-                title="Copy ox_lib anim table"
+                data-tooltip="Copy ox_lib anim table"
+                data-tooltip-pos="left"
+                aria-label="Copy ox_lib anim table"
               >
                 {copiedId === `ox-${anim.id}` ? (
                   <>
@@ -186,7 +188,9 @@ TaskPlayAnim(PlayerPedId(), '${a.dict}', '${a.clip}', 8.0, -8.0, -1, ${a.flag ||
               <button
                 onClick={() => handleCopy(`play-${anim.id}`, getTaskPlayAnimCode(anim))}
                 className="px-2.5 py-1 rounded-lg bg-white hover:bg-zinc-200 text-[11px] font-mono font-bold text-black transition-all flex items-center gap-1 active:scale-95 shadow-sm"
-                title="Copy TaskPlayAnim / Scenario code"
+                data-tooltip="Copy TaskPlayAnim / Scenario code"
+                data-tooltip-pos="left"
+                aria-label="Copy TaskPlayAnim code"
               >
                 {copiedId === `play-${anim.id}` ? (
                   <>

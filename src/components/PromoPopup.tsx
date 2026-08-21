@@ -98,7 +98,7 @@ export const PromoPopup: React.FC = () => {
             type="button"
             aria-label={`Copy discount code ${promoCode}`}
             className="flex-1 px-2.5 py-1.5 rounded-xl bg-black/60 border border-white/15 flex items-center justify-between cursor-pointer hover:border-white/40 transition-colors group"
-            title="Click to copy code"
+            data-tooltip="Click to copy code"
           >
             <span className="font-mono text-xs font-bold text-white tracking-wider">
               {promoCode}
@@ -130,7 +130,8 @@ export const PromoPopup: React.FC = () => {
             type="button"
             aria-label="Apply discount directly to basket"
             className="p-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/10 transition-colors"
-            title="Apply directly to basket"
+            data-tooltip="Apply discount to cart"
+            data-tooltip-pos="left"
           >
             <ArrowRight className="w-3.5 h-3.5" />
           </button>

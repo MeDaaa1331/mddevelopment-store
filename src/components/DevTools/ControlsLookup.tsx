@@ -146,7 +146,9 @@ export const ControlsLookup: React.FC = () => {
                 <button
                   onClick={() => handleCopy(`press-${ctrl.id}`, `IsControlJustPressed(0, ${ctrl.id})`)}
                   className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-[10px] font-mono font-semibold text-zinc-300 hover:text-white transition-all flex items-center gap-1 active:scale-95"
-                  title="Copy IsControlJustPressed code"
+                  data-tooltip="Copy IsControlJustPressed snippet"
+                  data-tooltip-pos="left"
+                  aria-label="Copy IsControlJustPressed code"
                 >
                   {copiedId === `press-${ctrl.id}` ? (
                     <>
@@ -164,7 +166,9 @@ export const ControlsLookup: React.FC = () => {
                 <button
                   onClick={() => handleCopy(`tag-${ctrl.id}`, `~${ctrl.name}~`)}
                   className="p-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 hover:text-white transition-colors"
-                  title="Copy ~INPUT~ tag"
+                  data-tooltip="Copy ~INPUT~ tag"
+                  data-tooltip-pos="left"
+                  aria-label="Copy input tag"
                 >
                   {copiedId === `tag-${ctrl.id}` ? (
                     <Check className="w-3 h-3 text-emerald-400" />

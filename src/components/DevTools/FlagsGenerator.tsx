@@ -390,7 +390,9 @@ export const FlagsGenerator: React.FC = () => {
               <button
                 onClick={() => handleCopy('dec', unsignedFlagValue.toString())}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors"
-                title="Copy Decimal"
+                data-tooltip="Copy Decimal"
+                data-tooltip-pos="left"
+                aria-label="Copy Decimal"
               >
                 {copiedKey === 'dec' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
@@ -411,7 +413,9 @@ export const FlagsGenerator: React.FC = () => {
               <button
                 onClick={() => handleCopy('hex', hexString)}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors"
-                title="Copy Hex"
+                data-tooltip="Copy Hex"
+                data-tooltip-pos="left"
+                aria-label="Copy Hex"
               >
                 {copiedKey === 'hex' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
@@ -440,7 +444,9 @@ export const FlagsGenerator: React.FC = () => {
                 <button
                   onClick={() => handleCopy('xml', `<flags value="${unsignedFlagValue}"/>`)}
                   className="p-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-colors"
-                  title="Copy XML tag"
+                  data-tooltip="Copy XML tag"
+                  data-tooltip-pos="left"
+                  aria-label="Copy XML tag"
                 >
                   {copiedKey === 'xml' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                 </button>
@@ -453,7 +459,9 @@ export const FlagsGenerator: React.FC = () => {
                 <button
                   onClick={() => handleCopy('lua', `flags = ${unsignedFlagValue}`)}
                   className="p-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-colors"
-                  title="Copy Lua code"
+                  data-tooltip="Copy Lua code"
+                  data-tooltip-pos="left"
+                  aria-label="Copy Lua code"
                 >
                   {copiedKey === 'lua' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                 </button>

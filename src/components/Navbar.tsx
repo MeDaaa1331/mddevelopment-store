@@ -181,8 +181,9 @@ export const Navbar: React.FC = () => {
             <button
               onClick={() => setSearchOpen(!searchOpen)}
               className="p-2.5 rounded-xl text-zinc-400 hover:text-white bg-zinc-900/50 hover:bg-zinc-800/80 border border-white/10 transition-all"
-              title="Search scripts"
-              aria-label="Search"
+              data-tooltip="Search scripts"
+              data-tooltip-pos="bottom"
+              aria-label="Search scripts"
             >
               <Search className="w-4 h-4" />
             </button>
@@ -192,7 +193,8 @@ export const Navbar: React.FC = () => {
               target="_blank"
               rel="noopener noreferrer"
               className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-zinc-900/90 hover:bg-zinc-800 text-zinc-200 hover:text-white border border-white/10 hover:border-white/25 transition-all group"
-              title={`${discordStats.totalMembers} Total Members • ${discordStats.onlineMembers} Online`}
+              data-tooltip={`${discordStats.totalMembers} Members • ${discordStats.onlineMembers} Online`}
+              data-tooltip-pos="bottom"
             >
               <div className="relative flex items-center justify-center">
                 <MessageSquare className="w-3.5 h-3.5 text-zinc-400 group-hover:text-white transition-colors" />

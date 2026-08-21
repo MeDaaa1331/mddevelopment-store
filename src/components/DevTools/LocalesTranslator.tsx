@@ -239,7 +239,9 @@ export const LocalesTranslator: React.FC = () => {
                 <button
                   onClick={handleDownload}
                   className="p-1.5 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-white/15 text-zinc-300 hover:text-white backdrop-blur-md transition-all shadow-lg active:scale-95"
-                  title="Download file"
+                  data-tooltip="Download file"
+                  data-tooltip-pos="left"
+                  aria-label="Download file"
                 >
                   <Download className="w-4 h-4" />
                 </button>

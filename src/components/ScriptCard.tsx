@@ -73,7 +73,8 @@ export const ScriptCard: React.FC<ScriptCardProps> = ({ pkg }) => {
                 setSelectedPackage(pkg);
               }}
               className="px-2.5 py-1 text-[10px] font-mono font-bold bg-zinc-950/90 hover:bg-red-600 text-zinc-200 hover:text-white border border-white/20 hover:border-red-500/50 rounded-lg backdrop-blur-md flex items-center gap-1 shadow-lg transition-all active:scale-95 group/video"
-              title="Watch Video Preview"
+              data-tooltip="Watch Video Preview"
+              data-tooltip-pos="bottom"
             >
               <Play className="w-3 h-3 fill-red-500 text-red-500 group-hover/video:fill-white group-hover/video:text-white transition-colors" />
               <span>Preview</span>
@@ -146,7 +147,8 @@ export const ScriptCard: React.FC<ScriptCardProps> = ({ pkg }) => {
             <button
               onClick={handleCardClick}
               className="p-2.5 rounded-xl text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-white/10 hover:border-white/20 transition-all duration-200 active:scale-95"
-              title="Preview Details"
+              data-tooltip="Preview Details"
+              data-tooltip-pos="left"
               aria-label="Preview script details"
             >
               <Eye className="w-4 h-4" />

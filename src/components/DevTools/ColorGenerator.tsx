@@ -172,7 +172,9 @@ export const ColorGenerator: React.FC = () => {
                     <button
                       onClick={() => handleCopy(f.key, f.value)}
                       className="p-1 rounded-lg text-zinc-400 hover:text-white bg-zinc-800/80 hover:bg-zinc-700 transition-colors active:scale-95"
-                      title="Copy value"
+                      data-tooltip={`Copy ${f.label}`}
+                      data-tooltip-pos="left"
+                      aria-label={`Copy ${f.label}`}
                     >
                       {copiedKey === f.key ? (
                         <Check className="w-3.5 h-3.5 text-emerald-400" />

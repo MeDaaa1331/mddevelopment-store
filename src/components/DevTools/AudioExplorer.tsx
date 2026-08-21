@@ -102,7 +102,9 @@ export const AudioExplorer: React.FC = () => {
                 <button
                   onClick={() => handleCopy(`entity-${sound.id}`, entitySnippet)}
                   className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-[11px] font-mono font-semibold text-zinc-300 hover:text-white transition-all flex items-center gap-1 active:scale-95"
-                  title="Copy PlaySoundFromEntity snippet"
+                  data-tooltip="Copy PlaySoundFromEntity snippet"
+                  data-tooltip-pos="left"
+                  aria-label="Copy PlaySoundFromEntity snippet"
                 >
                   {copiedId === `entity-${sound.id}` ? (
                     <>
@@ -120,7 +122,9 @@ export const AudioExplorer: React.FC = () => {
                 <button
                   onClick={() => handleCopy(`fe-${sound.id}`, frontendSnippet)}
                   className="px-2.5 py-1 rounded-lg bg-white hover:bg-zinc-200 text-[11px] font-mono font-bold text-black transition-all flex items-center gap-1 active:scale-95 shadow-sm"
-                  title="Copy PlaySoundFrontend snippet"
+                  data-tooltip="Copy PlaySoundFrontend snippet"
+                  data-tooltip-pos="left"
+                  aria-label="Copy PlaySoundFrontend snippet"
                 >
                   {copiedId === `fe-${sound.id}` ? (
                     <>

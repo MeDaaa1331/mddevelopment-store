@@ -275,7 +275,9 @@ export const JsonFormatter: React.FC = () => {
           <button
             onClick={handleAutoRepair}
             className="px-3 py-1.5 rounded-xl bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/30 text-xs font-mono font-bold text-emerald-300 transition-all flex items-center gap-1.5 shadow-sm"
-            title="Fix trailing commas, single quotes, and unquoted keys"
+            data-tooltip="Fix trailing commas, quotes & keys"
+            data-tooltip-pos="bottom"
+            aria-label="Auto Repair JSON"
           >
             <Wand2 className="w-3.5 h-3.5 text-emerald-400" />
             <span>Auto Repair JSON</span>
@@ -348,7 +350,9 @@ export const JsonFormatter: React.FC = () => {
             <button
               onClick={handleDownload}
               className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all active:scale-95"
-              title="Download file"
+              data-tooltip="Download file"
+              data-tooltip-pos="left"
+              aria-label="Download file"
             >
               <Download className="w-3.5 h-3.5" />
             </button>

@@ -466,7 +466,9 @@ export const HashConverter: React.FC = () => {
                     <button
                       onClick={() => handleCopy('joaatHex', hashes.joaatHex)}
                       className="p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white"
-                      title="Copy Hex"
+                      data-tooltip="Copy Hex"
+                      data-tooltip-pos="left"
+                      aria-label="Copy Hex"
                     >
                       {copiedKey === 'joaatHex' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                     </button>
@@ -620,7 +622,9 @@ export const HashConverter: React.FC = () => {
                       <button
                         onClick={() => handleCopy(`batch-${i}`, r.hex)}
                         className="p-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white"
-                        title="Copy Hex"
+                        data-tooltip="Copy Hex"
+                        data-tooltip-pos="left"
+                        aria-label="Copy Hex"
                       >
                         {copiedKey === `batch-${i}` ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                       </button>
