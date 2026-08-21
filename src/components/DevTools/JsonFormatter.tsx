@@ -7,16 +7,9 @@ const SAMPLE_MINIFIED_JSON = `{"server":{"name":"MD Development Roleplay","slots
 function repairJson(input: string): string {
   let cleaned = input.trim();
   
-  // Remove single line comments
   cleaned = cleaned.replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1');
-  
-  // Replace single quotes with double quotes for keys and strings
   cleaned = cleaned.replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, '"$1"');
-
-  // Fix unquoted object keys: { name: "val" } -> { "name": "val" }
   cleaned = cleaned.replace(/([{,]\s*)([a-zA-Z0-9_$-]+)\s*:/g, '$1"$2":');
-
-  // Remove trailing commas: [1, 2,] -> [1, 2]
   cleaned = cleaned.replace(/,\s*([\]}])/g, '$1');
 
   return cleaned;

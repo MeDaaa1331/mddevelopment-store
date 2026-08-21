@@ -1,22 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- Main Store Page -->
   <url>
     <loc>https://www.mddevelopment.store/</loc>
     <lastmod>2026-08-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
-
-  <!-- FiveM Developer Tools Hub -->
   <url>
     <loc>https://www.mddevelopment.store/devtools</loc>
     <lastmod>2026-08-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.95</priority>
   </url>
-
-  <!-- Individual FiveM Dev Tools -->
   <url>
     <loc>https://www.mddevelopment.store/devtools?tool=flags</loc>
     <lastmod>2026-08-21</lastmod>

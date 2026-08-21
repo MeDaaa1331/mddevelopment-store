@@ -18,7 +18,6 @@ export interface WeaponData {
 }
 
 export const GTA_WEAPONS_DATABASE: WeaponData[] = [
-  // MELEE
   {
     id: 'weapon_dagger',
     name: 'Antique Cavalry Dagger',
@@ -224,7 +223,6 @@ export const GTA_WEAPONS_DATABASE: WeaponData[] = [
     components: []
   },
 
-  // HANDGUNS
   {
     id: 'weapon_pistol',
     name: 'Pistol 9mm (Beretta 92FS)',
@@ -453,7 +451,6 @@ export const GTA_WEAPONS_DATABASE: WeaponData[] = [
     components: []
   },
 
-  // SUBMACHINE GUNS (SMG)
   {
     id: 'weapon_microsmg',
     name: 'Micro SMG (Uzi)',
@@ -574,7 +571,6 @@ export const GTA_WEAPONS_DATABASE: WeaponData[] = [
     components: []
   },
 
-  // SHOTGUNS
   {
     id: 'weapon_pumpshotgun',
     name: 'Pump Shotgun (Remington 870)',
@@ -710,7 +706,6 @@ export const GTA_WEAPONS_DATABASE: WeaponData[] = [
     ]
   },
 
-  // ASSAULT RIFLES
   {
     id: 'weapon_assaultrifle',
     name: 'Assault Rifle (AK-47)',
@@ -880,7 +875,6 @@ export const GTA_WEAPONS_DATABASE: WeaponData[] = [
     ]
   },
 
-  // SNIPER RIFLES
   {
     id: 'weapon_sniperrifle',
     name: 'Sniper Rifle (AWM)',
@@ -941,7 +935,6 @@ export const GTA_WEAPONS_DATABASE: WeaponData[] = [
     components: []
   },
 
-  // MACHINE GUNS & HEAVY
   {
     id: 'weapon_mg',
     name: 'MG (PKM)',
@@ -1087,7 +1080,6 @@ export const GTA_WEAPONS_DATABASE: WeaponData[] = [
     components: []
   },
 
-  // THROWABLES
   {
     id: 'weapon_grenade',
     name: 'Frag Grenade',
@@ -1197,7 +1189,6 @@ export const GTA_WEAPONS_DATABASE: WeaponData[] = [
     components: []
   },
 
-  // MK II WEAPONS
   {
     id: 'weapon_pistol_mk2',
     name: 'Pistol Mk II',

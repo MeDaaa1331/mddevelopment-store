@@ -231,7 +231,6 @@ export const DevToolsPage: React.FC = () => {
           </button>
         </div>
 
-        {/* Compact Header */}
         <div className="relative p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-[#111118]/90 via-[#0e0e14]/90 to-[#0b0b10]/95 border border-white/10 overflow-hidden shadow-xl mb-5">
           <div className="absolute top-0 right-0 w-80 h-80 bg-white/[0.02] rounded-full blur-2xl pointer-events-none" />
           <div className="absolute bottom-0 left-1/3 w-48 h-48 bg-emerald-500/[0.02] rounded-full blur-2xl pointer-events-none" />
@@ -256,7 +255,6 @@ export const DevToolsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Tab Navigation */}
         <div
           ref={tabContainerRef}
           className="relative flex flex-wrap items-center gap-1.5 p-1.5 bg-zinc-950/80 rounded-2xl border border-white/10 w-full backdrop-blur-md mb-5"
@@ -289,7 +287,6 @@ export const DevToolsPage: React.FC = () => {
           ))}
         </div>
 
-        {/* Enlarged Tool Window */}
         <div
           data-lenis-prevent
           className="p-6 sm:p-9 rounded-3xl bg-[#0b0b10]/95 border border-white/12 backdrop-blur-2xl shadow-2xl transition-all duration-300 animate-fadeIn min-h-[600px]"
@@ -310,7 +307,6 @@ export const DevToolsPage: React.FC = () => {
           {activeTab === 'anim' && <AnimExplorer />}
         </div>
 
-        {/* SEO Knowledge & Tool Directory Section */}
         <section aria-labelledby="devtools-overview-heading" className="mt-12 pt-10 border-t border-white/10">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="p-5 rounded-2xl bg-zinc-950/60 border border-white/10">

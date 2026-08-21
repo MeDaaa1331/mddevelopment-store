@@ -167,7 +167,6 @@ export const AdminStatsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#050507] text-white flex flex-col font-sans selection:bg-white selection:text-black">
-      {/* Reset Confirmation Modal */}
       {showResetConfirm && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="w-full max-w-sm p-6 rounded-3xl bg-zinc-950 border border-red-500/30 text-center space-y-4 shadow-2xl">
@@ -198,7 +197,6 @@ export const AdminStatsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Header Bar */}
       <header className="sticky top-0 z-40 bg-zinc-950/80 backdrop-blur-xl border-b border-white/10 px-6 py-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -276,9 +274,7 @@ export const AdminStatsPage: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
-        {/* KPI Top Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 relative overflow-hidden flex flex-col justify-between">
             <div className="flex items-center justify-between text-zinc-400 text-xs font-mono font-bold uppercase tracking-wider">
@@ -342,7 +338,6 @@ export const AdminStatsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Navigation Tabs */}
         <div className="flex items-center gap-2 p-1.5 bg-zinc-950/80 rounded-2xl border border-white/10 overflow-x-auto">
           {[
             { id: 'overview', label: 'Overview & Top Charts', icon: BarChart3 },
@@ -370,10 +365,8 @@ export const AdminStatsPage: React.FC = () => {
           })}
         </div>
 
-        {/* TAB: OVERVIEW & TOP CHARTS */}
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Tool Popularity Breakdown */}
             <div className="lg:col-span-8 p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -423,7 +416,6 @@ export const AdminStatsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Quick Live Feed & Summary */}
             <div className="lg:col-span-4 flex flex-col gap-6">
               <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-4">
                 <div className="flex items-center justify-between">
@@ -467,7 +459,6 @@ export const AdminStatsPage: React.FC = () => {
                 </button>
               </div>
 
-              {/* Upstash Redis Status Box */}
               <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-3">
                 <div className="flex items-center gap-2">
                   <Database className="w-4 h-4 text-emerald-400" />
@@ -485,7 +476,6 @@ export const AdminStatsPage: React.FC = () => {
           </div>
         )}
 
-        {/* TAB: TOOLS LEADERBOARD */}
         {activeTab === 'tools' && (
           <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-4">
             <div>
@@ -551,7 +541,6 @@ export const AdminStatsPage: React.FC = () => {
           </div>
         )}
 
-        {/* TAB: ITEMS & SEARCHES */}
         {activeTab === 'items' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-4">
@@ -615,7 +604,6 @@ export const AdminStatsPage: React.FC = () => {
           </div>
         )}
 
-        {/* TAB: LIVE ACTIVITY STREAM */}
         {activeTab === 'live' && (
           <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-4">
             <div className="flex items-center justify-between">
@@ -678,7 +666,6 @@ export const AdminStatsPage: React.FC = () => {
           </div>
         )}
 
-        {/* TAB: GEOGRAPHY & TRAFFIC */}
         {activeTab === 'geo' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-4">

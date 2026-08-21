@@ -318,7 +318,6 @@ code,
   pointer-events: none;
 }
 
-/* Custom FiveM Glassmorphism Tooltips */
 [data-tooltip] {
   position: relative;
 }

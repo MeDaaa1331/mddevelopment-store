@@ -8,7 +8,6 @@ export interface ModelEntry {
 }
 
 export const GTA_PED_PROP_DATABASE: ModelEntry[] = [
-  // LAW ENFORCEMENT & MILITARY
   { id: 's_m_y_cop_01', name: 'LSPD Police Officer Male', hash: '0x5E34C216', category: 'Law & Military', type: 'ped', description: 'Los Santos Police Department patrol officer male' },
   { id: 's_f_y_cop_01', name: 'LSPD Police Officer Female', hash: '0x15F8700D', category: 'Law & Military', type: 'ped', description: 'Los Santos Police Department patrol officer female' },
   { id: 's_m_y_sheriff_01', name: 'LSSD Sheriff Deputy Male', hash: '0xD8048714', category: 'Law & Military', type: 'ped', description: 'Los Santos County Sheriff deputy male' },
@@ -27,14 +26,12 @@ export const GTA_PED_PROP_DATABASE: ModelEntry[] = [
   { id: 's_m_y_blackops_02', name: 'Merryweather Heavy Assault', hash: '0x356CE929', category: 'Law & Military', type: 'ped', description: 'Merryweather tactical operative' },
   { id: 's_m_y_uscg_01', name: 'Coast Guard Officer', hash: '0x4386760B', category: 'Law & Military', type: 'ped', description: 'San Andreas Coast Guard officer' },
 
-  // EMS & FIRE
   { id: 's_m_m_paramedic_01', name: 'Paramedic / EMS Male', hash: '0x11D121FE', category: 'EMS & Fire', type: 'ped', description: 'LSFD paramedic medical responder' },
   { id: 's_m_y_fireman_01', name: 'Firefighter Male', hash: '0xD63CE169', category: 'EMS & Fire', type: 'ped', description: 'Los Santos Fire Department firefighter' },
   { id: 's_m_m_doctor_01', name: 'Hospital Doctor / Surgeon', hash: '0xD47DA357', category: 'EMS & Fire', type: 'ped', description: 'Pillbox Hill Medical Center doctor' },
   { id: 's_f_y_scrubs_01', name: 'Hospital Nurse / Scrubs Female', hash: '0x50C3A013', category: 'EMS & Fire', type: 'ped', description: 'Hospital nurse in scrubs' },
   { id: 's_m_m_lifeinvad_01', name: 'Hospital Attendant', hash: '0xA924F087', category: 'EMS & Fire', type: 'ped', description: 'Medical orderly / clinic staff' },
 
-  // SERVICES & WORKERS
   { id: 's_m_m_autoshop_01', name: 'Mechanic Bennys', hash: '0x99564EB2', category: 'Services & Jobs', type: 'ped', description: 'Bennys Original Motorworks mechanic' },
   { id: 's_m_m_autoshop_02', name: 'Mechanic Los Santos Customs', hash: '0x2649B283', category: 'Services & Jobs', type: 'ped', description: 'LSC vehicle tuner technician' },
   { id: 's_m_y_garbage', name: 'Sanitation Trash Collector', hash: '0x6A8D08D2', category: 'Services & Jobs', type: 'ped', description: 'City sanitation trash worker' },
@@ -53,7 +50,6 @@ export const GTA_PED_PROP_DATABASE: ModelEntry[] = [
   { id: 's_m_y_construct_01', name: 'Construction Worker Male', hash: '0xD7DA9E99', category: 'Services & Jobs', type: 'ped', description: 'Mile High Club building site worker' },
   { id: 's_m_y_busboy_01', name: 'Hotel Bellhop / Busboy', hash: '0x65F93DA2', category: 'Services & Jobs', type: 'ped', description: 'Richman Hotel luggage attendant' },
 
-  // GANGS & CRIME
   { id: 'g_m_y_ballaeast_01', name: 'East Ballas Gangster', hash: '0x23180323', category: 'Gangs & Crime', type: 'ped', description: 'East Los Santos Ballas member' },
   { id: 'g_m_y_ballaorig_01', name: 'Original Ballas Leader', hash: '0x23180323', category: 'Gangs & Crime', type: 'ped', description: 'South Los Santos Ballas OG' },
   { id: 'g_m_y_famca_01', name: 'Families Carson Ave Member', hash: '0x7E6A7D97', category: 'Gangs & Crime', type: 'ped', description: 'Chamberlain Gangster Families' },
@@ -67,7 +63,6 @@ export const GTA_PED_PROP_DATABASE: ModelEntry[] = [
   { id: 'g_m_y_armgoon_02', name: 'Armenian Mob Hitman', hash: '0xE899F139', category: 'Gangs & Crime', type: 'ped', description: 'La Puerta Armenian mobster' },
   { id: 'g_f_y_vagos_01', name: 'Vagos Female Gangster', hash: '0xA924F087', category: 'Gangs & Crime', type: 'ped', description: 'Vagos female member' },
 
-  // STORY CHARACTERS
   { id: 'player_zero', name: 'Michael De Santa', hash: '0x0D7114C9', category: 'Story Characters', type: 'ped', description: 'Protagonist Michael De Santa' },
   { id: 'player_one', name: 'Franklin Clinton', hash: '0x9B22DBAF', category: 'Story Characters', type: 'ped', description: 'Protagonist Franklin Clinton' },
   { id: 'player_two', name: 'Trevor Philips', hash: '0x9B810FA2', category: 'Story Characters', type: 'ped', description: 'Protagonist Trevor Philips' },
@@ -81,7 +76,6 @@ export const GTA_PED_PROP_DATABASE: ModelEntry[] = [
   { id: 'ig_paige', name: 'Paige Harris', hash: '0xD2B1DB15', category: 'Story Characters', type: 'ped', description: 'Expert heist hacker operative' },
   { id: 'ig_agatha', name: 'Agatha Baker', hash: '0xAA6F32A3', category: 'Story Characters', type: 'ped', description: 'Diamond Casino & Resort general manager' },
 
-  // ANIMALS
   { id: 'a_c_husky', name: 'Siberian Husky Dog', hash: '0x4E89C1D9', category: 'Animals', type: 'ped', description: 'Siberian husky domestic dog' },
   { id: 'a_c_rottweiler', name: 'Rottweiler Dog (Chop)', hash: '0x9563221D', category: 'Animals', type: 'ped', description: 'Rottweiler canine companion' },
   { id: 'a_c_shepherd', name: 'German Shepherd Dog', hash: '0x25557DA1', category: 'Animals', type: 'ped', description: 'K9 police patrol dog' },
@@ -94,7 +88,6 @@ export const GTA_PED_PROP_DATABASE: ModelEntry[] = [
   { id: 'a_c_coyote', name: 'Desert Coyote', hash: '0x644AC79E', category: 'Animals', type: 'ped', description: 'Senora Desert wild coyote' },
   { id: 'a_c_mtlion', name: 'Mountain Lion / Cougar', hash: '0x12572952', category: 'Animals', type: 'ped', description: 'Wild mountain cougar feline predator' },
 
-  // PROPS & OBJECTS
   { id: 'prop_atm_01', name: 'Fleeca Street ATM', hash: '0x27C50C20', category: 'Props & Objects', type: 'prop', description: 'Standard city Fleeca cash machine' },
   { id: 'prop_atm_02', name: 'Bank of Liberty Wall ATM', hash: '0x99276926', category: 'Props & Objects', type: 'prop', description: 'Wall mounted red bank ATM' },
   { id: 'prop_ld_vault_door', name: 'Bank Vault Door Heavy', hash: '0x40316279', category: 'Props & Objects', type: 'prop', description: 'Massive bank vault locking door' },
