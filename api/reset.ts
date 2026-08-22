@@ -14,8 +14,12 @@ export default async function handler(req: any, res: any) {
     const kvToken = process.env.KV_REST_API_TOKEN || process.env.REDIS_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
     if (kvUrl && kvToken) {
-      const headers = { Authorization: `Bearer ${kvToken}` };
-      const mainKeys = [
+      const headers = {
+        Authorization: `Bearer ${kvToken}`,
+        'Content-Type': 'application/json'
+      };
+
+      const keysToDelete = [
         'analytics:total_events',
         'analytics:total_views',
         'analytics:total_copies',
@@ -26,20 +30,25 @@ export default async function handler(req: any, res: any) {
         'analytics:items',
         'analytics:countries',
         'analytics:referrers',
-        'analytics:devices'
-      ];
-
-      const allKeysToDelete = [
-        ...mainKeys,
+        'analytics:devices',
         ...ALL_TOOLS.map(t => `analytics:tool_views:${t}`),
         ...ALL_TOOLS.map(t => `analytics:tool_copies:${t}`)
       ];
 
-      const deletePromises = allKeysToDelete.map(k =>
-        fetch(`${kvUrl}/del/${encodeURIComponent(k)}`, { headers }).catch(() => {})
-      );
+      const pipelineCommands = keysToDelete.map(k => ['DEL', k]);
 
-      await Promise.allSettled(deletePromises);
+      await Promise.allSettled([
+        fetch(`${kvUrl}/pipeline`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(pipelineCommands)
+        }),
+        ...keysToDelete.map(k =>
+          fetch(`${kvUrl}/del/${k}`, {
+            headers: { Authorization: `Bearer ${kvToken}` }
+          }).catch(() => {})
+        )
+      ]);
     }
 
     return res.status(200).json({ success: true, message: 'All analytics data reset to zero' });

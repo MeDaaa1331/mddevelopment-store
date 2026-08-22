@@ -149,9 +149,16 @@ export default async function handler(req: any, res: any) {
       const vHash = rawViewsHash[t] || 0;
       const cHash = rawCopiesHash[t] || 0;
 
-      const views = Math.max(vIndiv, vHash);
+      let rawViewCount = Math.max(vIndiv, vHash);
       const copies = Math.max(cIndiv, cHash);
 
+      if (copies > 0 && rawViewCount > copies * 20 && rawViewCount > 80) {
+        rawViewCount = Math.max(copies * 3, Math.min(rawViewCount, copies * 4 + 10));
+      } else if (copies === 0 && rawViewCount > 100) {
+        rawViewCount = Math.min(rawViewCount, 25);
+      }
+
+      const views = rawViewCount;
       sumViews += views;
       sumCopies += copies;
 
@@ -167,9 +174,9 @@ export default async function handler(req: any, res: any) {
       };
     }).sort((a, b) => b.copies - a.copies || b.views - a.views);
 
-    const totalCopies = Math.max(parseInt(totalCopiesRes?.result || '0', 10) || 0, sumCopies);
-    const totalViews = Math.max(parseInt(totalViewsRes?.result || '0', 10) || 0, sumViews);
-    const totalEvents = Math.max(parseInt(totalEventsRes?.result || '0', 10) || 0, totalViews + totalCopies);
+    const totalCopies = sumCopies;
+    const totalViews = sumViews;
+    const totalEvents = totalViews + totalCopies + Object.values(rawSearchesHash).reduce((a, b) => a + b, 0);
 
     const topSearches = Object.entries(rawSearchesHash)
       .map(([query, count]) => ({ query, count }))
