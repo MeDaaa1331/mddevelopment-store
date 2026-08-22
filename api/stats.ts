@@ -109,9 +109,24 @@ export default async function handler(req: any, res: any) {
       fetch(`${kvUrl}/hgetall/analytics:referrers`, { headers }).then(r => r.json()).catch(() => ({ result: {} })),
       fetch(`${kvUrl}/hgetall/analytics:devices`, { headers }).then(r => r.json()).catch(() => ({ result: {} })),
       fetch(`${kvUrl}/lrange/analytics:recent_events/0/99`, { headers }).then(r => r.json()).catch(() => ({ result: [] })),
+      fetch(`${kvUrl}/smembers/users:discord:index`, { headers }).then(r => r.json()).catch(() => ({ result: [] })),
       ...viewKeyFetches,
       ...copyKeyFetches
     ]);
+
+    const discordUserIds: string[] = recentEventsRes ? (await fetch(`${kvUrl}/smembers/users:discord:index`, { headers }).then(r => r.json()).catch(() => ({ result: [] })))?.result || [] : [];
+    const discordUserFetches = discordUserIds.map(id =>
+      fetch(`${kvUrl}/get/users:discord:${id}`, { headers })
+        .then(r => r.json())
+        .then(d => {
+          if (d?.result) {
+            try { return JSON.parse(decodeURIComponent(d.result)); } catch {}
+          }
+          return null;
+        })
+        .catch(() => null)
+    );
+    const discordUsers = (await Promise.all(discordUserFetches)).filter(Boolean);
 
     const rawViewsHash = parseHashResult(toolsViewsHashRes?.result);
     const rawCopiesHash = parseHashResult(toolsCopiesHashRes?.result);
@@ -234,7 +249,9 @@ export default async function handler(req: any, res: any) {
         mobile: Math.round((mobileCount / totalDeviceCount) * 100) || 0,
         tablet: 0
       },
-      recentEvents: recentEvents || []
+      recentEvents: recentEvents || [],
+      discordUsers: discordUsers || [],
+      totalDiscordUsers: discordUsers.length || 0
     });
 
   } catch (err: any) {

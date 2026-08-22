@@ -31,6 +31,8 @@ export interface AnalyticsSummary {
   topReferrers: { source: string; count: number; percentage: number }[];
   deviceBreakdown: { desktop: number; mobile: number; tablet: number };
   recentEvents: DevToolEvent[];
+  discordUsers?: any[];
+  totalDiscordUsers?: number;
 }
 
 const LOCAL_EVENTS_KEY = 'md_dev_analytics_events_v3';
@@ -284,7 +286,9 @@ export const getStoredAnalytics = async (): Promise<AnalyticsSummary> => {
       topCountries: serverData.topCountries || [],
       topReferrers: serverData.topReferrers || [],
       deviceBreakdown: serverData.deviceBreakdown || { desktop: 100, mobile: 0, tablet: 0 },
-      recentEvents
+      recentEvents,
+      discordUsers: serverData.discordUsers || [],
+      totalDiscordUsers: serverData.totalDiscordUsers || (serverData.discordUsers?.length || 0)
     };
   }
 

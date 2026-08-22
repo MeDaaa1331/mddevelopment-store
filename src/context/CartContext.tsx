@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CartItem, Coupon, TebexPackage } from '../types';
 import confetti from 'canvas-confetti';
 import { TEBEX_CONFIG } from '../config/tebex';
+import { useAuth } from './AuthContext';
 
 const TEBEX_HEADLESS_BASE = 'https://headless.tebex.io/api';
 const CART_KEY = 'md_cart_items_v2';
@@ -38,6 +39,7 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, syncUserData } = useAuth();
   const [items, setItems] = useState<CartItem[]>(() => {
     try { return JSON.parse(localStorage.getItem(CART_KEY) || '[]'); } catch { return []; }
   });
@@ -51,7 +53,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isCallbackProcessing, setIsCallbackProcessing] = useState(false);
   const [callbackError, setCallbackError] = useState<string | null>(null);
 
-  useEffect(() => { localStorage.setItem(CART_KEY, JSON.stringify(items)); }, [items]);
+  useEffect(() => {
+    localStorage.setItem(CART_KEY, JSON.stringify(items));
+    if (user) {
+      syncUserData({ cart: items });
+    }
+  }, [items]);
   useEffect(() => {
     if (appliedCoupon) localStorage.setItem(COUPON_KEY, JSON.stringify(appliedCoupon));
     else localStorage.removeItem(COUPON_KEY);

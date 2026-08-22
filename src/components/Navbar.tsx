@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ShoppingCart, Search, MessageSquare, Menu, X, Flame, Code2, Crown, Wrench } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useStore } from '../context/StoreContext';
+import { useAuth } from '../context/AuthContext';
 import { TEBEX_CONFIG } from '../config/tebex';
 import { useDiscordStats } from '../hooks/useDiscordStats';
 import { smoothScrollTo } from '../hooks/useSmoothScroll';
@@ -9,6 +10,7 @@ import { smoothScrollTo } from '../hooks/useSmoothScroll';
 export const Navbar: React.FC = () => {
   const { totalCount, setIsCartOpen } = useCart();
   const { setCategory, setSearch, filters, currentRoute, navigate } = useStore();
+  const { user, isLoggedIn, loginWithDiscord, setIsProfileModalOpen } = useAuth();
   const discordStats = useDiscordStats();
 
   const [isScrolled, setIsScrolled] = useState(false);
@@ -192,7 +194,7 @@ export const Navbar: React.FC = () => {
               href={DISCORD}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-zinc-900/90 hover:bg-zinc-800 text-zinc-200 hover:text-white border border-white/10 hover:border-white/25 transition-all group"
+              className="hidden lg:flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-zinc-900/90 hover:bg-zinc-800 text-zinc-200 hover:text-white border border-white/10 hover:border-white/25 transition-all group"
               data-tooltip={`${discordStats.totalMembers} Members • ${discordStats.onlineMembers} Online`}
               data-tooltip-pos="bottom"
             >
@@ -206,6 +208,32 @@ export const Navbar: React.FC = () => {
                 {discordStats.onlineMembers}
               </span>
             </a>
+
+            {isLoggedIn && user ? (
+              <button
+                onClick={() => setIsProfileModalOpen(true)}
+                className="flex items-center gap-2 p-1 pl-2 pr-3 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-white/10 hover:border-white/25 transition-all text-xs font-bold text-white shadow-sm group"
+                data-tooltip="View Discord Profile & History"
+                data-tooltip-pos="bottom"
+              >
+                <img
+                  src={user.avatarUrl}
+                  alt={user.username}
+                  className="w-6 h-6 rounded-lg object-cover border border-white/10"
+                />
+                <span className="max-w-[100px] truncate">{user.global_name || user.username}</span>
+              </button>
+            ) : (
+              <button
+                onClick={loginWithDiscord}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-[#5865F2]/20 hover:bg-[#5865F2]/30 text-[#8ea1ff] hover:text-white border border-[#5865F2]/40 hover:border-[#5865F2]/60 transition-all shadow-sm active:scale-95"
+                data-tooltip="Sign in with Discord"
+                data-tooltip-pos="bottom"
+              >
+                <MessageSquare className="w-3.5 h-3.5 fill-[#5865F2]" />
+                <span className="hidden sm:inline">Sign In</span>
+              </button>
+            )}
 
             <button
               onClick={() => setIsCartOpen(true)}
@@ -263,8 +291,35 @@ export const Navbar: React.FC = () => {
             ))}
             <button onClick={() => scrollTo('faq-section')} className="w-full text-left px-3 py-2 text-sm font-medium text-zinc-300 hover:text-white rounded-lg hover:bg-white/5">FAQ</button>
 
-            <div className="pt-2 border-t border-white/10 flex gap-2">
-              <a href={DISCORD} target="_blank" rel="noopener noreferrer" className="w-full py-2 text-xs font-semibold rounded-lg bg-zinc-800 text-white flex items-center justify-center gap-2">
+            <div className="pt-2 border-t border-white/10 flex flex-col gap-2">
+              {isLoggedIn && user ? (
+                <button
+                  onClick={() => {
+                    setMobileOpen(false);
+                    setIsProfileModalOpen(true);
+                  }}
+                  className="w-full py-2.5 px-3 text-xs font-bold rounded-xl bg-zinc-900 border border-white/10 text-white flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <img src={user.avatarUrl} alt={user.username} className="w-6 h-6 rounded-lg object-cover" />
+                    <span>{user.global_name || user.username}</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-zinc-400">View Profile →</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setMobileOpen(false);
+                    loginWithDiscord();
+                  }}
+                  className="w-full py-2.5 text-xs font-bold rounded-xl bg-[#5865F2] text-white flex items-center justify-center gap-2 shadow-sm"
+                >
+                  <MessageSquare className="w-3.5 h-3.5 fill-white" />
+                  <span>Sign In with Discord</span>
+                </button>
+              )}
+
+              <a href={DISCORD} target="_blank" rel="noopener noreferrer" className="w-full py-2 text-xs font-semibold rounded-lg bg-zinc-900/80 text-white flex items-center justify-center gap-2">
                 <MessageSquare className="w-3.5 h-3.5" />
                 <span>Discord Support</span>
                 <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-emerald-950 text-emerald-300 rounded-full">

@@ -23,7 +23,8 @@ import {
   ChevronRight,
   Database,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  MessageSquare
 } from 'lucide-react';
 import { getStoredAnalytics, resetAllAnalytics, AnalyticsSummary, DevToolEvent } from '../utils/analytics';
 import { useStore } from '../context/StoreContext';
@@ -37,7 +38,9 @@ export const AdminStatsPage: React.FC = () => {
   const [pinError, setPinError] = useState(false);
   const [data, setData] = useState<AnalyticsSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'tools' | 'items' | 'live' | 'geo'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'tools' | 'items' | 'live' | 'geo' | 'discord'>('overview');
+  const [discordSearch, setDiscordSearch] = useState('');
+  const [selectedUserModal, setSelectedUserModal] = useState<any | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
@@ -334,7 +337,8 @@ export const AdminStatsPage: React.FC = () => {
             { id: 'tools', label: 'Tool Leaderboard', icon: Flame },
             { id: 'items', label: 'Top GTA V Items & Queries', icon: Search },
             { id: 'live', label: 'Live Activity Stream', icon: Activity },
-            { id: 'geo', label: 'Geography & Traffic', icon: Globe }
+            { id: 'geo', label: 'Geography & Traffic', icon: Globe },
+            { id: 'discord', label: `Discord Members (${data?.totalDiscordUsers || (data?.discordUsers?.length || 0)})`, icon: MessageSquare }
           ].map(tab => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -700,7 +704,7 @@ export const AdminStatsPage: React.FC = () => {
 
               {(data?.topReferrers || []).length === 0 ? (
                 <div className="p-8 rounded-2xl bg-zinc-900/40 border border-white/5 text-center">
-                  <p className="text-xs text-zinc-400 font-mono">Zatím žádná referenční data.</p>
+                  <p className="text-xs text-zinc-400 font-mono">No referrer traffic recorded yet.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -721,6 +725,234 @@ export const AdminStatsPage: React.FC = () => {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'discord' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-mono text-zinc-400 uppercase font-bold">Registered Members</span>
+                  <span className="font-display font-black text-2xl text-white block mt-1">
+                    {data?.totalDiscordUsers || (data?.discordUsers?.length || 0)}
+                  </span>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-[#5865F2]/10 border border-[#5865F2]/30 flex items-center justify-center text-[#8ea1ff]">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-mono text-zinc-400 uppercase font-bold">Cloud Synced Carts</span>
+                  <span className="font-display font-black text-2xl text-white block mt-1">
+                    {(data?.discordUsers || []).filter(u => u.cart && u.cart.length > 0).length}
+                  </span>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-mono text-zinc-400 uppercase font-bold">Tool Downloads / Copies</span>
+                  <span className="font-display font-black text-2xl text-white block mt-1">
+                    {(data?.discordUsers || []).reduce((acc, u) => acc + (u.downloadsCount || u.history?.length || 0), 0)}
+                  </span>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                  <Download className="w-5 h-5" />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-display font-extrabold text-base text-white">Discord Member Accounts</h3>
+                  <p className="text-xs text-zinc-400">Users who authenticated via Discord OAuth2</p>
+                </div>
+
+                <div className="relative w-full sm:w-72">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by name, ID or country..."
+                    value={discordSearch}
+                    onChange={e => setDiscordSearch(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white"
+                  />
+                </div>
+              </div>
+
+              {(() => {
+                const allUsers = data?.discordUsers || [];
+                const filtered = allUsers.filter(u => {
+                  if (!discordSearch) return true;
+                  const q = discordSearch.toLowerCase();
+                  return (
+                    (u.username && u.username.toLowerCase().includes(q)) ||
+                    (u.global_name && u.global_name.toLowerCase().includes(q)) ||
+                    (u.id && u.id.toLowerCase().includes(q)) ||
+                    (u.country && u.country.toLowerCase().includes(q))
+                  );
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="p-12 rounded-2xl bg-zinc-900/40 border border-white/5 text-center">
+                      <MessageSquare className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
+                      <p className="text-xs text-zinc-400 font-mono">
+                        {allUsers.length === 0 ? 'No Discord users have logged in yet.' : 'No users match your search query.'}
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-white/10 text-zinc-400 font-mono">
+                          <th className="pb-3 pl-2">User</th>
+                          <th className="pb-3">Discord ID</th>
+                          <th className="pb-3">Country</th>
+                          <th className="pb-3">Joined</th>
+                          <th className="pb-3">Last Active</th>
+                          <th className="pb-3">Cart / Favs</th>
+                          <th className="pb-3">Activity</th>
+                          <th className="pb-3 text-right pr-2">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5 font-sans">
+                        {filtered.map(user => {
+                          const joinedStr = user.firstJoined
+                            ? new Date(user.firstJoined).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                            : 'N/A';
+                          const activeStr = user.lastActive
+                            ? new Date(user.lastActive).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                            : 'N/A';
+
+                          return (
+                            <tr key={user.id} className="hover:bg-white/[0.02] transition-colors">
+                              <td className="py-3.5 pl-2">
+                                <div className="flex items-center gap-3">
+                                  <img
+                                    src={user.avatarUrl}
+                                    alt={user.username}
+                                    className="w-8 h-8 rounded-xl object-cover border border-white/10 shrink-0"
+                                  />
+                                  <div>
+                                    <span className="font-bold text-white block">
+                                      {user.global_name || user.username}
+                                    </span>
+                                    <span className="font-mono text-[11px] text-zinc-400 block">
+                                      @{user.username}
+                                    </span>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-3.5 font-mono text-zinc-400">
+                                <span className="px-2 py-1 rounded bg-zinc-900 border border-white/5 text-[11px]">
+                                  {user.id}
+                                </span>
+                              </td>
+                              <td className="py-3.5 font-mono text-zinc-300">
+                                <span className="px-2 py-0.5 rounded-md bg-zinc-800 text-[10px] font-bold">
+                                  {user.country || 'GLOBAL'}
+                                </span>
+                              </td>
+                              <td className="py-3.5 text-zinc-400 font-mono text-[11px]">{joinedStr}</td>
+                              <td className="py-3.5 text-emerald-400 font-mono text-[11px]">{activeStr}</td>
+                              <td className="py-3.5">
+                                <div className="flex items-center gap-2">
+                                  <span className="px-2 py-0.5 rounded bg-zinc-900 border border-white/5 text-[11px] font-mono text-zinc-300">
+                                    🛒 {user.cart?.length || 0}
+                                  </span>
+                                  <span className="px-2 py-0.5 rounded bg-amber-400/10 border border-amber-400/20 text-[11px] font-mono text-amber-300">
+                                    ★ {user.favorites?.length || 0}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-3.5 font-mono text-zinc-300">
+                                <span className="font-bold">{user.downloadsCount || user.history?.length || 0}</span> events
+                              </td>
+                              <td className="py-3.5 text-right pr-2">
+                                <button
+                                  onClick={() => setSelectedUserModal(user)}
+                                  className="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-xs font-semibold text-zinc-200 hover:text-white transition-all"
+                                >
+                                  View Details
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        )}
+
+        {selectedUserModal && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center p-4 animate-fadeIn">
+            <div className="w-full max-w-lg p-6 rounded-3xl bg-zinc-950 border border-white/15 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={selectedUserModal.avatarUrl}
+                    alt={selectedUserModal.username}
+                    className="w-12 h-12 rounded-2xl border border-white/20 object-cover"
+                  />
+                  <div>
+                    <h4 className="font-display font-bold text-base text-white">
+                      {selectedUserModal.global_name || selectedUserModal.username}
+                    </h4>
+                    <p className="text-xs font-mono text-zinc-400">@{selectedUserModal.username} • ID: {selectedUserModal.id}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedUserModal(null)}
+                  className="p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white"
+                >
+                  <AlertTriangle className="w-4 h-4 hidden" />
+                  <Trash2 className="w-4 h-4 hidden" />
+                  <span className="text-sm font-bold">✕</span>
+                </button>
+              </div>
+
+              <div>
+                <h5 className="text-xs font-mono font-bold text-zinc-400 uppercase tracking-wider mb-2">
+                  Activity History ({selectedUserModal.history?.length || 0})
+                </h5>
+                {(!selectedUserModal.history || selectedUserModal.history.length === 0) ? (
+                  <p className="text-xs text-zinc-500 font-mono py-4 text-center">No recorded activity yet.</p>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    {selectedUserModal.history.map((h: any, idx: number) => (
+                      <div key={idx} className="p-2.5 rounded-xl bg-zinc-900/80 border border-white/5 flex items-center justify-between text-xs">
+                        <span className="font-semibold text-white truncate max-w-xs">{h.title}</span>
+                        <span className="text-[10px] font-mono text-zinc-400 uppercase">{h.type}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-2 border-t border-white/10 flex justify-end">
+                <button
+                  onClick={() => setSelectedUserModal(null)}
+                  className="px-4 py-2 rounded-xl bg-white text-black font-bold text-xs hover:bg-zinc-200"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         )}

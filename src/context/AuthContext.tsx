@@ -1,111 +1,153 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { CfxAuthService, CfxForumUser } from '../services/cfxAuth';
+import { DiscordUser, UserHistoryItem } from '../types/auth';
+
+const USER_STORAGE_KEY = 'md_discord_user_v1';
+const FAV_STORAGE_KEY = 'md_devtools_favorite_tools';
+const CART_STORAGE_KEY = 'md_cart_items_v2';
 
 interface AuthContextType {
-  user: CfxForumUser | null;
-  loginWithCfxForum: () => Promise<void>;
-  loginWithUsername: (username: string) => Promise<void>;
+  user: DiscordUser | null;
+  isLoggedIn: boolean;
+  loginWithDiscord: () => void;
   logout: () => void;
-  isLoading: boolean;
-  isAuthModalOpen: boolean;
-  setIsAuthModalOpen: (open: boolean) => void;
-  authPendingAction: (() => void) | null;
-  setAuthPendingAction: (action: (() => void) | null) => void;
+  syncUserData: (updates: Partial<DiscordUser>) => Promise<void>;
+  recordHistory: (item: Omit<UserHistoryItem, 'id' | 'timestamp'>) => void;
+  isProfileModalOpen: boolean;
+  setIsProfileModalOpen: (open: boolean) => void;
+  justLoggedIn: boolean;
+  dismissJustLoggedIn: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<CfxForumUser | null>(() => CfxAuthService.getSavedUser());
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
-  const [authPendingAction, setAuthPendingAction] = useState<(() => void) | null>(null);
+  const [user, setUser] = useState<DiscordUser | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const stored = localStorage.getItem(USER_STORAGE_KEY);
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [justLoggedIn, setJustLoggedIn] = useState(false);
 
   useEffect(() => {
-    const handleAuthRedirect = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const payloadParam = urlParams.get('payload');
-      const cfxUsername = urlParams.get('username') || urlParams.get('cfx_username') || urlParams.get('user');
+    if (typeof window === 'undefined') return;
 
-      if (cfxUsername) {
-        setIsLoading(true);
-        try {
-          const profile = await CfxAuthService.fetchForumProfile(cfxUsername);
-          setUser(profile);
-          CfxAuthService.saveUser(profile);
-          window.history.replaceState({}, document.title, window.location.pathname);
-        } finally {
-          setIsLoading(false);
-        }
-      } else if (payloadParam) {
-        setIsLoading(true);
-        try {
-          console.log('[CfxAuth] Processing encrypted return payload from forum.cfx.re...');
-          const decrypted = await CfxAuthService.decryptAuthPayload(payloadParam);
-          if (decrypted) {
-            console.log('[CfxAuth] Decrypted auth response successfully:', decrypted);
-          }
-          window.history.replaceState({}, document.title, window.location.pathname);
-        } catch (e) {
-          console.warn('[CfxAuth] Error handling payload:', e);
-        } finally {
-          setIsLoading(false);
-        }
-      }
-    };
+    const params = new URLSearchParams(window.location.search);
+    const authStatus = params.get('discord_auth');
+    const userPayload = params.get('user');
 
-    handleAuthRedirect();
+    if (authStatus === 'success' && userPayload) {
+      try {
+        const parsedUser: DiscordUser = JSON.parse(decodeURIComponent(userPayload));
+        setUser(parsedUser);
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(parsedUser));
+        setJustLoggedIn(true);
+
+        if (Array.isArray(parsedUser.favorites) && parsedUser.favorites.length > 0) {
+          localStorage.setItem(FAV_STORAGE_KEY, JSON.stringify(parsedUser.favorites));
+        }
+        if (Array.isArray(parsedUser.cart) && parsedUser.cart.length > 0) {
+          localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(parsedUser.cart));
+        }
+
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.delete('discord_auth');
+        currentUrl.searchParams.delete('user');
+        window.history.replaceState(null, '', currentUrl.pathname + currentUrl.search);
+      } catch (err) {}
+    }
   }, []);
 
-  const loginWithCfxForum = async () => {
-    setIsLoading(true);
-    try {
-      const redirectUrl = await CfxAuthService.getCfxForumLoginUrl();
-      console.log('[CfxAuth] Redirecting to official Cfx.re Forum Authorization:', redirectUrl);
-      window.location.href = redirectUrl;
-    } catch (err) {
-      console.error('[CfxAuth] Failed to generate RSA auth URL:', err);
-      setIsLoading(false);
-    }
-  };
-
-  const loginWithUsername = async (rawUsername: string) => {
-    const clean = rawUsername.trim().replace(/^@/, '');
-    if (!clean) return;
-
-    setIsLoading(true);
-    try {
-      const profile = await CfxAuthService.fetchForumProfile(clean);
-      setUser(profile);
-      CfxAuthService.saveUser(profile);
-      setIsAuthModalOpen(false);
-
-      if (authPendingAction) {
-        authPendingAction();
-        setAuthPendingAction(null);
-      }
-    } finally {
-      setIsLoading(false);
-    }
+  const loginWithDiscord = () => {
+    window.location.href = '/api/auth/discord/login';
   };
 
   const logout = () => {
     setUser(null);
-    CfxAuthService.clearUser();
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(USER_STORAGE_KEY);
+    }
   };
+
+  const syncUserData = async (updates: Partial<DiscordUser>) => {
+    if (!user) return;
+    const updatedUser = { ...user, ...updates, lastActive: Date.now() };
+    setUser(updatedUser);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
+    }
+
+    try {
+      await fetch('/api/auth/discord/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          cart: updates.cart,
+          favorites: updates.favorites,
+          downloadsCountDelta: updates.downloadsCount ? 1 : 0
+        })
+      });
+    } catch {}
+  };
+
+  const recordHistory = (item: Omit<UserHistoryItem, 'id' | 'timestamp'>) => {
+    const newItem: UserHistoryItem = {
+      ...item,
+      id: 'hist-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 6),
+      timestamp: Date.now()
+    };
+
+    if (!user) return;
+
+    const newHistory = [newItem, ...(user.history || [])].slice(0, 50);
+    const newDownloadsCount = item.type === 'download' || item.type === 'export'
+      ? (user.downloadsCount || 0) + 1
+      : (user.downloadsCount || 0);
+
+    const updated = {
+      ...user,
+      downloadsCount: newDownloadsCount,
+      history: newHistory,
+      lastActive: Date.now()
+    };
+
+    setUser(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updated));
+    }
+
+    fetch('/api/auth/discord/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: user.id,
+        historyItem: newItem,
+        downloadsCountDelta: item.type === 'download' || item.type === 'export' ? 1 : 0
+      })
+    }).catch(() => {});
+  };
+
+  const dismissJustLoggedIn = () => setJustLoggedIn(false);
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        loginWithCfxForum,
-        loginWithUsername,
+        isLoggedIn: Boolean(user),
+        loginWithDiscord,
         logout,
-        isLoading,
-        isAuthModalOpen,
-        setIsAuthModalOpen,
-        authPendingAction,
-        setAuthPendingAction
+        syncUserData,
+        recordHistory,
+        isProfileModalOpen,
+        setIsProfileModalOpen,
+        justLoggedIn,
+        dismissJustLoggedIn
       }}
     >
       {children}

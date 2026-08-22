@@ -13,8 +13,12 @@ import { ScriptModal } from './components/ScriptModal';
 import { CartDrawer } from './components/CartDrawer';
 import { PromoPopup } from './components/PromoPopup';
 import { InAppCheckoutModal } from './components/InAppCheckoutModal';
+import { UserProfileModal } from './components/UserProfileModal';
+import { DiscordLoginPrompt } from './components/DiscordLoginPrompt';
+import { DiscordWelcomeToast } from './components/DiscordWelcomeToast';
 import { StoreProvider, useStore } from './context/StoreContext';
 import { CartProvider, useCart } from './context/CartContext';
+import { AuthProvider } from './context/AuthContext';
 import { useSmoothScroll } from './hooks/useSmoothScroll';
 
 import { AdminStatsPage } from './components/AdminStatsPage';
@@ -26,6 +30,9 @@ const AppModals: React.FC = () => {
       <ScriptModal />
       <CartDrawer />
       <PromoPopup />
+      <UserProfileModal />
+      <DiscordLoginPrompt />
+      <DiscordWelcomeToast />
       <InAppCheckoutModal
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
@@ -138,9 +145,11 @@ const AppContent: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <StoreProvider>
-      <CartProvider>
-        <AppContent />
-      </CartProvider>
+      <AuthProvider>
+        <CartProvider>
+          <AppContent />
+        </CartProvider>
+      </AuthProvider>
     </StoreProvider>
   );
 };

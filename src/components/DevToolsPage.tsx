@@ -22,6 +22,7 @@ import {
   Star
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
+import { useAuth } from '../context/AuthContext';
 import { LocalesTranslator } from './DevTools/LocalesTranslator';
 import { HandlingEditor } from './DevTools/HandlingEditor';
 import { ColorGenerator } from './DevTools/ColorGenerator';
@@ -88,23 +89,23 @@ const TOOL_SEO_METADATA: Record<ToolTab, { title: string; description: string }>
   },
   flags: {
     title: 'FiveM Flags Generator & Bitwise Calculator (YTYP, Handling, AI Styles) | FiveM Dev Tools',
-    description: 'Accurate bitwise flag calculator for FiveM & GTA V. Calculate YTYP archetypes, vehicle model flags, handling flags, damage flags, and AI driving styles.'
+    description: 'FiveM flags generator and bitwise calculator. Combine interior, exterior, vehicle handling, and ped task flags with zero math errors.'
   },
   translator: {
-    title: 'FiveM Locales & Script Translator (Auto Lua / JSON) | FiveM Dev Tools',
-    description: 'Auto-translate FiveM script locales to 12+ languages (Czech, Slovak, German, French, Spanish, etc.) and export directly to Lua tables or JSON.'
+    title: 'FiveM Locales & Language Translator (Lua, JSON, ox_lib) | FiveM Dev Tools',
+    description: 'Translate FiveM script locales between English, Czech, German, French, and Spanish instantly. Supports ESX, QBCore, and ox_lib dictionaries.'
   },
   json: {
-    title: 'FiveM JSON Formatter, Auto-Repair & Lua Converter | FiveM Dev Tools',
-    description: 'Format, validate, and auto-repair broken FiveM JSON configs with trailing commas and unquoted keys. Convert JSON into optimized FiveM Lua tables.'
+    title: 'FiveM JSON Formatter, Minifier & Validator | FiveM Dev Tools',
+    description: 'Clean, format, minify, and validate JSON data for FiveM config files, inventories, and database payloads.'
   },
   blip: {
-    title: 'FiveM Blip & Radar Designer (Lua & ox_lib Generator) | FiveM Dev Tools',
-    description: 'Visual FiveM map blip configurator. Search all 800+ GTA V blip sprite IDs, colors, displays, and generate native or ox_lib blip codes.'
+    title: 'FiveM Blip & Map Radar Designer (Lua & OxLib) | FiveM Dev Tools',
+    description: 'Interactive FiveM blip generator with visual GTA V sprite icons, colors, display settings, and live Lua / ox_lib code export.'
   },
   weapons: {
-    title: 'FiveM Weapons & Ammo Configurator (ox_inventory & QB) | FiveM Dev Tools',
-    description: 'Interactive GTA V weapon explorer. Generate ammo configurations, recoil multipliers, weapon component attachments, and ox_inventory items.'
+    title: 'FiveM Weapons, Ammo & Hash Database | FiveM Dev Tools',
+    description: 'Complete FiveM weapon database with spawn names, JoAAT hashes, weapon groups, ammo types, and damage stats.'
   },
   audio: {
     title: 'FiveM Audio & Sound FX Explorer (PlaySoundFrontend) | FiveM Dev Tools',
@@ -146,6 +147,7 @@ const TOOL_SEO_METADATA: Record<ToolTab, { title: string; description: string }>
 
 export const DevToolsPage: React.FC = () => {
   const { navigate } = useStore();
+  const { user, syncUserData } = useAuth();
   const [activeTab, setActiveTab] = useState<ToolTab>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -172,6 +174,12 @@ export const DevToolsPage: React.FC = () => {
     return [];
   });
 
+  useEffect(() => {
+    if (user?.favorites && Array.isArray(user.favorites) && user.favorites.length > 0) {
+      setFavorites(user.favorites as ToolTab[]);
+    }
+  }, [user]);
+
   const toggleFavorite = (id: ToolTab, e?: React.MouseEvent) => {
     e?.stopPropagation();
     setFavorites(prev => {
@@ -180,6 +188,9 @@ export const DevToolsPage: React.FC = () => {
         try {
           localStorage.setItem('md_devtools_favorite_tools', JSON.stringify(next));
         } catch {}
+      }
+      if (user) {
+        syncUserData({ favorites: next });
       }
       return next;
     });
