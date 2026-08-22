@@ -11,18 +11,20 @@ export interface DevToolEvent {
   referrer?: string;
 }
 
+export interface ToolRankItem {
+  toolId: string;
+  toolName: string;
+  views: number;
+  copies: number;
+  copyRate: number;
+}
+
 export interface AnalyticsSummary {
   totalEvents: number;
   totalViews: number;
   totalCopies: number;
   activeInteractions: number;
-  toolRankings: {
-    toolId: string;
-    toolName: string;
-    views: number;
-    copies: number;
-    copyRate: number;
-  }[];
+  toolRankings: ToolRankItem[];
   topSearches: { query: string; count: number }[];
   topItems: { name: string; type: string; count: number }[];
   topCountries: { code: string; name: string; count: number; percentage: number }[];
@@ -31,7 +33,8 @@ export interface AnalyticsSummary {
   recentEvents: DevToolEvent[];
 }
 
-const LOCAL_STORAGE_KEY = 'md_dev_analytics_events_v2';
+const LOCAL_EVENTS_KEY = 'md_dev_analytics_events_v3';
+const LOCAL_COUNTS_KEY = 'md_dev_analytics_counts_v3';
 
 export const TOOL_NAMES: Record<string, string> = {
   translator: 'Locales Translator',
@@ -65,6 +68,63 @@ export const normalizeToolId = (id: string): string => {
   return map[id] || id;
 };
 
+interface LocalCounts {
+  totalEvents: number;
+  totalViews: number;
+  totalCopies: number;
+  toolStats: Record<string, { views: number; copies: number }>;
+  searches: Record<string, number>;
+  items: Record<string, { name: string; type: string; count: number }>;
+  countries: Record<string, number>;
+  referrers: Record<string, number>;
+  devices: { desktop: number; mobile: number };
+}
+
+function getLocalCounts(): LocalCounts {
+  if (typeof window === 'undefined') {
+    return {
+      totalEvents: 0,
+      totalViews: 0,
+      totalCopies: 0,
+      toolStats: {},
+      searches: {},
+      items: {},
+      countries: {},
+      referrers: {},
+      devices: { desktop: 0, mobile: 0 }
+    };
+  }
+
+  try {
+    const raw = localStorage.getItem(LOCAL_COUNTS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+
+  const initialToolStats: Record<string, { views: number; copies: number }> = {};
+  Object.keys(TOOL_NAMES).forEach(t => {
+    initialToolStats[t] = { views: 0, copies: 0 };
+  });
+
+  return {
+    totalEvents: 0,
+    totalViews: 0,
+    totalCopies: 0,
+    toolStats: initialToolStats,
+    searches: {},
+    items: {},
+    countries: {},
+    referrers: {},
+    devices: { desktop: 0, mobile: 0 }
+  };
+}
+
+function saveLocalCounts(counts: LocalCounts) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(LOCAL_COUNTS_KEY, JSON.stringify(counts));
+  } catch {}
+}
+
 export const trackEvent = async (
   rawToolId: string,
   action: DevToolEvent['action'],
@@ -73,6 +133,11 @@ export const trackEvent = async (
 ) => {
   try {
     const toolId = normalizeToolId(rawToolId);
+    const country = Intl.DateTimeFormat().resolvedOptions().timeZone.includes('Europe') ? 'CZ' : 'Global';
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 1024;
+    const device = isMobile ? 'Mobile' : 'Desktop';
+    const referrer = typeof document !== 'undefined' && document.referrer ? (new URL(document.referrer).hostname || 'Direct') : 'Direct';
+
     const event: DevToolEvent = {
       id: 'ev-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 6),
       timestamp: Date.now(),
@@ -81,17 +146,69 @@ export const trackEvent = async (
       action,
       label,
       meta,
-      country: Intl.DateTimeFormat().resolvedOptions().timeZone.includes('Europe') ? 'CZ' : 'Global',
-      device: typeof window !== 'undefined' && window.innerWidth > 1024 ? 'Desktop' : 'Mobile',
-      referrer: typeof document !== 'undefined' && document.referrer ? (new URL(document.referrer).hostname || 'Direct') : 'Direct'
+      country,
+      device,
+      referrer
     };
 
     if (typeof window !== 'undefined') {
-      const existingStr = localStorage.getItem(LOCAL_STORAGE_KEY);
+      const existingStr = localStorage.getItem(LOCAL_EVENTS_KEY);
       const events: DevToolEvent[] = existingStr ? JSON.parse(existingStr) : [];
       events.unshift(event);
-      if (events.length > 500) events.pop();
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(events));
+      if (events.length > 100) events.pop();
+      localStorage.setItem(LOCAL_EVENTS_KEY, JSON.stringify(events));
+
+      const counts = getLocalCounts();
+      counts.totalEvents = (counts.totalEvents || 0) + 1;
+
+      const isCopy = action.startsWith('copy_') || action === 'format';
+      const isView = action === 'view';
+      const isSearch = action === 'search';
+
+      if (isView) counts.totalViews = (counts.totalViews || 0) + 1;
+      if (isCopy) counts.totalCopies = (counts.totalCopies || 0) + 1;
+
+      if (!counts.toolStats[toolId]) {
+        counts.toolStats[toolId] = { views: 0, copies: 0 };
+      }
+      if (isView) counts.toolStats[toolId].views = (counts.toolStats[toolId].views || 0) + 1;
+      if (isCopy) counts.toolStats[toolId].copies = (counts.toolStats[toolId].copies || 0) + 1;
+
+      if (isSearch && label) {
+        const q = label.trim().toLowerCase();
+        counts.searches[q] = (counts.searches[q] || 0) + 1;
+      }
+
+      if (label && !isSearch) {
+        const itemKey = `${toolId}::${label.trim()}`;
+        let type = 'Item';
+        if (toolId === 'weapons') type = 'Weapon';
+        else if (toolId === 'peds') type = 'Ped / Prop';
+        else if (toolId === 'blip') type = 'Blip';
+        else if (toolId === 'flags') type = 'Flag';
+        else if (toolId === 'audio') type = 'Sound';
+        else if (toolId === 'json') type = 'JSON';
+        else if (toolId === 'hash') type = 'Hash';
+        else if (toolId === 'translator') type = 'Locale';
+        else if (toolId === 'colors') type = 'Color';
+        else if (toolId === 'coords') type = 'Coord / Zone';
+        else if (toolId === 'webhook') type = 'Webhook';
+        else if (toolId === 'controls') type = 'Control';
+        else if (toolId === 'manifest') type = 'Manifest';
+        else if (toolId === 'anim') type = 'Animation';
+
+        if (!counts.items[itemKey]) {
+          counts.items[itemKey] = { name: label.trim(), type, count: 0 };
+        }
+        counts.items[itemKey].count += 1;
+      }
+
+      counts.countries[country] = (counts.countries[country] || 0) + 1;
+      counts.referrers[referrer] = (counts.referrers[referrer] || 0) + 1;
+      if (isMobile) counts.devices.mobile = (counts.devices.mobile || 0) + 1;
+      else counts.devices.desktop = (counts.devices.desktop || 0) + 1;
+
+      saveLocalCounts(counts);
     }
 
     fetch('/api/track', {
@@ -102,132 +219,121 @@ export const trackEvent = async (
   } catch (err) {}
 };
 
-export const buildAnalyticsSummary = (allEvents: DevToolEvent[], serverTotalEvents = 0, serverTotalCopies = 0): AnalyticsSummary => {
-  const sortedEvents = [...allEvents].sort((a, b) => b.timestamp - a.timestamp);
+export const getStoredAnalytics = async (): Promise<AnalyticsSummary> => {
+  let serverData: any = null;
 
-  const totalEvents = Math.max(allEvents.length, serverTotalEvents);
-  
-  let totalViews = 0;
-  let totalCopies = 0;
-
-  const toolStatsMap: Record<string, { views: number; copies: number }> = {};
-  Object.keys(TOOL_NAMES).forEach(id => {
-    toolStatsMap[id] = { views: 0, copies: 0 };
-  });
-
-  const searchCounts: Record<string, number> = {};
-  const itemCounts: Record<string, { name: string; type: string; count: number }> = {};
-  const countryCounts: Record<string, number> = {};
-  const referrerCounts: Record<string, number> = {};
-  let desktopCount = 0;
-  let mobileCount = 0;
-
-  sortedEvents.forEach(e => {
-    const isCopy = e.action.startsWith('copy_') || e.action === 'format';
-    const isView = e.action === 'view';
-
-    if (isView) totalViews++;
-    if (isCopy) totalCopies++;
-
-    const tid = normalizeToolId(e.toolId);
-    if (!toolStatsMap[tid]) {
-      toolStatsMap[tid] = { views: 0, copies: 0 };
+  try {
+    const res = await fetch('/api/stats');
+    if (res.ok) {
+      serverData = await res.json();
     }
-    if (isView) toolStatsMap[tid].views++;
-    if (isCopy) toolStatsMap[tid].copies++;
+  } catch (err) {}
 
-    if (e.label) {
-      const cleanLabel = e.label.trim();
-      let type = 'Item';
-      if (tid === 'weapons') type = 'Weapon';
-      else if (tid === 'peds') type = 'Ped / Prop';
-      else if (tid === 'blip') type = 'Blip';
-      else if (tid === 'flags') type = 'Flag';
-      else if (tid === 'audio') type = 'Sound';
-      else if (tid === 'json') type = 'JSON';
-      else if (tid === 'hash') type = 'Hash';
-      else if (tid === 'translator') type = 'Locale';
-      else if (tid === 'colors') type = 'Color';
-      else if (tid === 'coords') type = 'Coord / Zone';
-      else if (tid === 'webhook') type = 'Webhook';
-      else if (tid === 'controls') type = 'Control';
-      else if (tid === 'manifest') type = 'Manifest';
-      else if (tid === 'anim') type = 'Animation';
+  const localCounts = getLocalCounts();
 
-      if (e.action === 'search') {
-        searchCounts[cleanLabel] = (searchCounts[cleanLabel] || 0) + 1;
-      } else if (cleanLabel) {
-        if (!itemCounts[cleanLabel]) {
-          itemCounts[cleanLabel] = { name: cleanLabel, type, count: 0 };
-        }
-        itemCounts[cleanLabel].count++;
-      }
-    }
-
-    const c = e.country || 'CZ';
-    countryCounts[c] = (countryCounts[c] || 0) + 1;
-
-    const r = e.referrer || 'Direct';
-    referrerCounts[r] = (referrerCounts[r] || 0) + 1;
-
-    if (e.device === 'Mobile') mobileCount++;
-    else desktopCount++;
-  });
-
-  if (serverTotalCopies > totalCopies) {
-    totalCopies = serverTotalCopies;
+  let localEvents: DevToolEvent[] = [];
+  if (typeof window !== 'undefined') {
+    const existingStr = localStorage.getItem(LOCAL_EVENTS_KEY);
+    localEvents = existingStr ? JSON.parse(existingStr) : [];
   }
 
-  const toolRankings = Object.entries(toolStatsMap)
-    .map(([toolId, stats]) => ({
+  const serverEvents: DevToolEvent[] = (serverData && Array.isArray(serverData.recentEvents)) ? serverData.recentEvents : [];
+  const mergedEventsMap = new Map<string, DevToolEvent>();
+  [...serverEvents, ...localEvents].forEach(ev => {
+    if (ev && ev.id) mergedEventsMap.set(ev.id, ev);
+  });
+  const recentEvents = Array.from(mergedEventsMap.values()).sort((a, b) => b.timestamp - a.timestamp).slice(0, 50);
+
+  if (serverData && Array.isArray(serverData.toolRankings) && serverData.toolRankings.length > 0) {
+    const serverToolStats = serverData.toolStats || {};
+
+    const toolRankings = Object.keys(TOOL_NAMES).map(toolId => {
+      const serverStats = serverToolStats[toolId] || { views: 0, copies: 0 };
+      const localStats = localCounts.toolStats[toolId] || { views: 0, copies: 0 };
+
+      const views = Math.max(serverStats.views || 0, localStats.views || 0);
+      const copies = Math.max(serverStats.copies || 0, localStats.copies || 0);
+      const copyRate = views > 0 ? Math.min(100, Math.round((copies / views) * 100)) : 0;
+
+      return {
+        toolId,
+        toolName: TOOL_NAMES[toolId] || toolId,
+        views,
+        copies,
+        copyRate
+      };
+    }).sort((a, b) => b.copies - a.copies || b.views - a.views);
+
+    const sumToolCopies = toolRankings.reduce((acc, t) => acc + t.copies, 0);
+    const sumToolViews = toolRankings.reduce((acc, t) => acc + t.views, 0);
+
+    const totalCopies = Math.max(serverData.totalCopies || 0, localCounts.totalCopies || 0, sumToolCopies);
+    const totalViews = Math.max(serverData.totalViews || 0, localCounts.totalViews || 0, sumToolViews);
+    const totalEvents = Math.max(serverData.totalEvents || 0, localCounts.totalEvents || 0, totalViews + totalCopies);
+
+    return {
+      totalEvents,
+      totalViews,
+      totalCopies,
+      activeInteractions: totalEvents,
+      toolRankings,
+      topSearches: serverData.topSearches || [],
+      topItems: serverData.topItems || [],
+      topCountries: serverData.topCountries || [],
+      topReferrers: serverData.topReferrers || [],
+      deviceBreakdown: serverData.deviceBreakdown || { desktop: 100, mobile: 0, tablet: 0 },
+      recentEvents
+    };
+  }
+
+  const toolRankings = Object.keys(TOOL_NAMES).map(toolId => {
+    const stats = localCounts.toolStats[toolId] || { views: 0, copies: 0 };
+    const copyRate = stats.views > 0 ? Math.min(100, Math.round((stats.copies / stats.views) * 100)) : 0;
+    return {
       toolId,
       toolName: TOOL_NAMES[toolId] || toolId,
       views: stats.views,
       copies: stats.copies,
-      copyRate: stats.views > 0 ? Math.min(100, Math.round((stats.copies / stats.views) * 100)) : 0
-    }))
-    .sort((a, b) => b.copies - a.copies || b.views - a.views);
+      copyRate
+    };
+  }).sort((a, b) => b.copies - a.copies || b.views - a.views);
 
-  const topSearches = Object.entries(searchCounts)
+  const sumToolCopies = toolRankings.reduce((acc, t) => acc + t.copies, 0);
+  const sumToolViews = toolRankings.reduce((acc, t) => acc + t.views, 0);
+
+  const totalCopies = Math.max(localCounts.totalCopies, sumToolCopies);
+  const totalViews = Math.max(localCounts.totalViews, sumToolViews);
+  const totalEvents = Math.max(localCounts.totalEvents, totalViews + totalCopies);
+
+  const topSearches = Object.entries(localCounts.searches)
     .map(([query, count]) => ({ query, count }))
     .sort((a, b) => b.count - a.count)
-    .slice(0, 10);
+    .slice(0, 15);
 
-  const topItems = Object.values(itemCounts)
+  const topItems = Object.values(localCounts.items)
     .sort((a, b) => b.count - a.count)
-    .slice(0, 10);
+    .slice(0, 15);
 
-  const countryNames: Record<string, string> = {
-    CZ: 'Czech Republic',
-    SK: 'Slovakia',
-    DE: 'Germany',
-    US: 'United States',
-    FR: 'France',
-    PL: 'Poland',
-    GB: 'United Kingdom',
-    Global: 'Global / Other'
-  };
-
-  const totalGeoEvents = Math.max(1, Object.values(countryCounts).reduce((a, b) => a + b, 0));
-  const topCountries = Object.entries(countryCounts)
+  const totalGeo = Math.max(1, Object.values(localCounts.countries).reduce((a, b) => a + b, 0));
+  const topCountries = Object.entries(localCounts.countries)
     .map(([code, count]) => ({
       code,
-      name: countryNames[code] || code,
+      name: code === 'CZ' ? 'Czech Republic' : (code === 'SK' ? 'Slovakia' : code),
       count,
-      percentage: Math.round((count / totalGeoEvents) * 100)
+      percentage: Math.round((count / totalGeo) * 100)
     }))
     .sort((a, b) => b.count - a.count);
 
-  const totalRefEvents = Math.max(1, Object.values(referrerCounts).reduce((a, b) => a + b, 0));
-  const topReferrers = Object.entries(referrerCounts)
+  const totalRef = Math.max(1, Object.values(localCounts.referrers).reduce((a, b) => a + b, 0));
+  const topReferrers = Object.entries(localCounts.referrers)
     .map(([source, count]) => ({
       source,
       count,
-      percentage: Math.round((count / totalRefEvents) * 100)
+      percentage: Math.round((count / totalRef) * 100)
     }))
     .sort((a, b) => b.count - a.count);
 
-  const totalDev = Math.max(1, desktopCount + mobileCount);
+  const totalDevices = Math.max(1, localCounts.devices.desktop + localCounts.devices.mobile);
 
   return {
     totalEvents,
@@ -240,54 +346,19 @@ export const buildAnalyticsSummary = (allEvents: DevToolEvent[], serverTotalEven
     topCountries,
     topReferrers,
     deviceBreakdown: {
-      desktop: Math.round((desktopCount / totalDev) * 100),
-      mobile: Math.round((mobileCount / totalDev) * 100),
+      desktop: Math.round((localCounts.devices.desktop / totalDevices) * 100) || 100,
+      mobile: Math.round((localCounts.devices.mobile / totalDevices) * 100) || 0,
       tablet: 0
     },
-    recentEvents: sortedEvents.slice(0, 50)
+    recentEvents
   };
-};
-
-export const getStoredAnalytics = async (): Promise<AnalyticsSummary> => {
-  let serverEvents: DevToolEvent[] = [];
-  let serverTotalEvents = 0;
-  let serverTotalCopies = 0;
-
-  try {
-    const res = await fetch('/api/stats');
-    if (res.ok) {
-      const data = await res.json();
-      if (data && Array.isArray(data.recentEvents)) {
-        serverEvents = data.recentEvents;
-      }
-      if (data && typeof data.totalEvents === 'number') {
-        serverTotalEvents = data.totalEvents;
-      }
-      if (data && typeof data.totalCopies === 'number') {
-        serverTotalCopies = data.totalCopies;
-      }
-    }
-  } catch (err) {}
-
-  let localEvents: DevToolEvent[] = [];
-  if (typeof window !== 'undefined') {
-    const existingStr = localStorage.getItem(LOCAL_STORAGE_KEY);
-    localEvents = existingStr ? JSON.parse(existingStr) : [];
-  }
-
-  const mergedEventsMap = new Map<string, DevToolEvent>();
-  [...serverEvents, ...localEvents].forEach(ev => {
-    if (ev && ev.id) mergedEventsMap.set(ev.id, ev);
-  });
-
-  const allMergedEvents = Array.from(mergedEventsMap.values());
-
-  return buildAnalyticsSummary(allMergedEvents, serverTotalEvents, serverTotalCopies);
 };
 
 export const resetAllAnalytics = async (): Promise<void> => {
   if (typeof window !== 'undefined') {
-    localStorage.removeItem(LOCAL_STORAGE_KEY);
+    localStorage.removeItem(LOCAL_EVENTS_KEY);
+    localStorage.removeItem(LOCAL_COUNTS_KEY);
+    localStorage.removeItem('md_dev_analytics_events_v2');
     localStorage.removeItem('md_dev_analytics_events_v1');
   }
 

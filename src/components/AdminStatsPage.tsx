@@ -38,7 +38,6 @@ export const AdminStatsPage: React.FC = () => {
   const [data, setData] = useState<AnalyticsSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'tools' | 'items' | 'live' | 'geo'>('overview');
-  const [timeRange, setTimeRange] = useState<'all' | 'today' | '7d' | '30d'>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
@@ -216,18 +215,9 @@ export const AdminStatsPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-900 border border-white/10 text-xs font-mono">
-              {(['all', 'today', '7d', '30d'] as const).map(range => (
-                <button
-                  key={range}
-                  onClick={() => setTimeRange(range)}
-                  className={`px-2.5 py-1 rounded-lg uppercase transition-all font-bold ${
-                    timeRange === range ? 'bg-white text-black shadow-sm' : 'text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  {range === 'all' ? 'All Time' : range}
-                </button>
-              ))}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-xs font-mono font-bold text-zinc-300 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span>All-Time Stats</span>
             </div>
 
             <button
