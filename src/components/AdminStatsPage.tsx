@@ -44,6 +44,7 @@ export const AdminStatsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'tools' | 'items' | 'live' | 'geo' | 'discord' | 'wheel'>('overview');
   const [discordSearch, setDiscordSearch] = useState('');
   const [wheelSearch, setWheelSearch] = useState('');
+  const [wheelFilter, setWheelFilter] = useState<'all' | 'wins' | 'jackpots' | 'noluck'>('all');
   const [wheelData, setWheelData] = useState<{ history: any[]; totalSpins: number; prizeCounts: Record<string, number> }>({
     history: [],
     totalSpins: 0,
@@ -985,8 +986,8 @@ export const AdminStatsPage: React.FC = () => {
             <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h3 className="font-display font-bold text-lg text-white">Wheel Spin History</h3>
-                  <p className="text-xs text-zinc-400">Chronological log of wheel spins, prizes won, and generated 24h Tebex coupon codes</p>
+                  <h3 className="font-display font-bold text-lg text-white">Wheel Spin & Reward Log</h3>
+                  <p className="text-xs text-zinc-400">Complete chronological record of all user spins, prizes won, and generated 24h Tebex coupon codes</p>
                 </div>
 
                 <div className="relative w-full sm:w-72">
@@ -995,14 +996,48 @@ export const AdminStatsPage: React.FC = () => {
                     type="text"
                     value={wheelSearch}
                     onChange={e => setWheelSearch(e.target.value)}
-                    placeholder="Search by user or coupon..."
+                    placeholder="Search by user, ID or coupon..."
                     className="w-full pl-9 pr-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white/30"
                   />
                 </div>
               </div>
 
+              <div className="flex items-center gap-2 pt-2 border-t border-white/5 overflow-x-auto">
+                {[
+                  { id: 'all', label: `All Spins (${wheelData.history.length})` },
+                  {
+                    id: 'wins',
+                    label: `All Wins (${wheelData.history.filter(h => h.discount > 0).length})`
+                  },
+                  {
+                    id: 'jackpots',
+                    label: `Jackpots 100% (${wheelData.history.filter(h => h.discount === 100).length})`
+                  },
+                  {
+                    id: 'noluck',
+                    label: `No Luck (${wheelData.history.filter(h => h.discount === 0).length})`
+                  }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setWheelFilter(tab.id as any)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-all whitespace-nowrap ${
+                      wheelFilter === tab.id
+                        ? 'bg-white text-black shadow-sm'
+                        : 'bg-zinc-900 text-zinc-400 hover:text-white border border-white/5'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
               {(() => {
                 const filteredHistory = wheelData.history.filter(item => {
+                  if (wheelFilter === 'wins' && item.discount === 0) return false;
+                  if (wheelFilter === 'jackpots' && item.discount !== 100) return false;
+                  if (wheelFilter === 'noluck' && item.discount > 0) return false;
+
                   if (!wheelSearch) return true;
                   const q = wheelSearch.toLowerCase();
                   return (

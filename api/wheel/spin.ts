@@ -180,6 +180,13 @@ export default async function handler(req: any, res: any) {
       user.rewards = [rewardEntry, ...(user.rewards || [])].slice(0, 30);
     }
 
+    user.history = [{
+      id: 'hist-spin-' + now.toString(36),
+      type: isWin ? 'purchase' : 'download',
+      title: isWin ? `Wheel of Fortune: Won ${prize.label} (${couponCode})` : 'Wheel of Fortune: No Luck',
+      timestamp: now
+    }, ...(user.history || [])].slice(0, 50);
+
     const country = (req.headers['x-vercel-ip-country'] || req.headers['cf-ipcountry'] || user.country || 'CZ').toString().toUpperCase();
 
     const historyEntry = {
@@ -201,7 +208,19 @@ export default async function handler(req: any, res: any) {
         ['LPUSH', 'analytics:spin_history', JSON.stringify(historyEntry)],
         ['LTRIM', 'analytics:spin_history', '0', '199'],
         ['INCR', 'analytics:spins:total'],
-        ['INCR', `analytics:spins:prize_${prize.discount}`]
+        ['INCR', `analytics:spins:prize_${prize.discount}`],
+        ['INCR', 'analytics:total_events'],
+        ['LPUSH', 'analytics:recent_events', JSON.stringify({
+          id: 'ev-spin-' + now.toString(36),
+          timestamp: now,
+          toolId: 'wheel',
+          toolName: 'Wheel of Fortune',
+          action: isWin ? 'copy_lua' : 'view',
+          label: isWin ? `@${user.username} won ${prize.label} (${couponCode})` : `@${user.username} spun: No Luck`,
+          country,
+          device: /mobile/i.test(req.headers['user-agent'] || '') ? 'Mobile' : 'Desktop'
+        })],
+        ['LTRIM', 'analytics:recent_events', '0', '99']
       ];
 
       await fetch(`${kvUrl}/pipeline`, {
