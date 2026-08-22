@@ -1,3 +1,20 @@
+function safeParseJson(raw: any) {
+  if (!raw) return null;
+  if (typeof raw === 'object') return raw;
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      try {
+        return JSON.parse(decodeURIComponent(raw));
+      } catch {
+        return null;
+      }
+    }
+  }
+  return null;
+}
+
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -29,13 +46,7 @@ export default async function handler(req: any, res: any) {
       fetch(`${kvUrl}/get/analytics:spins:prize_100`, { headers }).then(r => r.json()).catch(() => ({ result: 0 }))
     ]);
 
-    const history = (historyRes?.result || []).map((str: string) => {
-      try {
-        return JSON.parse(decodeURIComponent(str));
-      } catch {
-        return null;
-      }
-    }).filter(Boolean);
+    const history = (historyRes?.result || []).map((entry: any) => safeParseJson(entry)).filter(Boolean);
 
     const prizeCounts: Record<string, number> = {
       '0': parseInt(prizeCountRes[0]?.result || '0', 10) || 0,
@@ -51,7 +62,7 @@ export default async function handler(req: any, res: any) {
 
     return res.status(200).json({
       history,
-      totalSpins,
+      totalSpins: Math.max(totalSpins, history.length),
       prizeCounts
     });
   } catch (err: any) {

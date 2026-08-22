@@ -35,6 +35,23 @@ const COUNTRY_NAMES: Record<string, string> = {
   GLOBAL: 'Global / Other'
 };
 
+function safeParseJson(raw: any) {
+  if (!raw) return null;
+  if (typeof raw === 'object') return raw;
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      try {
+        return JSON.parse(decodeURIComponent(raw));
+      } catch {
+        return null;
+      }
+    }
+  }
+  return null;
+}
+
 function parseHashResult(raw: any): Record<string, number> {
   const result: Record<string, number> = {};
   if (!raw) return result;
@@ -96,6 +113,7 @@ export default async function handler(req: any, res: any) {
       referrersRes,
       devicesRes,
       recentEventsRes,
+      discordIndexRes,
       ...indivResults
     ] = await Promise.all([
       fetch(`${kvUrl}/get/analytics:total_events`, { headers }).then(r => r.json()).catch(() => ({ result: 0 })),
@@ -114,16 +132,11 @@ export default async function handler(req: any, res: any) {
       ...copyKeyFetches
     ]);
 
-    const discordUserIds: string[] = recentEventsRes ? (await fetch(`${kvUrl}/smembers/users:discord:index`, { headers }).then(r => r.json()).catch(() => ({ result: [] })))?.result || [] : [];
+    const discordUserIds: string[] = (discordIndexRes?.result || []).filter(Boolean);
     const discordUserFetches = discordUserIds.map(id =>
       fetch(`${kvUrl}/get/users:discord:${id}`, { headers })
         .then(r => r.json())
-        .then(d => {
-          if (d?.result) {
-            try { return JSON.parse(decodeURIComponent(d.result)); } catch {}
-          }
-          return null;
-        })
+        .then(d => (d?.result ? safeParseJson(d.result) : null))
         .catch(() => null)
     );
     const discordUsers = (await Promise.all(discordUserFetches)).filter(Boolean);
@@ -232,13 +245,7 @@ export default async function handler(req: any, res: any) {
     const mobileCount = rawDevicesHash['Mobile'] || rawDevicesHash['mobile'] || 0;
     const totalDeviceCount = Math.max(1, desktopCount + mobileCount);
 
-    const recentEvents = (recentEventsRes?.result || []).map((str: string) => {
-      try {
-        return JSON.parse(decodeURIComponent(str));
-      } catch {
-        return null;
-      }
-    }).filter(Boolean);
+    const recentEvents = (recentEventsRes?.result || []).map((entry: any) => safeParseJson(entry)).filter(Boolean);
 
     return res.status(200).json({
       totalEvents,
