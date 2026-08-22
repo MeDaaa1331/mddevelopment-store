@@ -290,7 +290,7 @@ export const DevToolsPage: React.FC = () => {
                     <span className="w-1 h-1 rounded-full bg-amber-400" />
                     <span className="text-amber-400 font-bold flex items-center gap-1">
                       <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-                      {favorites.length} {favorites.length === 1 ? 'oblíbený' : (favorites.length < 5 ? 'oblíbené' : 'oblíbených')}
+                      {favorites.length} {favorites.length === 1 ? 'Favorite Pinned' : 'Favorites Pinned'}
                     </span>
                   </>
                 )}
@@ -343,14 +343,14 @@ export const DevToolsPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={e => toggleFavorite(tab.id, e)}
-                  data-tooltip={isFav ? 'Odebrat z oblíbených' : 'Připnout do oblíbených'}
+                  data-tooltip={isFav ? 'Remove from favorites' : 'Pin to favorites'}
                   data-tooltip-pos="top"
                   className={`p-0.5 rounded transition-all ml-0.5 ${
                     isFav
                       ? 'text-amber-400 hover:scale-125'
                       : 'opacity-0 group-hover:opacity-60 hover:opacity-100 hover:text-amber-400 hover:scale-125'
                   }`}
-                  aria-label={isFav ? 'Unfavorite' : 'Favorite'}
+                  aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
                 >
                   <Star className={`w-3 h-3 ${isFav ? 'fill-amber-400 text-amber-400' : 'text-zinc-400'}`} />
                 </button>

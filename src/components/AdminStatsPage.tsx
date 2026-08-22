@@ -173,9 +173,9 @@ export const AdminStatsPage: React.FC = () => {
               <AlertTriangle className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-display font-bold text-base text-white">Vynulovat všechny statistiky?</h3>
+              <h3 className="font-display font-bold text-base text-white">Reset All Analytics?</h3>
               <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-                Tímto smažeš všechna zaznamenaná data z Upstash databáze i lokální paměti a počítání začne od 0.
+                This action will permanently wipe all analytics counters from the database and local cache. Metrics will restart from zero.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-2 pt-2">
@@ -183,13 +183,13 @@ export const AdminStatsPage: React.FC = () => {
                 onClick={() => setShowResetConfirm(false)}
                 className="py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-xs font-semibold text-zinc-300"
               >
-                Zrušit
+                Cancel
               </button>
               <button
                 onClick={handleResetData}
                 className="py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all shadow-glow-sm"
               >
-                Ano, vynulovat
+                Yes, Reset All
               </button>
             </div>
           </div>
@@ -245,12 +245,12 @@ export const AdminStatsPage: React.FC = () => {
             <button
               onClick={() => setShowResetConfirm(true)}
               className="px-3 py-2 rounded-xl bg-red-950/40 hover:bg-red-900/50 border border-red-500/30 text-xs font-semibold text-red-300 transition-all flex items-center gap-1.5"
-              data-tooltip="Vynulovat všechny statistiky"
+              data-tooltip="Reset all analytics"
               data-tooltip-pos="bottom"
               aria-label="Reset stats"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Vynulovat</span>
+              <span className="hidden sm:inline">Reset</span>
             </button>
 
             <button
@@ -277,7 +277,7 @@ export const AdminStatsPage: React.FC = () => {
               </span>
               <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium mt-1">
                 <TrendingUp className="w-3.5 h-3.5" />
-                <span>Zaznamenané akce</span>
+                <span>Recorded events</span>
               </div>
             </div>
           </div>
@@ -307,14 +307,14 @@ export const AdminStatsPage: React.FC = () => {
                 {data?.totalViews && data.totalViews > 0 ? Math.round((data.totalCopies / data.totalViews) * 100) : 0}%
               </span>
               <div className="flex items-center gap-1.5 text-xs text-amber-400 font-medium mt-1">
-                <span>Poměr zkopírování / zobrazení</span>
+                <span>Copy to view ratio</span>
               </div>
             </div>
           </div>
 
           <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 relative overflow-hidden flex flex-col justify-between">
             <div className="flex items-center justify-between text-zinc-400 text-xs font-mono font-bold uppercase tracking-wider">
-              <span>Celková aktivita</span>
+              <span>Total Activity</span>
               <Users className="w-4 h-4 text-violet-400" />
             </div>
             <div className="mt-3">
@@ -322,7 +322,7 @@ export const AdminStatsPage: React.FC = () => {
                 {(data?.activeInteractions || 0).toLocaleString()}
               </span>
               <div className="flex items-center gap-1.5 text-xs text-violet-400 font-medium mt-1">
-                <span>Celkový počet interakcí</span>
+                <span>Total interactions</span>
               </div>
             </div>
           </div>
