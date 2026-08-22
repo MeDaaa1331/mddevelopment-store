@@ -4,7 +4,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { userId, cart, favorites, historyItem, downloadsCountDelta } = req.body;
+    const { userId, cart, favorites, historyItem, downloadsCountDelta, lastSpin, rewards } = req.body;
     if (!userId) {
       return res.status(400).json({ error: 'Missing userId' });
     }
@@ -23,13 +23,18 @@ export default async function handler(req: any, res: any) {
         cart: [],
         favorites: [],
         downloadsCount: 0,
-        history: []
+        history: [],
+        rewards: []
       };
 
       if (userData?.result) {
         try {
-          user = JSON.parse(decodeURIComponent(userData.result));
-        } catch {}
+          user = typeof userData.result === 'string' ? JSON.parse(userData.result) : userData.result;
+        } catch {
+          try {
+            user = JSON.parse(decodeURIComponent(userData.result));
+          } catch {}
+        }
       }
 
       if (cart !== undefined) user.cart = cart;
@@ -38,9 +43,25 @@ export default async function handler(req: any, res: any) {
       if (historyItem) {
         user.history = [historyItem, ...(user.history || [])].slice(0, 50);
       }
+      if (lastSpin !== undefined) user.lastSpin = lastSpin;
+      if (rewards !== undefined) user.rewards = rewards;
       user.lastActive = Date.now();
 
-      await fetch(`${kvUrl}/set/users:discord:${userId}/${encodeURIComponent(JSON.stringify(user))}`, { headers });
+      const pipelineCommands = [
+        ['SET', `users:discord:${userId}`, JSON.stringify(user)]
+      ];
+      if (lastSpin) {
+        pipelineCommands.push(['SET', `users:discord:${userId}:last_spin`, String(lastSpin)]);
+      }
+
+      await fetch(`${kvUrl}/pipeline`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${kvToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(pipelineCommands)
+      });
 
       return res.status(200).json({ success: true, user });
     }

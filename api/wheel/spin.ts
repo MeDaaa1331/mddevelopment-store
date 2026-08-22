@@ -1,14 +1,22 @@
 const WHEEL_PRIZES = [
-  { id: 'none', label: 'No Luck', shortLabel: 'No Luck', discount: 0, weight: 25, color: '#27272a' },
-  { id: 'disc5', label: '5% Discount', shortLabel: '5% OFF', discount: 5, weight: 20, color: '#065f46' },
-  { id: 'disc10', label: '10% Discount', shortLabel: '10% OFF', discount: 10, weight: 15, color: '#0369a1' },
-  { id: 'disc15', label: '15% Discount', shortLabel: '15% OFF', discount: 15, weight: 15, color: '#6d28d9' },
-  { id: 'disc30', label: '30% Discount', shortLabel: '30% OFF', discount: 30, weight: 15, color: '#be185d' },
-  { id: 'disc50', label: '50% Discount', shortLabel: '50% OFF', discount: 50, weight: 9, color: '#d97706' },
-  { id: 'disc100', label: '100% FREE Script', shortLabel: '100% FREE', discount: 100, weight: 1, color: '#e11d48', isJackpot: true }
+  { id: 'none', label: 'No Luck', shortLabel: 'NO LUCK', discount: 0, weight: 25, color: '#18181b' },
+  { id: 'disc5', label: '5% Discount', shortLabel: '5% OFF', discount: 5, weight: 20, color: '#0f172a' },
+  { id: 'disc10', label: '10% Discount', shortLabel: '10% OFF', discount: 10, weight: 15, color: '#131b2e' },
+  { id: 'disc15', label: '15% Discount', shortLabel: '15% OFF', discount: 15, weight: 15, color: '#16221c' },
+  { id: 'disc30', label: '30% Discount', shortLabel: '30% OFF', discount: 30, weight: 15, color: '#22182b' },
+  { id: 'disc50', label: '50% Discount', shortLabel: '50% OFF', discount: 50, weight: 9, color: '#281d0d' },
+  { id: 'disc100', label: '100% FREE Script', shortLabel: '100% FREE', discount: 100, weight: 1, color: '#311019', isJackpot: true }
 ];
 
 export default async function handler(req: any, res: any) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -25,8 +33,8 @@ export default async function handler(req: any, res: any) {
 
     if (guildId && botToken) {
       try {
-        const guildRes = await fetch(`https://discord.com/api/guilds/${guildId}/members/${userId}`, {
-          headers: { Authorization: `Bot ${botToken}` }
+        const guildRes = await fetch(`https://discord.com/api/guilds/${guildId.trim()}/members/${userId.trim()}`, {
+          headers: { Authorization: `Bot ${botToken.trim()}` }
         });
         if (guildRes.status === 404) {
           return res.status(200).json({
@@ -40,7 +48,7 @@ export default async function handler(req: any, res: any) {
 
     const kvUrl = process.env.KV_REST_API_URL || process.env.REDIS_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
     const kvToken = process.env.KV_REST_API_TOKEN || process.env.REDIS_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
-    const headers = kvToken ? { Authorization: `Bearer ${kvToken}` } : {};
+    const headers = kvToken ? { Authorization: `Bearer ${kvToken}`, 'Content-Type': 'application/json' } : {};
 
     let user: any = {
       id: userId,
@@ -52,28 +60,48 @@ export default async function handler(req: any, res: any) {
       history: []
     };
 
+    let lastSpinTime = 0;
+
     if (kvUrl && kvToken) {
       try {
-        const userRes = await fetch(`${kvUrl}/get/users:discord:${userId}`, { headers });
-        const userData = await userRes.json();
+        const [userRes, lastSpinRes] = await Promise.all([
+          fetch(`${kvUrl}/get/users:discord:${userId}`, { headers: { Authorization: `Bearer ${kvToken}` } }),
+          fetch(`${kvUrl}/get/users:discord:${userId}:last_spin`, { headers: { Authorization: `Bearer ${kvToken}` } })
+        ]);
+
+        const userData = await userRes.json().catch(() => null);
+        const lastSpinData = await lastSpinRes.json().catch(() => null);
+
         if (userData?.result) {
-          const parsed = JSON.parse(decodeURIComponent(userData.result));
-          user = { ...user, ...parsed };
+          try {
+            const parsed = typeof userData.result === 'string' ? JSON.parse(userData.result) : userData.result;
+            user = { ...user, ...parsed };
+          } catch {
+            try {
+              const parsed = JSON.parse(decodeURIComponent(userData.result));
+              user = { ...user, ...parsed };
+            } catch {}
+          }
+        }
+
+        if (lastSpinData?.result) {
+          lastSpinTime = parseInt(String(lastSpinData.result), 10) || 0;
+        } else if (user.lastSpin) {
+          lastSpinTime = user.lastSpin;
         }
       } catch {}
     }
 
     const now = Date.now();
     const cooldownMs = 86400000;
-    const lastSpin = user.lastSpin || 0;
-    const elapsed = now - lastSpin;
+    const elapsed = now - lastSpinTime;
 
-    if (lastSpin > 0 && elapsed < cooldownMs) {
+    if (lastSpinTime > 0 && elapsed < cooldownMs) {
       return res.status(200).json({
         success: false,
         cooldown: true,
         remainingMs: cooldownMs - elapsed,
-        nextSpinTime: lastSpin + cooldownMs,
+        nextSpinTime: lastSpinTime + cooldownMs,
         error: 'Cooldown active. You can spin once every 24 hours.'
       });
     }
@@ -104,23 +132,32 @@ export default async function handler(req: any, res: any) {
       if (tebexSecret) {
         try {
           const expireDate = new Date(expiresAt).toISOString().split('T')[0];
+          const startDate = new Date(now).toISOString().split('T')[0];
+
           await fetch('https://plugin.tebex.io/coupons', {
             method: 'POST',
             headers: {
-              'X-Tebex-Secret': tebexSecret,
-              'Content-Type': 'application/json'
+              'X-Tebex-Secret': tebexSecret.trim(),
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
             },
             body: JSON.stringify({
               code: couponCode,
               effective_on: 'cart',
+              packages: [],
+              categories: [],
               discount_type: 'percentage',
               discount_percentage: prize.discount,
-              redeem_unlimited: 'false',
-              expire_never: '0',
+              discount_amount: 0,
+              redeem_unlimited: false,
+              expire_never: false,
               expire_limit: 1,
               expire_date: expireDate,
+              start_date: startDate,
               basket_type: 'both',
-              minimum: 0
+              minimum: 0,
+              username: '',
+              note: `Daily Wheel Reward for ${user.username || 'User'}`
             })
           });
         } catch (err) {}
@@ -158,13 +195,23 @@ export default async function handler(req: any, res: any) {
     };
 
     if (kvUrl && kvToken) {
-      await Promise.allSettled([
-        fetch(`${kvUrl}/set/users:discord:${userId}/${encodeURIComponent(JSON.stringify(user))}`, { headers }),
-        fetch(`${kvUrl}/lpush/analytics:spin_history/${encodeURIComponent(JSON.stringify(historyEntry))}`, { headers }),
-        fetch(`${kvUrl}/ltrim/analytics:spin_history/0/199`, { headers }),
-        fetch(`${kvUrl}/incr/analytics:spins:total`, { headers }),
-        fetch(`${kvUrl}/incr/analytics:spins:prize_${prize.discount}`, { headers })
-      ]);
+      const pipelineCommands = [
+        ['SET', `users:discord:${userId}`, JSON.stringify(user)],
+        ['SET', `users:discord:${userId}:last_spin`, String(now)],
+        ['LPUSH', 'analytics:spin_history', JSON.stringify(historyEntry)],
+        ['LTRIM', 'analytics:spin_history', '0', '199'],
+        ['INCR', 'analytics:spins:total'],
+        ['INCR', `analytics:spins:prize_${prize.discount}`]
+      ];
+
+      await fetch(`${kvUrl}/pipeline`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${kvToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(pipelineCommands)
+      }).catch(() => {});
     }
 
     return res.status(200).json({

@@ -26,8 +26,8 @@ export default async function handler(req: any, res: any) {
     let inGuild = true;
     if (guildId && botToken) {
       try {
-        const guildRes = await fetch(`https://discord.com/api/guilds/${guildId}/members/${userId}`, {
-          headers: { Authorization: `Bot ${botToken}` }
+        const guildRes = await fetch(`https://discord.com/api/guilds/${guildId.trim()}/members/${userId.trim()}`, {
+          headers: { Authorization: `Bot ${botToken.trim()}` }
         });
         if (guildRes.status === 404) {
           inGuild = false;
@@ -47,22 +47,40 @@ export default async function handler(req: any, res: any) {
 
     if (kvUrl && kvToken) {
       const headers = { Authorization: `Bearer ${kvToken}` };
-      const userRes = await fetch(`${kvUrl}/get/users:discord:${userId}`, { headers });
-      const userData = await userRes.json();
+      const [userRes, lastSpinRes] = await Promise.all([
+        fetch(`${kvUrl}/get/users:discord:${userId}`, { headers }),
+        fetch(`${kvUrl}/get/users:discord:${userId}:last_spin`, { headers })
+      ]);
+
+      const userData = await userRes.json().catch(() => null);
+      const lastSpinData = await lastSpinRes.json().catch(() => null);
 
       if (userData?.result) {
         try {
-          const parsed = JSON.parse(decodeURIComponent(userData.result));
+          const parsed = typeof userData.result === 'string' ? JSON.parse(userData.result) : userData.result;
           lastSpin = parsed.lastSpin || 0;
           rewards = parsed.rewards || [];
-        } catch {}
+        } catch {
+          try {
+            const parsed = JSON.parse(decodeURIComponent(userData.result));
+            lastSpin = parsed.lastSpin || 0;
+            rewards = parsed.rewards || [];
+          } catch {}
+        }
+      }
+
+      if (lastSpinData?.result) {
+        const directSpin = parseInt(String(lastSpinData.result), 10) || 0;
+        if (directSpin > lastSpin) {
+          lastSpin = directSpin;
+        }
       }
     }
 
     const now = Date.now();
     const cooldownMs = 86400000;
     const elapsed = now - lastSpin;
-    const remainingMs = Math.max(0, cooldownMs - elapsed);
+    const remainingMs = lastSpin > 0 ? Math.max(0, cooldownMs - elapsed) : 0;
     const canSpin = inGuild && remainingMs === 0;
 
     return res.status(200).json({

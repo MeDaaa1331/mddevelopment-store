@@ -93,11 +93,11 @@ export default async function handler(req: any, res: any) {
         }
       } catch {}
 
-      await Promise.allSettled([
-        fetch(`${kvUrl}/set/users:discord:${discordUser.id}/${encodeURIComponent(JSON.stringify(finalUser))}`, { headers }),
-        fetch(`${kvUrl}/sadd/users:discord:index/${discordUser.id}`, { headers }),
-        fetch(`${kvUrl}/incr/analytics:discord:total_logins`, { headers }),
-        fetch(`${kvUrl}/lpush/analytics:recent_events/${encodeURIComponent(JSON.stringify({
+      const pipelineCommands = [
+        ['SET', `users:discord:${discordUser.id}`, JSON.stringify(finalUser)],
+        ['SADD', 'users:discord:index', discordUser.id],
+        ['INCR', 'analytics:discord:total_logins'],
+        ['LPUSH', 'analytics:recent_events', JSON.stringify({
           id: 'ev-login-' + now.toString(36),
           timestamp: now,
           toolId: 'auth',
@@ -106,9 +106,18 @@ export default async function handler(req: any, res: any) {
           label: `Discord Login: @${discordUser.username}`,
           country,
           device: /mobile/i.test(req.headers['user-agent'] || '') ? 'Mobile' : 'Desktop'
-        }))}`, { headers }),
-        fetch(`${kvUrl}/ltrim/analytics:recent_events/0/99`, { headers })
-      ]);
+        })],
+        ['LTRIM', 'analytics:recent_events', '0', '99']
+      ];
+
+      await fetch(`${kvUrl}/pipeline`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${kvToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(pipelineCommands)
+      }).catch(() => {});
     }
 
     const payload = encodeURIComponent(JSON.stringify(finalUser));
