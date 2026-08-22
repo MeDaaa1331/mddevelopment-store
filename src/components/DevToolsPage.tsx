@@ -18,7 +18,8 @@ import {
   Volume2,
   Crosshair,
   User,
-  Car
+  Car,
+  Star
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { LocalesTranslator } from './DevTools/LocalesTranslator';
@@ -156,6 +157,40 @@ export const DevToolsPage: React.FC = () => {
     return 'translator';
   });
 
+  const [favorites, setFavorites] = useState<ToolTab[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('md_devtools_favorite_tools');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            return parsed.filter(id => DEV_TOOLS_TABS.some(t => t.id === id));
+          }
+        }
+      } catch {}
+    }
+    return [];
+  });
+
+  const toggleFavorite = (id: ToolTab, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setFavorites(prev => {
+      const next = prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id];
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('md_devtools_favorite_tools', JSON.stringify(next));
+        } catch {}
+      }
+      return next;
+    });
+  };
+
+  const orderedTabs = React.useMemo(() => {
+    const favTabs = DEV_TOOLS_TABS.filter(t => favorites.includes(t.id));
+    const normalTabs = DEV_TOOLS_TABS.filter(t => !favorites.includes(t.id));
+    return [...favTabs, ...normalTabs];
+  }, [favorites]);
+
   const [indicatorStyle, setIndicatorStyle] = useState<{
     left: number;
     top: number;
@@ -211,7 +246,7 @@ export const DevToolsPage: React.FC = () => {
 
     window.addEventListener('resize', updateIndicator);
     return () => window.removeEventListener('resize', updateIndicator);
-  }, [activeTab]);
+  }, [activeTab, favorites]);
 
   return (
     <div className="min-h-screen bg-[#050507] text-zinc-100 flex flex-col font-sans selection:bg-white selection:text-black">
@@ -245,11 +280,20 @@ export const DevToolsPage: React.FC = () => {
 
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-zinc-900/90 border border-white/10 text-[11px] font-mono text-zinc-300 mb-2 shadow-sm">
+              <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-zinc-900/90 border border-white/10 text-[11px] font-mono text-zinc-300 mb-2 shadow-sm flex-wrap">
                 <Terminal className="w-3 h-3 text-emerald-400" />
                 <span className="text-white font-bold">FiveM Developer Hub</span>
                 <span className="w-1 h-1 rounded-full bg-zinc-500" />
-                <span className="text-zinc-400">14 Free Utilities</span>
+                <span className="text-zinc-400">15 Free Utilities</span>
+                {favorites.length > 0 && (
+                  <>
+                    <span className="w-1 h-1 rounded-full bg-amber-400" />
+                    <span className="text-amber-400 font-bold flex items-center gap-1">
+                      <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                      {favorites.length} {favorites.length === 1 ? 'oblíbený' : (favorites.length < 5 ? 'oblíbené' : 'oblíbených')}
+                    </span>
+                  </>
+                )}
               </div>
 
               <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
@@ -278,21 +322,41 @@ export const DevToolsPage: React.FC = () => {
             }}
           />
 
-          {DEV_TOOLS_TABS.map(tab => (
-            <button
-              key={tab.id}
-              data-tool={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`relative z-10 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors duration-200 flex items-center gap-2 select-none whitespace-nowrap ${
-                activeTab === tab.id
-                  ? 'text-black font-extrabold'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <span className={activeTab === tab.id ? 'text-black' : ''}>{tab.icon}</span>
-              <span>{tab.label}</span>
-            </button>
-          ))}
+          {orderedTabs.map(tab => {
+            const isFav = favorites.includes(tab.id);
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                data-tool={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`group relative z-10 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 select-none whitespace-nowrap ${
+                  isActive
+                    ? 'text-black font-extrabold shadow-sm'
+                    : isFav
+                    ? 'text-amber-200/90 hover:text-amber-100 bg-amber-400/[0.06] hover:bg-amber-400/[0.12] border border-amber-400/25 shadow-[0_0_8px_rgba(251,191,36,0.08)]'
+                    : 'text-zinc-400 hover:text-white border border-transparent'
+                }`}
+              >
+                <span className={isActive ? 'text-black' : isFav ? 'text-amber-400' : ''}>{tab.icon}</span>
+                <span>{tab.label}</span>
+                <button
+                  type="button"
+                  onClick={e => toggleFavorite(tab.id, e)}
+                  data-tooltip={isFav ? 'Odebrat z oblíbených' : 'Připnout do oblíbených'}
+                  data-tooltip-pos="top"
+                  className={`p-0.5 rounded transition-all ml-0.5 ${
+                    isFav
+                      ? 'text-amber-400 hover:scale-125'
+                      : 'opacity-0 group-hover:opacity-60 hover:opacity-100 hover:text-amber-400 hover:scale-125'
+                  }`}
+                  aria-label={isFav ? 'Unfavorite' : 'Favorite'}
+                >
+                  <Star className={`w-3 h-3 ${isFav ? 'fill-amber-400 text-amber-400' : 'text-zinc-400'}`} />
+                </button>
+              </button>
+            );
+          })}
         </div>
 
         <div
