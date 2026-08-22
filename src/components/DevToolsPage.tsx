@@ -23,23 +23,24 @@ import {
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
-import { LocalesTranslator } from './DevTools/LocalesTranslator';
-import { HandlingEditor } from './DevTools/HandlingEditor';
-import { ColorGenerator } from './DevTools/ColorGenerator';
-import { CoordsGenerator } from './DevTools/CoordsGenerator';
-import { DiscordWebhookBuilder } from './DevTools/DiscordWebhookBuilder';
-import { ControlsLookup } from './DevTools/ControlsLookup';
-import { ManifestGenerator } from './DevTools/ManifestGenerator';
-import { AnimExplorer } from './DevTools/AnimExplorer';
-import { FlagsGenerator } from './DevTools/FlagsGenerator';
-import { HashConverter } from './DevTools/HashConverter';
-import { JsonFormatter } from './DevTools/JsonFormatter';
-import { BlipDesigner } from './DevTools/BlipDesigner';
-import { AudioExplorer } from './DevTools/AudioExplorer';
-import { WeaponsConfigurator } from './DevTools/WeaponsConfigurator';
-import { PedPropExplorer } from './DevTools/PedPropExplorer';
 import { trackEvent } from '../utils/analytics';
 import { Footer } from './Footer';
+
+const LocalesTranslator = React.lazy(() => import('./DevTools/LocalesTranslator').then(m => ({ default: m.LocalesTranslator })));
+const HandlingEditor = React.lazy(() => import('./DevTools/HandlingEditor').then(m => ({ default: m.HandlingEditor })));
+const ColorGenerator = React.lazy(() => import('./DevTools/ColorGenerator').then(m => ({ default: m.ColorGenerator })));
+const CoordsGenerator = React.lazy(() => import('./DevTools/CoordsGenerator').then(m => ({ default: m.CoordsGenerator })));
+const DiscordWebhookBuilder = React.lazy(() => import('./DevTools/DiscordWebhookBuilder').then(m => ({ default: m.DiscordWebhookBuilder })));
+const ControlsLookup = React.lazy(() => import('./DevTools/ControlsLookup').then(m => ({ default: m.ControlsLookup })));
+const ManifestGenerator = React.lazy(() => import('./DevTools/ManifestGenerator').then(m => ({ default: m.ManifestGenerator })));
+const AnimExplorer = React.lazy(() => import('./DevTools/AnimExplorer').then(m => ({ default: m.AnimExplorer })));
+const FlagsGenerator = React.lazy(() => import('./DevTools/FlagsGenerator').then(m => ({ default: m.FlagsGenerator })));
+const HashConverter = React.lazy(() => import('./DevTools/HashConverter').then(m => ({ default: m.HashConverter })));
+const JsonFormatter = React.lazy(() => import('./DevTools/JsonFormatter').then(m => ({ default: m.JsonFormatter })));
+const BlipDesigner = React.lazy(() => import('./DevTools/BlipDesigner').then(m => ({ default: m.BlipDesigner })));
+const AudioExplorer = React.lazy(() => import('./DevTools/AudioExplorer').then(m => ({ default: m.AudioExplorer })));
+const WeaponsConfigurator = React.lazy(() => import('./DevTools/WeaponsConfigurator').then(m => ({ default: m.WeaponsConfigurator })));
+const PedPropExplorer = React.lazy(() => import('./DevTools/PedPropExplorer').then(m => ({ default: m.PedPropExplorer })));
 
 type ToolTab =
   | 'handling'
@@ -380,21 +381,30 @@ export const DevToolsPage: React.FC = () => {
           data-lenis-prevent
           className="p-6 sm:p-9 rounded-3xl bg-[#0b0b10]/95 border border-white/12 backdrop-blur-2xl shadow-2xl transition-all duration-300 animate-fadeIn min-h-[600px]"
         >
-          {activeTab === 'handling' && <HandlingEditor />}
-          {activeTab === 'translator' && <LocalesTranslator />}
-          {activeTab === 'json' && <JsonFormatter />}
-          {activeTab === 'blip' && <BlipDesigner />}
-          {activeTab === 'weapons' && <WeaponsConfigurator />}
-          {activeTab === 'audio' && <AudioExplorer />}
-          {activeTab === 'peds' && <PedPropExplorer />}
-          {activeTab === 'flags' && <FlagsGenerator />}
-          {activeTab === 'hash' && <HashConverter />}
-          {activeTab === 'colors' && <ColorGenerator />}
-          {activeTab === 'coords' && <CoordsGenerator />}
-          {activeTab === 'webhook' && <DiscordWebhookBuilder />}
-          {activeTab === 'controls' && <ControlsLookup />}
-          {activeTab === 'manifest' && <ManifestGenerator />}
-          {activeTab === 'anim' && <AnimExplorer />}
+          <React.Suspense
+            fallback={
+              <div className="min-h-[400px] flex flex-col items-center justify-center text-center">
+                <Terminal className="w-8 h-8 text-emerald-400 animate-pulse mb-3" />
+                <span className="text-xs font-mono text-zinc-400">Loading developer tool...</span>
+              </div>
+            }
+          >
+            {activeTab === 'handling' && <HandlingEditor />}
+            {activeTab === 'translator' && <LocalesTranslator />}
+            {activeTab === 'json' && <JsonFormatter />}
+            {activeTab === 'blip' && <BlipDesigner />}
+            {activeTab === 'weapons' && <WeaponsConfigurator />}
+            {activeTab === 'audio' && <AudioExplorer />}
+            {activeTab === 'peds' && <PedPropExplorer />}
+            {activeTab === 'flags' && <FlagsGenerator />}
+            {activeTab === 'hash' && <HashConverter />}
+            {activeTab === 'colors' && <ColorGenerator />}
+            {activeTab === 'coords' && <CoordsGenerator />}
+            {activeTab === 'webhook' && <DiscordWebhookBuilder />}
+            {activeTab === 'controls' && <ControlsLookup />}
+            {activeTab === 'manifest' && <ManifestGenerator />}
+            {activeTab === 'anim' && <AnimExplorer />}
+          </React.Suspense>
         </div>
 
         <section aria-labelledby="devtools-overview-heading" className="mt-12 pt-10 border-t border-white/10">

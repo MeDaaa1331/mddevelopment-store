@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
@@ -6,14 +6,8 @@ import { CategoryFilter } from './components/CategoryFilter';
 import { ScriptGrid } from './components/ScriptGrid';
 import { FeaturesSection } from './components/FeaturesSection';
 import { RecentPayments } from './components/RecentPayments';
-import { DevToolsPage } from './components/DevToolsPage';
 import { FAQSection } from './components/FAQSection';
 import { Footer } from './components/Footer';
-import { ScriptModal } from './components/ScriptModal';
-import { CartDrawer } from './components/CartDrawer';
-import { PromoPopup } from './components/PromoPopup';
-import { InAppCheckoutModal } from './components/InAppCheckoutModal';
-import { UserProfileModal } from './components/UserProfileModal';
 import { DiscordLoginPrompt } from './components/DiscordLoginPrompt';
 import { DiscordWelcomeToast } from './components/DiscordWelcomeToast';
 import { StoreProvider, useStore } from './context/StoreContext';
@@ -21,15 +15,21 @@ import { CartProvider, useCart } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
 import { useSmoothScroll } from './hooks/useSmoothScroll';
 
-import { WheelOfFortuneModal } from './components/WheelOfFortuneModal';
-import { AdminStatsPage } from './components/AdminStatsPage';
+const DevToolsPage = lazy(() => import('./components/DevToolsPage').then(m => ({ default: m.DevToolsPage })));
+const AdminStatsPage = lazy(() => import('./components/AdminStatsPage').then(m => ({ default: m.AdminStatsPage })));
+const ScriptModal = lazy(() => import('./components/ScriptModal').then(m => ({ default: m.ScriptModal })));
+const CartDrawer = lazy(() => import('./components/CartDrawer').then(m => ({ default: m.CartDrawer })));
+const PromoPopup = lazy(() => import('./components/PromoPopup').then(m => ({ default: m.PromoPopup })));
+const InAppCheckoutModal = lazy(() => import('./components/InAppCheckoutModal').then(m => ({ default: m.InAppCheckoutModal })));
+const UserProfileModal = lazy(() => import('./components/UserProfileModal').then(m => ({ default: m.UserProfileModal })));
+const WheelOfFortuneModal = lazy(() => import('./components/WheelOfFortuneModal').then(m => ({ default: m.WheelOfFortuneModal })));
 
 const AppModals: React.FC = () => {
   const { isCheckoutOpen, setIsCheckoutOpen, checkoutUrl } = useCart();
   const { isWheelOpen, setIsWheelOpen } = useStore();
 
   return (
-    <>
+    <Suspense fallback={null}>
       <ScriptModal />
       <CartDrawer />
       <PromoPopup />
@@ -45,9 +45,16 @@ const AppModals: React.FC = () => {
         onClose={() => setIsCheckoutOpen(false)}
         checkoutUrl={checkoutUrl}
       />
-    </>
+    </Suspense>
   );
 };
+
+const PageLoadingFallback: React.FC = () => (
+  <div className="min-h-[60vh] flex flex-col items-center justify-center p-12 text-center">
+    <Loader2 className="w-8 h-8 text-emerald-400 animate-spin mb-3" />
+    <span className="text-xs font-mono text-zinc-400">Loading module...</span>
+  </div>
+);
 
 const AppContent: React.FC = () => {
   useSmoothScroll();
@@ -110,7 +117,9 @@ const AppContent: React.FC = () => {
   if (currentRoute === '/admin') {
     return (
       <div className="min-h-screen bg-[#050507] text-zinc-100 flex flex-col font-sans selection:bg-white selection:text-black">
-        <AdminStatsPage />
+        <Suspense fallback={<PageLoadingFallback />}>
+          <AdminStatsPage />
+        </Suspense>
       </div>
     );
   }
@@ -119,7 +128,9 @@ const AppContent: React.FC = () => {
     return (
       <div className="min-h-screen bg-[#050507] text-zinc-100 flex flex-col font-sans selection:bg-white selection:text-black">
         <Navbar />
-        <DevToolsPage />
+        <Suspense fallback={<PageLoadingFallback />}>
+          <DevToolsPage />
+        </Suspense>
         <AppModals />
       </div>
     );

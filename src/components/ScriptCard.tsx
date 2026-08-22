@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { ShoppingCart, Eye, Check, Code2, Sparkles, Flame, Play } from 'lucide-react';
 import { TebexPackage } from '../types';
 import { useCart } from '../context/CartContext';
@@ -9,7 +9,7 @@ interface ScriptCardProps {
   pkg: TebexPackage;
 }
 
-export const ScriptCard: React.FC<ScriptCardProps> = ({ pkg }) => {
+export const ScriptCard: React.FC<ScriptCardProps> = memo(({ pkg }) => {
   const { addToCart } = useCart();
   const { setSelectedPackage } = useStore();
   const youtubeId = pkg.youtube_id || extractYouTubeId(pkg.description);
@@ -32,19 +32,18 @@ export const ScriptCard: React.FC<ScriptCardProps> = ({ pkg }) => {
       onClick={handleCardClick}
       className="group relative cursor-pointer flex flex-col rounded-3xl bg-[#0b0b10]/90 border border-white/10 hover:border-white/30 backdrop-blur-2xl transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden"
     >
-
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-zinc-950">
         <img
           src={pkg.image}
           alt={pkg.name}
           className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
           loading="lazy"
+          decoding="async"
         />
 
         <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b10] via-transparent to-black/30 pointer-events-none" />
 
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2">
-
           <div className="flex items-center gap-1.5 flex-wrap pointer-events-none">
             {pkg.discount && pkg.discount > 0 ? (
               <span className="px-2.5 py-1 text-[10px] font-mono font-black bg-red-600 text-white rounded-lg shadow-[0_0_18px_rgba(220,38,38,0.6)] flex items-center gap-1 animate-pulse-subtle border border-red-400/30">
@@ -90,13 +89,10 @@ export const ScriptCard: React.FC<ScriptCardProps> = ({ pkg }) => {
             QB-CORE
           </span>
         </div>
-
       </div>
 
       <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between gap-4">
-
         <div>
-
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-mono font-bold text-zinc-400 uppercase tracking-widest">
               {pkg.category_name || (pkg.is_open_source ? 'Open Source' : 'Paid Resources')}
@@ -126,7 +122,6 @@ export const ScriptCard: React.FC<ScriptCardProps> = ({ pkg }) => {
         </div>
 
         <div className="pt-4 border-t border-white/10 flex items-center justify-between mt-auto">
-
           <div className="flex flex-col">
             <span className="text-[10px] text-zinc-400 font-mono uppercase tracking-wider">
               CFX Keymaster
@@ -162,11 +157,8 @@ export const ScriptCard: React.FC<ScriptCardProps> = ({ pkg }) => {
               <span>Buy</span>
             </button>
           </div>
-
         </div>
-
       </div>
-
     </div>
   );
-};
+});
