@@ -38,6 +38,7 @@ const LOCAL_COUNTS_KEY = 'md_dev_analytics_counts_v3';
 
 export const TOOL_NAMES: Record<string, string> = {
   translator: 'Locales Translator',
+  handling: 'Vehicle Handling Editor',
   json: 'JSON Formatter',
   blip: 'Blip & Radar Designer',
   weapons: 'Weapons & Ammo',
@@ -56,6 +57,7 @@ export const TOOL_NAMES: Record<string, string> = {
 export const normalizeToolId = (id: string): string => {
   const map: Record<string, string> = {
     flags_generator: 'flags',
+    handling_editor: 'handling',
     blip_designer: 'blip',
     weapons_configurator: 'weapons',
     ped_spawner: 'peds',

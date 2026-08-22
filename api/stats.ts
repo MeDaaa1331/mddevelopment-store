@@ -1,11 +1,12 @@
 const ALL_TOOLS = [
-  'translator', 'json', 'blip', 'weapons', 'audio',
+  'translator', 'handling', 'json', 'blip', 'weapons', 'audio',
   'peds', 'flags', 'hash', 'colors', 'coords',
   'webhook', 'controls', 'manifest', 'anim'
 ];
 
 const TOOL_NAMES: Record<string, string> = {
   translator: 'Locales Translator',
+  handling: 'Vehicle Handling Editor',
   json: 'JSON Formatter',
   blip: 'Blip & Radar Designer',
   weapons: 'Weapons & Ammo',

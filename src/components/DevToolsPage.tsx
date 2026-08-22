@@ -17,10 +17,12 @@ import {
   Navigation,
   Volume2,
   Crosshair,
-  User
+  User,
+  Car
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { LocalesTranslator } from './DevTools/LocalesTranslator';
+import { HandlingEditor } from './DevTools/HandlingEditor';
 import { ColorGenerator } from './DevTools/ColorGenerator';
 import { CoordsGenerator } from './DevTools/CoordsGenerator';
 import { DiscordWebhookBuilder } from './DevTools/DiscordWebhookBuilder';
@@ -38,6 +40,7 @@ import { trackEvent } from '../utils/analytics';
 import { Footer } from './Footer';
 
 type ToolTab =
+  | 'handling'
   | 'translator'
   | 'json'
   | 'blip'
@@ -60,6 +63,7 @@ interface TabItem {
 }
 
 const DEV_TOOLS_TABS: TabItem[] = [
+  { id: 'handling', label: 'Vehicle Handling', icon: <Car className="w-3.5 h-3.5" /> },
   { id: 'translator', label: 'Locales Translator', icon: <Languages className="w-3.5 h-3.5" /> },
   { id: 'json', label: 'JSON Formatter', icon: <FileJson className="w-3.5 h-3.5" /> },
   { id: 'blip', label: 'Blip & Radar Designer', icon: <Navigation className="w-3.5 h-3.5" /> },
@@ -77,6 +81,10 @@ const DEV_TOOLS_TABS: TabItem[] = [
 ];
 
 const TOOL_SEO_METADATA: Record<ToolTab, { title: string; description: string }> = {
+  handling: {
+    title: 'FiveM Vehicle Handling Editor & Calculator (handling.meta) | FiveM Dev Tools',
+    description: 'Visual FiveM handling.meta editor and calculator. Tune engine power, transmission gears, traction curve, suspension, and damage multipliers with live speed calculations.'
+  },
   flags: {
     title: 'FiveM Flags Generator & Bitwise Calculator (YTYP, Handling, AI Styles) | FiveM Dev Tools',
     description: 'Accurate bitwise flag calculator for FiveM & GTA V. Calculate YTYP archetypes, vehicle model flags, handling flags, damage flags, and AI driving styles.'
@@ -291,6 +299,7 @@ export const DevToolsPage: React.FC = () => {
           data-lenis-prevent
           className="p-6 sm:p-9 rounded-3xl bg-[#0b0b10]/95 border border-white/12 backdrop-blur-2xl shadow-2xl transition-all duration-300 animate-fadeIn min-h-[600px]"
         >
+          {activeTab === 'handling' && <HandlingEditor />}
           {activeTab === 'translator' && <LocalesTranslator />}
           {activeTab === 'json' && <JsonFormatter />}
           {activeTab === 'blip' && <BlipDesigner />}
@@ -315,7 +324,7 @@ export const DevToolsPage: React.FC = () => {
                 <h3>100% Free FiveM Utilities</h3>
               </div>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                All 14 developer utilities run instantly in your browser with zero latency. No downloads or signups required.
+                All 15 developer utilities run instantly in your browser with zero latency. No downloads or signups required.
               </p>
             </div>
 

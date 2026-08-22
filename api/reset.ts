@@ -1,5 +1,5 @@
 const ALL_TOOLS = [
-  'translator', 'json', 'blip', 'weapons', 'audio',
+  'translator', 'handling', 'json', 'blip', 'weapons', 'audio',
   'peds', 'flags', 'hash', 'colors', 'coords',
   'webhook', 'controls', 'manifest', 'anim'
 ];
