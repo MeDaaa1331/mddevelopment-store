@@ -118,14 +118,14 @@ export const Navbar: React.FC = () => {
 
   return (
     <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-[#050507]/90 backdrop-blur-2xl border-b border-white/10 shadow-2xl py-3' : 'bg-transparent py-5'}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between gap-4">
+      <div className="max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8 w-full">
+        <div className="flex items-center justify-between gap-3 lg:gap-6">
 
-          <a href="/" onClick={e => { e.preventDefault(); navigate('/'); smoothScrollTo(0, { duration: 1.4 }); }} className="flex items-center gap-3.5 group cursor-pointer select-none">
+          <a href="/" onClick={e => { e.preventDefault(); navigate('/'); smoothScrollTo(0, { duration: 1.4 }); }} className="flex items-center gap-3.5 group cursor-pointer select-none shrink-0">
             <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-black border border-white/15 p-1 flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:border-white/40 shadow-glow-sm">
               <img src="/logo.png" alt="MD Development" className="w-full h-full object-contain" />
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col whitespace-nowrap">
               <div className="flex items-center gap-1.5">
                 <span className="font-display text-xl font-extrabold tracking-tight text-white">MD<span className="text-zinc-400">.</span></span>
                 <span className="text-xs font-mono font-medium tracking-widest text-zinc-400 uppercase">Development</span>
@@ -134,7 +134,7 @@ export const Navbar: React.FC = () => {
             </div>
           </a>
 
-          <nav ref={navRef} className="relative hidden md:flex items-center gap-1 bg-zinc-900/70 p-1.5 rounded-full border border-white/10 backdrop-blur-md">
+          <nav ref={navRef} className="relative hidden lg:flex items-center gap-1 bg-zinc-900/70 p-1.5 rounded-full border border-white/10 backdrop-blur-md shrink-0">
 
             <div
               className="absolute top-1.5 bottom-1.5 rounded-full bg-white transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] shadow-md pointer-events-none"
@@ -150,7 +150,7 @@ export const Navbar: React.FC = () => {
                 key={cat.slug}
                 data-nav={cat.slug}
                 onClick={() => handleCategory(cat.slug)}
-                className={`relative z-10 px-3.5 py-1.5 text-xs font-semibold rounded-full transition-colors duration-200 flex items-center gap-1.5 select-none ${
+                className={`relative z-10 px-3.5 py-1.5 text-xs font-semibold rounded-full transition-colors duration-200 flex items-center gap-1.5 select-none whitespace-nowrap ${
                   activeNav === cat.slug ? 'text-black font-bold' : 'text-zinc-400 hover:text-white'
                 }`}
               >
@@ -170,7 +170,7 @@ export const Navbar: React.FC = () => {
             <button
               data-nav="faq"
               onClick={handleFAQClick}
-              className={`relative z-10 px-4 py-1.5 text-xs font-semibold rounded-full transition-colors duration-200 select-none ${
+              className={`relative z-10 px-4 py-1.5 text-xs font-semibold rounded-full transition-colors duration-200 select-none whitespace-nowrap ${
                 activeNav === 'faq' ? 'text-black font-bold' : 'text-zinc-400 hover:text-white'
               }`}
             >
@@ -178,11 +178,11 @@ export const Navbar: React.FC = () => {
             </button>
           </nav>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
 
             <button
               onClick={() => setSearchOpen(!searchOpen)}
-              className="p-2.5 rounded-xl text-zinc-400 hover:text-white bg-zinc-900/50 hover:bg-zinc-800/80 border border-white/10 transition-all"
+              className="p-2.5 rounded-xl text-zinc-400 hover:text-white bg-zinc-900/50 hover:bg-zinc-800/80 border border-white/10 transition-all shrink-0"
               data-tooltip="Search scripts"
               data-tooltip-pos="bottom"
               aria-label="Search scripts"
@@ -194,7 +194,7 @@ export const Navbar: React.FC = () => {
               href={DISCORD}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden lg:flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-zinc-900/90 hover:bg-zinc-800 text-zinc-200 hover:text-white border border-white/10 hover:border-white/25 transition-all group"
+              className="hidden xl:flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-zinc-900/90 hover:bg-zinc-800 text-zinc-200 hover:text-white border border-white/10 hover:border-white/25 transition-all group shrink-0 whitespace-nowrap"
               data-tooltip={`${discordStats.totalMembers} Members • ${discordStats.onlineMembers} Online`}
               data-tooltip-pos="bottom"
             >
@@ -212,7 +212,7 @@ export const Navbar: React.FC = () => {
             {isLoggedIn && user ? (
               <button
                 onClick={() => setIsProfileModalOpen(true)}
-                className="flex items-center gap-2 p-1 pl-2 pr-3 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-white/10 hover:border-white/25 transition-all text-xs font-bold text-white shadow-sm group"
+                className="flex items-center gap-2 p-1 pl-2 pr-3 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-white/10 hover:border-white/25 transition-all text-xs font-bold text-white shadow-sm group shrink-0 whitespace-nowrap"
                 data-tooltip="View Discord Profile & History"
                 data-tooltip-pos="bottom"
               >
@@ -221,23 +221,23 @@ export const Navbar: React.FC = () => {
                   alt={user.username}
                   className="w-6 h-6 rounded-lg object-cover border border-white/10"
                 />
-                <span className="max-w-[100px] truncate">{user.global_name || user.username}</span>
+                <span className="max-w-[120px] truncate">{user.global_name || user.username}</span>
               </button>
             ) : (
               <button
                 onClick={loginWithDiscord}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-[#5865F2]/20 hover:bg-[#5865F2]/30 text-[#8ea1ff] hover:text-white border border-[#5865F2]/40 hover:border-[#5865F2]/60 transition-all shadow-sm active:scale-95"
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#5865F2] hover:bg-[#4752C4] text-white border border-[#5865F2]/50 hover:border-[#5865F2] transition-all shadow-glow-sm active:scale-95 shrink-0 whitespace-nowrap group"
                 data-tooltip="Sign in with Discord"
                 data-tooltip-pos="bottom"
               >
-                <MessageSquare className="w-3.5 h-3.5 fill-[#5865F2]" />
-                <span className="hidden sm:inline">Sign In</span>
+                <MessageSquare className="w-3.5 h-3.5 fill-white" />
+                <span>Sign In with Discord</span>
               </button>
             )}
 
             <button
               onClick={() => setIsCartOpen(true)}
-              className="relative flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white text-black hover:bg-zinc-200 font-bold text-xs transition-all shadow-glow-sm active:scale-95 hover:scale-105"
+              className="relative flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white text-black hover:bg-zinc-200 font-bold text-xs transition-all shadow-glow-sm active:scale-95 hover:scale-105 shrink-0 whitespace-nowrap"
             >
               <ShoppingCart className="w-4 h-4 text-black" />
               <span className="hidden sm:inline">Cart</span>
