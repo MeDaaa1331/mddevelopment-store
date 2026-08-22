@@ -5,8 +5,33 @@ const WHEEL_PRIZES = [
   { id: 'disc15', label: '15% Discount', shortLabel: '15% OFF', discount: 15, weight: 15, color: '#16221c' },
   { id: 'disc30', label: '30% Discount', shortLabel: '30% OFF', discount: 30, weight: 15, color: '#22182b' },
   { id: 'disc50', label: '50% Discount', shortLabel: '50% OFF', discount: 50, weight: 9, color: '#281d0d' },
-  { id: 'disc100', label: '100% FREE Script', shortLabel: '100% FREE', discount: 100, weight: 1, color: '#311019', isJackpot: true }
+  { id: 'disc100', label: '100% FREE Standalone Script', shortLabel: '100% FREE', discount: 100, weight: 1, color: '#311019', isJackpot: true }
 ];
+
+async function getEscrowPackageIds(tebexSecret: string): Promise<number[]> {
+  try {
+    const res = await fetch('https://plugin.tebex.io/packages', {
+      headers: {
+        'X-Tebex-Secret': tebexSecret.trim(),
+        'Accept': 'application/json'
+      }
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const list = Array.isArray(data) ? data : (data.packages || data.data || []);
+
+    return list
+      .filter((pkg: any) => {
+        const name = (pkg.name || '').toLowerCase();
+        const isExcluded = /all[\s-_]?in[\s-_]?one|subscription|open[\s-_]?source/i.test(name);
+        return !isExcluded;
+      })
+      .map((pkg: any) => Number(pkg.id))
+      .filter((id: number) => !isNaN(id) && id > 0);
+  } catch (err) {
+    return [];
+  }
+}
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -134,6 +159,17 @@ export default async function handler(req: any, res: any) {
           const expireDate = new Date(expiresAt).toISOString().split('T')[0];
           const startDate = new Date(now).toISOString().split('T')[0];
 
+          let effectiveOn = 'cart';
+          let packagesPayload: number[] = [];
+
+          if (prize.discount === 100) {
+            const escrowPackageIds = await getEscrowPackageIds(tebexSecret);
+            if (escrowPackageIds.length > 0) {
+              effectiveOn = 'package';
+              packagesPayload = escrowPackageIds;
+            }
+          }
+
           await fetch('https://plugin.tebex.io/coupons', {
             method: 'POST',
             headers: {
@@ -143,8 +179,8 @@ export default async function handler(req: any, res: any) {
             },
             body: JSON.stringify({
               code: couponCode,
-              effective_on: 'cart',
-              packages: [],
+              effective_on: effectiveOn,
+              packages: packagesPayload,
               categories: [],
               discount_type: 'percentage',
               discount_percentage: prize.discount,
@@ -154,10 +190,12 @@ export default async function handler(req: any, res: any) {
               expire_limit: 1,
               expire_date: expireDate,
               start_date: startDate,
-              basket_type: 'both',
+              basket_type: 'single',
               minimum: 0,
               username: '',
-              note: `Daily Wheel Reward for ${user.username || 'User'}`
+              note: prize.discount === 100
+                ? `100% Free Escrow Script for ${user.username || 'User'}`
+                : `Daily Wheel Reward for ${user.username || 'User'}`
             })
           });
         } catch (err) {}
