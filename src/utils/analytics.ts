@@ -129,6 +129,8 @@ function saveLocalCounts(counts: LocalCounts) {
   } catch {}
 }
 
+export const viewedSessionTools = new Set<string>();
+
 export const trackEvent = async (
   rawToolId: string,
   action: DevToolEvent['action'],
@@ -137,6 +139,21 @@ export const trackEvent = async (
 ) => {
   try {
     const toolId = normalizeToolId(rawToolId);
+
+    if (action === 'view') {
+      const sessionKey = `md_view_${toolId}`;
+      if (typeof window !== 'undefined') {
+        const lastViewTime = sessionStorage.getItem(sessionKey);
+        if (lastViewTime && Date.now() - Number(lastViewTime) < 60000) {
+          return;
+        }
+        sessionStorage.setItem(sessionKey, Date.now().toString());
+      } else if (viewedSessionTools.has(toolId)) {
+        return;
+      }
+      viewedSessionTools.add(toolId);
+    }
+
     const country = Intl.DateTimeFormat().resolvedOptions().timeZone.includes('Europe') ? 'CZ' : 'Global';
     const isMobile = typeof window !== 'undefined' && window.innerWidth <= 1024;
     const device = isMobile ? 'Mobile' : 'Desktop';
@@ -225,7 +242,6 @@ export const trackEvent = async (
 
 export const getStoredAnalytics = async (): Promise<AnalyticsSummary> => {
   let serverData: any = null;
-
   try {
     const res = await fetch('/api/stats');
     if (res.ok) {
@@ -253,10 +269,8 @@ export const getStoredAnalytics = async (): Promise<AnalyticsSummary> => {
 
     const toolRankings = Object.keys(TOOL_NAMES).map(toolId => {
       const serverStats = serverToolStats[toolId] || { views: 0, copies: 0 };
-      const localStats = localCounts.toolStats[toolId] || { views: 0, copies: 0 };
-
-      const views = Math.max(serverStats.views || 0, localStats.views || 0);
-      const copies = Math.max(serverStats.copies || 0, localStats.copies || 0);
+      const views = serverStats.views || 0;
+      const copies = serverStats.copies || 0;
       const copyRate = views > 0 ? Math.min(100, Math.round((copies / views) * 100)) : 0;
 
       return {
@@ -271,9 +285,9 @@ export const getStoredAnalytics = async (): Promise<AnalyticsSummary> => {
     const sumToolCopies = toolRankings.reduce((acc, t) => acc + t.copies, 0);
     const sumToolViews = toolRankings.reduce((acc, t) => acc + t.views, 0);
 
-    const totalCopies = Math.max(serverData.totalCopies || 0, localCounts.totalCopies || 0, sumToolCopies);
-    const totalViews = Math.max(serverData.totalViews || 0, localCounts.totalViews || 0, sumToolViews);
-    const totalEvents = Math.max(serverData.totalEvents || 0, localCounts.totalEvents || 0, totalViews + totalCopies);
+    const totalCopies = Math.max(serverData.totalCopies || 0, sumToolCopies);
+    const totalViews = Math.max(serverData.totalViews || 0, sumToolViews);
+    const totalEvents = Math.max(serverData.totalEvents || 0, totalViews + totalCopies);
 
     return {
       totalEvents,

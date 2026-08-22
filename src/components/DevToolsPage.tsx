@@ -217,6 +217,7 @@ export const DevToolsPage: React.FC = () => {
   });
 
   const tabContainerRef = useRef<HTMLDivElement>(null);
+  const lastTrackedToolRef = useRef<string | null>(null);
 
   const updateIndicator = () => {
     if (!tabContainerRef.current) return;
@@ -234,7 +235,15 @@ export const DevToolsPage: React.FC = () => {
 
   useEffect(() => {
     updateIndicator();
-    trackEvent(activeTab, 'view');
+    window.addEventListener('resize', updateIndicator);
+    return () => window.removeEventListener('resize', updateIndicator);
+  }, [activeTab, favorites]);
+
+  useEffect(() => {
+    if (lastTrackedToolRef.current !== activeTab) {
+      lastTrackedToolRef.current = activeTab;
+      trackEvent(activeTab, 'view');
+    }
 
     if (typeof window !== 'undefined') {
       const seo = TOOL_SEO_METADATA[activeTab];
@@ -254,10 +263,7 @@ export const DevToolsPage: React.FC = () => {
       }
       window.history.replaceState(null, '', currentUrl.pathname + currentUrl.search);
     }
-
-    window.addEventListener('resize', updateIndicator);
-    return () => window.removeEventListener('resize', updateIndicator);
-  }, [activeTab, favorites]);
+  }, [activeTab]);
 
   return (
     <div className="min-h-screen bg-[#050507] text-zinc-100 flex flex-col font-sans selection:bg-white selection:text-black">
