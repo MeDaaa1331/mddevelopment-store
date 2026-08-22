@@ -37,4 +37,4 @@
 - **Performance**: Every script is engineered for optimal client and server performance (0.00ms idle resmon).
 - **Security & Delivery**: Automated 24/7 delivery via CFX Keymaster upon Tebex checkout completion.
 - **Daily Wheel of Fortune**: Daily spins for Discord community members with coupons up to 100% OFF on standalone scripts.
-- **Official Discord Community**: 24/7 technical support, updates, and customer announcements at https://discord.gg/mddevelopment.
+- **Official Discord Community**: 24/7 technical support, updates, and customer announcements at https://discord.gg/Ze4m2Uyxjw.
