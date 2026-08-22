@@ -22,7 +22,6 @@ import { AuthProvider } from './context/AuthContext';
 import { useSmoothScroll } from './hooks/useSmoothScroll';
 
 import { WheelOfFortuneModal } from './components/WheelOfFortuneModal';
-import { DailySpinWidget } from './components/DailySpinWidget';
 import { AdminStatsPage } from './components/AdminStatsPage';
 
 const AppModals: React.FC = () => {
@@ -37,7 +36,6 @@ const AppModals: React.FC = () => {
       <UserProfileModal />
       <DiscordLoginPrompt />
       <DiscordWelcomeToast />
-      <DailySpinWidget onOpen={() => setIsWheelOpen(true)} />
       <WheelOfFortuneModal
         isOpen={isWheelOpen}
         onClose={() => setIsWheelOpen(false)}
