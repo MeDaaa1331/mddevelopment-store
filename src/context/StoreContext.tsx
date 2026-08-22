@@ -22,6 +22,8 @@ interface StoreContextType {
   refreshStore: () => Promise<void>;
   currentRoute: string;
   navigate: (path: string) => void;
+  isWheelOpen: boolean;
+  setIsWheelOpen: (open: boolean) => void;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -42,6 +44,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [selectedPackage, setSelectedPackage] = useState<TebexPackage | null>(null);
   const [isLive, setIsLive] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isWheelOpen, setIsWheelOpen] = useState<boolean>(false);
   const [currentRoute, setCurrentRoute] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname.toLowerCase();
@@ -191,6 +194,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         refreshStore: () => loadData(false),
         currentRoute,
         navigate,
+        isWheelOpen,
+        setIsWheelOpen,
       }}
     >
       {children}

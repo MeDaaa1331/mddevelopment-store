@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Search, MessageSquare, Menu, X, Flame, Code2, Crown, Wrench } from 'lucide-react';
+import { ShoppingCart, Search, MessageSquare, Menu, X, Flame, Code2, Crown, Wrench, Gift } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
@@ -9,7 +9,7 @@ import { smoothScrollTo } from '../hooks/useSmoothScroll';
 
 export const Navbar: React.FC = () => {
   const { totalCount, setIsCartOpen } = useCart();
-  const { setCategory, setSearch, filters, currentRoute, navigate } = useStore();
+  const { setCategory, setSearch, filters, currentRoute, navigate, setIsWheelOpen } = useStore();
   const { user, isLoggedIn, loginWithDiscord, setIsProfileModalOpen } = useAuth();
   const discordStats = useDiscordStats();
 
@@ -208,6 +208,16 @@ export const Navbar: React.FC = () => {
                 {discordStats.onlineMembers}
               </span>
             </a>
+
+            <button
+              onClick={() => setIsWheelOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold bg-gradient-to-r from-amber-500/15 to-amber-600/10 hover:from-amber-500/25 hover:to-amber-600/20 text-amber-300 border border-amber-500/40 hover:border-amber-400/80 transition-all shrink-0 whitespace-nowrap hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(245,158,11,0.2)] group"
+              data-tooltip="Daily Wheel of Fortune (Win up to 100% OFF)"
+              data-tooltip-pos="bottom"
+            >
+              <Gift className="w-3.5 h-3.5 text-amber-400 group-hover:rotate-12 transition-transform" />
+              <span>Daily Spin</span>
+            </button>
 
             {isLoggedIn && user ? (
               <button

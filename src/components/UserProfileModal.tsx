@@ -13,16 +13,22 @@ import {
   Star,
   Activity,
   Sparkles,
-  Check
+  Check,
+  Gift,
+  Tag,
+  Clock
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { TEBEX_CONFIG } from '../config/tebex';
 
 export const UserProfileModal: React.FC = () => {
   const { user, isProfileModalOpen, setIsProfileModalOpen, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'history'>('overview');
+  const { applyCoupon, setIsCartOpen } = useCart();
+  const [activeTab, setActiveTab] = useState<'overview' | 'rewards' | 'history'>('overview');
   const [isClosing, setIsClosing] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
+  const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
 
   if (!isProfileModalOpen || !user) return null;
 
@@ -40,6 +46,18 @@ export const UserProfileModal: React.FC = () => {
     setTimeout(() => setCopiedId(false), 2000);
   };
 
+  const handleCopyCoupon = (id: string, code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCodeId(id);
+    setTimeout(() => setCopiedCodeId(null), 2000);
+  };
+
+  const handleApplyCoupon = (code: string) => {
+    applyCoupon(code);
+    setIsCartOpen(true);
+    handleClose();
+  };
+
   const joinDate = user.firstJoined
     ? new Date(user.firstJoined).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : 'Recent Member';
@@ -47,6 +65,8 @@ export const UserProfileModal: React.FC = () => {
   const lastActiveDate = user.lastActive
     ? new Date(user.lastActive).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
     : 'Just now';
+
+  const rewards = user.rewards || [];
 
   return (
     <div
@@ -113,28 +133,39 @@ export const UserProfileModal: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 px-6 pt-4 border-b border-white/10 bg-zinc-950/60">
+        <div className="flex items-center gap-2 px-6 pt-4 border-b border-white/10 bg-zinc-950/60 overflow-x-auto">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`px-4 py-2.5 text-xs font-bold transition-all border-b-2 flex items-center gap-2 ${
+            className={`px-3.5 py-2.5 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'overview'
                 ? 'border-white text-white shadow-sm'
                 : 'border-transparent text-zinc-400 hover:text-zinc-200'
             }`}
           >
             <Cloud className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Cloud Sync & Overview</span>
+            <span>Overview</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('rewards')}
+            className={`px-3.5 py-2.5 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 whitespace-nowrap ${
+              activeTab === 'rewards'
+                ? 'border-white text-white shadow-sm'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <Gift className="w-3.5 h-3.5 text-amber-400" />
+            <span>Wheel Rewards ({rewards.length})</span>
           </button>
           <button
             onClick={() => setActiveTab('history')}
-            className={`px-4 py-2.5 text-xs font-bold transition-all border-b-2 flex items-center gap-2 ${
+            className={`px-3.5 py-2.5 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'history'
                 ? 'border-white text-white shadow-sm'
                 : 'border-transparent text-zinc-400 hover:text-zinc-200'
             }`}
           >
             <Activity className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Activity History ({user.history?.length || 0})</span>
+            <span>History ({user.history?.length || 0})</span>
           </button>
         </div>
 
@@ -187,6 +218,69 @@ export const UserProfileModal: React.FC = () => {
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'rewards' && (
+            <div className="space-y-3 animate-fadeIn">
+              {rewards.length === 0 ? (
+                <div className="p-8 rounded-2xl bg-zinc-950/60 border border-white/5 text-center">
+                  <Gift className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
+                  <span className="text-xs font-bold text-zinc-300 block">No Wheel Rewards Yet</span>
+                  <p className="text-[11px] text-zinc-500 mt-1 max-w-xs mx-auto">
+                    Spin the Daily Wheel of Fortune to win discounts up to 100% OFF for the Tebex store.
+                  </p>
+                </div>
+              ) : (
+                rewards.map(rew => {
+                  const isExpired = Date.now() > rew.expiresAt;
+                  const hoursLeft = Math.max(0, Math.round((rew.expiresAt - Date.now()) / (1000 * 60 * 60)));
+
+                  return (
+                    <div
+                      key={rew.id}
+                      className="p-4 rounded-2xl bg-zinc-900/70 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-white/25 transition-all"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                          <Tag className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-white block">{rew.label}</span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                              isExpired ? 'bg-zinc-800 text-zinc-500' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                            }`}>
+                              {isExpired ? 'Expired' : `${hoursLeft}h left`}
+                            </span>
+                          </div>
+                          <span className="font-mono text-xs text-amber-300 font-bold block mt-0.5">{rew.code}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleCopyCoupon(rew.id, rew.code)}
+                          className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-mono font-bold text-zinc-300 hover:text-white flex items-center gap-1.5 transition-all"
+                          data-tooltip="Copy Coupon Code"
+                        >
+                          {copiedCodeId === rew.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span>{copiedCodeId === rew.id ? 'Copied' : 'Copy'}</span>
+                        </button>
+                        {!isExpired && (
+                          <button
+                            onClick={() => handleApplyCoupon(rew.code)}
+                            className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs transition-all flex items-center gap-1.5"
+                          >
+                            <ShoppingCart className="w-3.5 h-3.5" />
+                            <span>Apply</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           )}
 

@@ -24,7 +24,10 @@ import {
   Database,
   Trash2,
   AlertTriangle,
-  MessageSquare
+  MessageSquare,
+  Gift,
+  Tag,
+  Check
 } from 'lucide-react';
 import { getStoredAnalytics, resetAllAnalytics, AnalyticsSummary, DevToolEvent } from '../utils/analytics';
 import { useStore } from '../context/StoreContext';
@@ -38,8 +41,15 @@ export const AdminStatsPage: React.FC = () => {
   const [pinError, setPinError] = useState(false);
   const [data, setData] = useState<AnalyticsSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'tools' | 'items' | 'live' | 'geo' | 'discord'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'tools' | 'items' | 'live' | 'geo' | 'discord' | 'wheel'>('overview');
   const [discordSearch, setDiscordSearch] = useState('');
+  const [wheelSearch, setWheelSearch] = useState('');
+  const [wheelData, setWheelData] = useState<{ history: any[]; totalSpins: number; prizeCounts: Record<string, number> }>({
+    history: [],
+    totalSpins: 0,
+    prizeCounts: {}
+  });
+  const [copiedCoupon, setCopiedCoupon] = useState<string | null>(null);
   const [selectedUserModal, setSelectedUserModal] = useState<any | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -55,6 +65,14 @@ export const AdminStatsPage: React.FC = () => {
     try {
       const stats = await getStoredAnalytics();
       setData(stats);
+
+      try {
+        const wheelRes = await fetch('/api/wheel/history');
+        if (wheelRes.ok) {
+          const wData = await wheelRes.json();
+          setWheelData(wData);
+        }
+      } catch {}
     } catch (e) {
     } finally {
       setIsLoading(false);
@@ -334,6 +352,7 @@ export const AdminStatsPage: React.FC = () => {
         <div className="flex items-center gap-2 p-1.5 bg-zinc-950/80 rounded-2xl border border-white/10 overflow-x-auto">
           {[
             { id: 'overview', label: 'Overview & Top Charts', icon: BarChart3 },
+            { id: 'wheel', label: `Wheel of Fortune (${wheelData.totalSpins || 0})`, icon: Gift },
             { id: 'tools', label: 'Tool Leaderboard', icon: Flame },
             { id: 'items', label: 'Top GTA V Items & Queries', icon: Search },
             { id: 'live', label: 'Live Activity Stream', icon: Activity },
@@ -887,6 +906,200 @@ export const AdminStatsPage: React.FC = () => {
                                 >
                                   View Details
                                 </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'wheel' && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-zinc-400 text-xs font-mono font-bold uppercase">
+                  <span>Total Spins</span>
+                  <Gift className="w-4 h-4 text-amber-400" />
+                </div>
+                <div className="mt-3">
+                  <span className="font-display font-black text-3xl text-white">
+                    {wheelData.totalSpins.toLocaleString()}
+                  </span>
+                  <p className="text-xs text-zinc-400 mt-1 font-mono">Total wheel plays</p>
+                </div>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-zinc-400 text-xs font-mono font-bold uppercase">
+                  <span>Discounts Won</span>
+                  <Tag className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div className="mt-3">
+                  <span className="font-display font-black text-3xl text-emerald-400">
+                    {(
+                      (wheelData.prizeCounts['5'] || 0) +
+                      (wheelData.prizeCounts['10'] || 0) +
+                      (wheelData.prizeCounts['15'] || 0) +
+                      (wheelData.prizeCounts['30'] || 0) +
+                      (wheelData.prizeCounts['50'] || 0) +
+                      (wheelData.prizeCounts['100'] || 0)
+                    ).toLocaleString()}
+                  </span>
+                  <p className="text-xs text-emerald-400/80 mt-1 font-mono">Tebex coupons generated</p>
+                </div>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-zinc-400 text-xs font-mono font-bold uppercase">
+                  <span>100% Free Jackpots</span>
+                  <Sparkles className="w-4 h-4 text-rose-400" />
+                </div>
+                <div className="mt-3">
+                  <span className="font-display font-black text-3xl text-rose-400">
+                    {(wheelData.prizeCounts['100'] || 0).toLocaleString()}
+                  </span>
+                  <p className="text-xs text-rose-400/80 mt-1 font-mono">1% rare jackpot wins</p>
+                </div>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-zinc-400 text-xs font-mono font-bold uppercase">
+                  <span>No Luck (Try Again)</span>
+                  <Activity className="w-4 h-4 text-zinc-400" />
+                </div>
+                <div className="mt-3">
+                  <span className="font-display font-black text-3xl text-zinc-300">
+                    {(wheelData.prizeCounts['0'] || 0).toLocaleString()}
+                  </span>
+                  <p className="text-xs text-zinc-500 mt-1 font-mono">25% base probability</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-display font-bold text-lg text-white">Wheel Spin History</h3>
+                  <p className="text-xs text-zinc-400">Chronological log of wheel spins, prizes won, and generated 24h Tebex coupon codes</p>
+                </div>
+
+                <div className="relative w-full sm:w-72">
+                  <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+                  <input
+                    type="text"
+                    value={wheelSearch}
+                    onChange={e => setWheelSearch(e.target.value)}
+                    placeholder="Search by user or coupon..."
+                    className="w-full pl-9 pr-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white/30"
+                  />
+                </div>
+              </div>
+
+              {(() => {
+                const filteredHistory = wheelData.history.filter(item => {
+                  if (!wheelSearch) return true;
+                  const q = wheelSearch.toLowerCase();
+                  return (
+                    item.username?.toLowerCase().includes(q) ||
+                    item.code?.toLowerCase().includes(q) ||
+                    item.prizeLabel?.toLowerCase().includes(q) ||
+                    item.userId?.includes(q)
+                  );
+                });
+
+                if (filteredHistory.length === 0) {
+                  return (
+                    <div className="py-12 text-center text-zinc-500 font-mono text-xs">
+                      No wheel spin records found.
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-white/10 text-zinc-400 font-mono uppercase text-[11px]">
+                          <th className="py-3 pl-2">User</th>
+                          <th className="py-3">Prize Won</th>
+                          <th className="py-3">Tebex Coupon Code</th>
+                          <th className="py-3">Timestamp</th>
+                          <th className="py-3">Country</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5 font-sans">
+                        {filteredHistory.map((item, idx) => {
+                          const dateStr = new Date(item.timestamp).toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          });
+
+                          return (
+                            <tr key={item.id || idx} className="hover:bg-white/[0.02] transition-colors">
+                              <td className="py-3.5 pl-2">
+                                <div className="flex items-center gap-3">
+                                  {item.avatarUrl ? (
+                                    <img
+                                      src={item.avatarUrl}
+                                      alt={item.username}
+                                      className="w-8 h-8 rounded-xl object-cover border border-white/10"
+                                    />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-xl bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold">
+                                      {item.username?.[0] || 'U'}
+                                    </div>
+                                  )}
+                                  <div>
+                                    <span className="font-bold text-white block">{item.username}</span>
+                                    <span className="text-[10px] font-mono text-zinc-400">ID: {item.userId}</span>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-3.5">
+                                <span className={`px-2.5 py-1 rounded-lg text-xs font-bold font-mono ${
+                                  item.discount === 100
+                                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse'
+                                    : item.discount >= 30
+                                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                                    : item.discount > 0
+                                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                    : 'bg-zinc-800 text-zinc-400'
+                                }`}>
+                                  {item.prizeLabel}
+                                </span>
+                              </td>
+                              <td className="py-3.5 font-mono">
+                                {item.code ? (
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(item.code);
+                                      setCopiedCoupon(item.code);
+                                      setTimeout(() => setCopiedCoupon(null), 2000);
+                                    }}
+                                    className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-white font-bold text-[11px] flex items-center gap-1.5 transition-all"
+                                  >
+                                    <span>{item.code}</span>
+                                    {copiedCoupon === item.code ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-zinc-400" />}
+                                  </button>
+                                ) : (
+                                  <span className="text-zinc-500 text-[11px]">—</span>
+                                )}
+                              </td>
+                              <td className="py-3.5 font-mono text-zinc-400 text-[11px]">
+                                {dateStr}
+                              </td>
+                              <td className="py-3.5 font-mono text-zinc-300">
+                                <span className="px-2 py-0.5 rounded bg-zinc-900 border border-white/10 text-[10px] font-bold">
+                                  {item.country || 'CZ'}
+                                </span>
                               </td>
                             </tr>
                           );

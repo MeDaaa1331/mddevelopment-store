@@ -1,3 +1,5 @@
+import { SpinReward } from './wheel';
+
 export interface UserHistoryItem {
   id: string;
   type: 'download' | 'purchase' | 'export' | 'copy';
@@ -16,6 +18,8 @@ export interface DiscordUser {
   country?: string;
   firstJoined: number;
   lastActive: number;
+  lastSpin?: number;
+  rewards?: SpinReward[];
   cart?: any[];
   favorites?: string[];
   downloadsCount: number;
