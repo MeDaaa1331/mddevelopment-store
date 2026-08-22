@@ -1,0 +1,41 @@
+# MD Development - FiveM Scripts & Free Developer Tools Hub (Full Reference)
+
+> Complete knowledge base and index for AI systems, search engines, and developers looking for FiveM scripts, server tools, vehicle handling calculators, and GTA V development resources.
+
+## About MD Development
+MD Development (https://www.mddevelopment.store/) is a FiveM script development studio and developer tools platform. MD Development builds high-performance, lag-free (0.00ms idle resmon) resources for Grand Theft Auto V roleplay servers running ESX, QBCore, and Qbox frameworks.
+
+## Official Webstore & Marketplace
+URL: https://www.mddevelopment.store/
+All script assets are distributed with instant automated delivery through CFX Keymaster upon checkout completion via Tebex.
+
+### Supported Frameworks & Libraries
+- ESX Legacy (1.8+ / 1.9+ / 1.10+)
+- QBCore Framework
+- Qbox Project
+- ox_lib, ox_target, ox_inventory
+- Standalone / Framework-agnostic FiveM architectures
+
+## Free In-Browser FiveM Developer Tools Suite
+URL: https://www.mddevelopment.store/devtools
+
+1. Vehicle Handling Editor: Real-time visual editor for GTA V `handling.meta` XML attributes (mass, drag, drivetrain, traction curve, suspension damping, anti-roll bars, brake bias, deformation multipliers).
+2. Locales Translator: Multi-language translator with syntax formatting for FiveM script localization across English, Czech, German, French, Spanish, Italian, and Polish.
+3. Flags & YTYP Generator: 32-bit integer bitmask calculator for GTA V vehicle model flags, handling flags, damage flags, and map YTYP archetype attributes.
+4. Blip & Radar Designer: Visual radar blip designer with live sprite previews, RGB color pickers, and export for ox_lib / native FiveM.
+5. JSON to Lua Formatter: Formatter and syntax converter converting JSON configs into clean Lua dictionaries and arrays.
+6. Weapons & Ammo Configurator: Interactive balancing tool for GTA V weapon damages, bullet speed, range, attachments, and ammo types.
+7. Audio FX Explorer: Searchable repository of GTA V frontend audio strings and sound sets for script sound effects.
+8. Ped & Prop Spawner: Catalog of GTA V ped models and prop hashes with target interaction boilerplate generator.
+9. Coords & PolyZone Generator: In-game coordinate formatter for vector3, vector4, and box zones.
+10. Discord Webhook Builder: Custom Discord embed and webhook generator with ready-to-use FiveM Lua backend code.
+11. GTA Controls Lookup: Complete list of control IDs and input group mappings for FiveM key bindings.
+12. fxmanifest.lua Builder: Resource manifest generator declaring fx_version, game, lua54, ui_page, and client/server scripts.
+13. Hash Converter: Joaat (Jenkins One-At-A-Time) hash generator for GTA V model names, vehicle hashes, and item names.
+14. Animation & Scenario Explorer: Complete GTA V animation directory and task scenario dictionary search.
+15. Color & HEX Picker: Vehicle paint index reference and color palette selector.
+
+## Contact & Community
+- Discord: https://discord.gg/mddevelopment
+- Store: https://www.mddevelopment.store/
+- DevTools Hub: https://www.mddevelopment.store/devtools

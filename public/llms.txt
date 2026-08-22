@@ -1,0 +1,40 @@
+# MD Development - FiveM Scripts & Free Developer Tools Hub
+
+> Official store and developer utilities platform for FiveM and GTA V developers, creators, and server owners. Providing ultra-optimized FiveM scripts (0.00ms resmon), standalone escrow and open-source resources, and a suite of 15 free browser-based developer tools.
+
+## Core Offerings
+
+- [MD Development Official Webstore](https://www.mddevelopment.store/): Premium FiveM scripts, standalone resources, and free developer utilities for ESX, QBCore, and Qbox frameworks with instant CFX Keymaster asset delivery.
+- [Free FiveM Developer Tools Suite](https://www.mddevelopment.store/devtools): 15 browser-based utilities for vehicle handling, locales translation, flags calculation, coords generation, blip design, weapon balancing, and manifest creation with zero server lag.
+
+## FiveM Resource Categories
+
+- [Paid & Escrow Scripts](https://www.mddevelopment.store/#scripts-store): Standalone, highly optimized gameplay and server management scripts for FiveM.
+- [Open Source Scripts](https://www.mddevelopment.store/#scripts-store): Fully unlocked, unencrypted source code scripts for complete server customization.
+- [Special Deals & Bundles](https://www.mddevelopment.store/#scripts-store): Discounted script packages and limited-time FiveM offers.
+
+## Free FiveM Developer Tools (15 In-Browser Utilities)
+
+1. [Vehicle Handling Editor](https://www.mddevelopment.store/devtools): Interactive real-time editor and visualizer for GTA V and FiveM `handling.meta` files. Modify traction, suspension, mass, drivetrain, and transmission curves with instant XML export.
+2. [Locales & Translation Generator](https://www.mddevelopment.store/devtools): Translate script language files between English, Czech, German, French, Spanish, Italian, and Polish. Supports ox_lib, ESX, QBCore, and JSON formats.
+3. [Flags & YTYP Archetype Generator](https://www.mddevelopment.store/devtools): Calculate 32-bit bitmask integers and binary flags for GTA V vehicles, handling attributes, damage flags, archetype definitions, and YTYP map assets.
+4. [Blip & Radar Designer](https://www.mddevelopment.store/devtools): Interactive GTA V radar map blip builder with real-time sprite search, RGB/palette color selector, blip display modes, and clean Lua snippet export for ox_lib and vanilla FiveM.
+5. [JSON to Lua / Table Formatter](https://www.mddevelopment.store/devtools): Convert JSON data structures into optimized Lua tables, validate syntax, and beautify configuration code.
+6. [Weapons & Ammo Configurator](https://www.mddevelopment.store/devtools): Interactive weapon damage, recoil, clip size, and attachment builder supporting ox_inventory, qb-weapons, and custom weapon definitions.
+7. [Audio FX & Sound Explorer](https://www.mddevelopment.store/devtools): Search and preview GTA V frontend audio sound names, sound sets, and PlaySoundFrontend audio triggers.
+8. [Ped & Prop Spawner](https://www.mddevelopment.store/devtools): Search ped models, scenario animations, prop models, and generate clean target / spawn code.
+9. [Coords & PolyZone Generator](https://www.mddevelopment.store/devtools): Format Vector3, Vector4, and PolyZone box coordinates for ox_target, qb-target, and ESX zones.
+10. [Discord Webhook Embed Builder](https://www.mddevelopment.store/devtools): Design rich server log embeds and Discord notifications with real-time FiveM Lua webhook code generation.
+11. [GTA Controls & Keybind Lookup](https://www.mddevelopment.store/devtools): Comprehensive lookup for FiveM control IDs, key mapping names, and game input indices.
+12. [fxmanifest.lua Generator](https://www.mddevelopment.store/devtools): Auto-generate complete resource manifests with Lua 5.4, UI page declarations, dependencies, and escrow metadata.
+13. [GTA V Hash Converter](https://www.mddevelopment.store/devtools): Instant Joaat (`GetHashKey`) string-to-hash and hex-to-decimal converter for GTA V assets.
+14. [Animation & Scenario Explorer](https://www.mddevelopment.store/devtools): Search over 10,000 GTA V animation dictionaries, task animations, and scenario names with ready-to-paste Lua snippets.
+15. [Color & HEX Palette Picker](https://www.mddevelopment.store/devtools): GTA V vehicle paint IDs, RGB color codes, and HEX palette generator for HUD and UI designs.
+
+## Key Features & Compatibility
+
+- **Framework Compatibility**: Native support for ESX Legacy, QBCore, Qbox, ox_lib, ox_inventory, and standalone FiveM installations.
+- **Performance**: Every script is engineered for optimal client and server performance (0.00ms idle resmon).
+- **Security & Delivery**: Automated 24/7 delivery via CFX Keymaster upon Tebex checkout completion.
+- **Daily Wheel of Fortune**: Daily spins for Discord community members with coupons up to 100% OFF on standalone scripts.
+- **Official Discord Community**: 24/7 technical support, updates, and customer announcements at https://discord.gg/mddevelopment.
