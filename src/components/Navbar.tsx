@@ -212,25 +212,31 @@ export const Navbar: React.FC = () => {
             {isLoggedIn && user ? (
               <button
                 onClick={() => setIsProfileModalOpen(true)}
-                className="flex items-center gap-2 p-1 pl-2 pr-3 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-white/10 hover:border-white/25 transition-all text-xs font-bold text-white shadow-sm group shrink-0 whitespace-nowrap"
+                className="flex items-center gap-2.5 p-1 pl-2 pr-3.5 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-white/12 hover:border-[#5865F2]/60 hover:shadow-[0_0_15px_rgba(88,101,242,0.3)] transition-all duration-200 text-xs font-bold text-white shadow-sm group shrink-0 whitespace-nowrap hover:scale-105 active:scale-95"
                 data-tooltip="View Discord Profile & History"
                 data-tooltip-pos="bottom"
               >
-                <img
-                  src={user.avatarUrl}
-                  alt={user.username}
-                  className="w-6 h-6 rounded-lg object-cover border border-white/10"
-                />
-                <span className="max-w-[120px] truncate">{user.global_name || user.username}</span>
+                <div className="relative">
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.username}
+                    className="w-6 h-6 rounded-lg object-cover border border-white/10 group-hover:border-[#5865F2] transition-colors"
+                  />
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 border border-black" />
+                </div>
+                <span className="max-w-[120px] truncate group-hover:text-[#8ea1ff] transition-colors">
+                  {user.global_name || user.username}
+                </span>
               </button>
             ) : (
               <button
                 onClick={loginWithDiscord}
-                className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#5865F2] hover:bg-[#4752C4] text-white border border-[#5865F2]/50 hover:border-[#5865F2] transition-all shadow-glow-sm active:scale-95 shrink-0 whitespace-nowrap group"
+                className="relative overflow-hidden flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#5865F2] hover:bg-[#4752C4] text-white border border-[#5865F2]/60 hover:border-[#5865F2] transition-all duration-200 shadow-glow-sm active:scale-95 hover:scale-105 hover:shadow-[0_0_20px_rgba(88,101,242,0.7)] shrink-0 whitespace-nowrap group"
                 data-tooltip="Sign in with Discord"
                 data-tooltip-pos="bottom"
               >
-                <MessageSquare className="w-3.5 h-3.5 fill-white" />
+                <div className="absolute inset-0 w-1/2 h-full bg-white/20 skew-x-12 -translate-x-full group-hover:translate-x-[300%] transition-transform duration-700 pointer-events-none" />
+                <MessageSquare className="w-3.5 h-3.5 fill-white transition-transform duration-200 group-hover:rotate-6" />
                 <span>Sign In with Discord</span>
               </button>
             )}
