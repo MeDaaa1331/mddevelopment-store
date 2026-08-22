@@ -36,6 +36,6 @@ URL: https://www.mddevelopment.store/devtools
 15. Color & HEX Picker: Vehicle paint index reference and color palette selector.
 
 ## Contact & Community
-- Discord: https://discord.gg/mddevelopment
+- Discord: https://discord.gg/Ze4m2Uyxjw
 - Store: https://www.mddevelopment.store/
 - DevTools Hub: https://www.mddevelopment.store/devtools

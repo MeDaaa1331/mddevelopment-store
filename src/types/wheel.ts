@@ -2,10 +2,10 @@ export interface WheelPrize {
   id: string;
   label: string;
   shortLabel: string;
-  discount: number; // 0, 5, 10, 15, 30, 50, 100
+  discount: number;
   color: string;
   textColor: string;
-  probability: number; // weight
+  probability: number;
   isJackpot?: boolean;
 }
 
