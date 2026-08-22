@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, X, ArrowRight, Sparkles } from 'lucide-react';
+import { MessageSquare, X, ArrowRight, Sparkles, Gift } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const DiscordLoginPrompt: React.FC = () => {
@@ -46,7 +46,7 @@ export const DiscordLoginPrompt: React.FC = () => {
 
         <button
           onClick={handleDismiss}
-          className="absolute top-3.5 right-3.5 p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-zinc-400 hover:text-white transition-all hover:scale-110 active:scale-95"
+          className="absolute top-3.5 right-3.5 p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-zinc-400 hover:text-white transition-all hover:scale-110 active:scale-95 z-20"
           aria-label="Dismiss login prompt"
         >
           <X className="w-3.5 h-3.5" />
@@ -66,7 +66,7 @@ export const DiscordLoginPrompt: React.FC = () => {
               <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin" style={{ animationDuration: '6s' }} />
             </div>
             <p className="text-xs text-zinc-300 leading-relaxed">
-              Sign in with Discord to sync your cart across devices, save favorite FiveM DevTools & unlock exclusive member perks.
+              Sign in with Discord to spin the <strong className="text-amber-300">Daily Wheel of Fortune</strong> (win up to 100% OFF), cloud sync your cart across devices & save favorite FiveM DevTools.
             </p>
           </div>
         </div>
@@ -84,6 +84,7 @@ export const DiscordLoginPrompt: React.FC = () => {
             className="relative overflow-hidden px-4 py-2 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] text-white font-extrabold text-xs transition-all duration-200 shadow-glow-sm flex items-center gap-1.5 active:scale-95 hover:scale-105 hover:shadow-[0_0_20px_rgba(88,101,242,0.8)]"
           >
             <div className="absolute inset-0 w-1/2 h-full bg-white/20 skew-x-12 -translate-x-full group-hover:translate-x-[300%] transition-transform duration-700 pointer-events-none" />
+            <Gift className="w-3.5 h-3.5 text-amber-300" />
             <span>Sign in with Discord</span>
             <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
           </button>

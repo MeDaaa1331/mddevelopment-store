@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   LogOut,
@@ -15,8 +15,7 @@ import {
   Sparkles,
   Check,
   Gift,
-  Tag,
-  Clock
+  Tag
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -30,8 +29,6 @@ export const UserProfileModal: React.FC = () => {
   const [copiedId, setCopiedId] = useState(false);
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
 
-  if (!isProfileModalOpen || !user) return null;
-
   const handleClose = () => {
     setIsClosing(true);
     setTimeout(() => {
@@ -39,6 +36,17 @@ export const UserProfileModal: React.FC = () => {
       setIsClosing(false);
     }, 220);
   };
+
+  useEffect(() => {
+    if (!isProfileModalOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isProfileModalOpen]);
+
+  if (!isProfileModalOpen || !user) return null;
 
   const handleCopyId = () => {
     navigator.clipboard.writeText(user.id);
@@ -76,20 +84,20 @@ export const UserProfileModal: React.FC = () => {
       onClick={handleClose}
     >
       <div
-        className={`w-full max-w-xl rounded-3xl bg-[#0b0b10] border border-white/12 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col max-h-[90vh] ${
+        className={`w-full max-w-xl h-[560px] max-h-[90vh] rounded-3xl bg-[#0b0b10] border border-white/12 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col ${
           isClosing ? 'animate-scaleDown' : 'animate-scaleUp'
         }`}
         onClick={e => e.stopPropagation()}
       >
-        <div className="relative p-6 sm:p-8 bg-gradient-to-br from-[#5865F2]/25 via-[#5865F2]/10 to-transparent border-b border-white/10 overflow-hidden">
+        <div className="relative p-6 sm:p-7 bg-gradient-to-br from-[#5865F2]/25 via-[#5865F2]/10 to-transparent border-b border-white/10 overflow-hidden shrink-0">
           <div className="absolute top-0 right-1/4 w-48 h-48 bg-[#5865F2]/20 rounded-full blur-3xl pointer-events-none animate-pulse" />
 
           <button
             onClick={handleClose}
-            className="absolute top-5 right-5 p-2 rounded-xl bg-black/40 hover:bg-black/70 border border-white/10 text-zinc-400 hover:text-white transition-all hover:scale-110 active:scale-95 z-10"
+            className="absolute top-5 right-5 w-9 h-9 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-white/10 text-zinc-400 hover:text-white transition-all hover:scale-110 active:scale-95 z-30 flex items-center justify-center cursor-pointer shadow-md"
             aria-label="Close profile modal"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 pointer-events-none" />
           </button>
 
           <div className="flex items-center gap-4 sm:gap-5 relative z-10">
@@ -97,12 +105,12 @@ export const UserProfileModal: React.FC = () => {
               <img
                 src={user.avatarUrl}
                 alt={user.username}
-                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-2 border-white/20 shadow-xl object-cover transition-transform duration-300 group-hover:scale-105"
+                className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl border-2 border-white/20 shadow-xl object-cover transition-transform duration-300 group-hover:scale-105"
               />
               <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-[#0b0b10] shadow-sm animate-pulse" />
             </div>
 
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 pr-8">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="font-display font-black text-xl sm:text-2xl text-white truncate">
                   {user.global_name || user.username}
@@ -133,7 +141,7 @@ export const UserProfileModal: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 px-6 pt-4 border-b border-white/10 bg-zinc-950/60 overflow-x-auto">
+        <div className="flex items-center gap-2 px-6 pt-3 border-b border-white/10 bg-zinc-950/60 overflow-x-auto shrink-0">
           <button
             onClick={() => setActiveTab('overview')}
             className={`px-3.5 py-2.5 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 whitespace-nowrap ${
@@ -171,7 +179,7 @@ export const UserProfileModal: React.FC = () => {
 
         <div className="p-6 overflow-y-auto flex-1 space-y-4 font-sans text-sm selection:bg-white selection:text-black">
           {activeTab === 'overview' && (
-            <div className="space-y-4 animate-fadeIn">
+            <div className="space-y-4 animate-fadeIn transition-opacity duration-300">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/10 flex items-start gap-3 hover:border-white/20 transition-all group">
                   <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 group-hover:scale-110 transition-transform">
@@ -222,7 +230,7 @@ export const UserProfileModal: React.FC = () => {
           )}
 
           {activeTab === 'rewards' && (
-            <div className="space-y-3 animate-fadeIn">
+            <div className="space-y-3 animate-fadeIn transition-opacity duration-300">
               {rewards.length === 0 ? (
                 <div className="p-8 rounded-2xl bg-zinc-950/60 border border-white/5 text-center">
                   <Gift className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
@@ -261,7 +269,7 @@ export const UserProfileModal: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleCopyCoupon(rew.id, rew.code)}
-                          className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-mono font-bold text-zinc-300 hover:text-white flex items-center gap-1.5 transition-all"
+                          className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-mono font-bold text-zinc-300 hover:text-white flex items-center gap-1.5 transition-all cursor-pointer"
                           data-tooltip="Copy Coupon Code"
                         >
                           {copiedCodeId === rew.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -270,7 +278,7 @@ export const UserProfileModal: React.FC = () => {
                         {!isExpired && (
                           <button
                             onClick={() => handleApplyCoupon(rew.code)}
-                            className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs transition-all flex items-center gap-1.5"
+                            className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
                           >
                             <ShoppingCart className="w-3.5 h-3.5" />
                             <span>Apply</span>
@@ -285,7 +293,7 @@ export const UserProfileModal: React.FC = () => {
           )}
 
           {activeTab === 'history' && (
-            <div className="space-y-2.5 animate-fadeIn">
+            <div className="space-y-2.5 animate-fadeIn transition-opacity duration-300">
               {(!user.history || user.history.length === 0) ? (
                 <div className="p-8 rounded-2xl bg-zinc-950/60 border border-white/5 text-center">
                   <Activity className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
@@ -331,7 +339,7 @@ export const UserProfileModal: React.FC = () => {
           )}
         </div>
 
-        <div className="p-4 sm:p-5 border-t border-white/10 bg-zinc-950/80 flex items-center justify-between gap-3">
+        <div className="p-4 sm:p-5 border-t border-white/10 bg-zinc-950/80 flex items-center justify-between gap-3 shrink-0">
           <span className="text-[11px] font-mono text-zinc-500">
             Last synced: {lastActiveDate}
           </span>
@@ -340,7 +348,7 @@ export const UserProfileModal: React.FC = () => {
               logout();
               handleClose();
             }}
-            className="px-3.5 py-2 rounded-xl bg-red-950/40 hover:bg-red-900/50 border border-red-500/30 text-red-300 hover:text-red-200 text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 hover:scale-105"
+            className="px-3.5 py-2 rounded-xl bg-red-950/40 hover:bg-red-900/50 border border-red-500/30 text-red-300 hover:text-red-200 text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 hover:scale-105 cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Sign Out</span>
