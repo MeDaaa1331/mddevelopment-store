@@ -28,6 +28,7 @@ export const UserProfileModal: React.FC = () => {
   const [isClosing, setIsClosing] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
+  const [inGuild, setInGuild] = useState<boolean | null>(null);
 
   const handleClose = () => {
     setIsClosing(true);
@@ -36,6 +37,22 @@ export const UserProfileModal: React.FC = () => {
       setIsClosing(false);
     }, 220);
   };
+
+  useEffect(() => {
+    if (!isProfileModalOpen || !user?.id) return;
+    let isMounted = true;
+    fetch(`/api/wheel/status?userId=${user.id}`)
+      .then(res => res.json())
+      .then(data => {
+        if (isMounted && typeof data?.inGuild === 'boolean') {
+          setInGuild(data.inGuild);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setInGuild(false);
+      });
+    return () => { isMounted = false; };
+  }, [isProfileModalOpen, user?.id]);
 
   useEffect(() => {
     if (!isProfileModalOpen) return;
@@ -115,10 +132,17 @@ export const UserProfileModal: React.FC = () => {
                 <h2 className="font-display font-black text-xl sm:text-2xl text-white truncate">
                   {user.global_name || user.username}
                 </h2>
-                <span className="px-2.5 py-0.5 rounded-full bg-[#5865F2]/20 border border-[#5865F2]/40 text-[10px] font-mono font-bold text-[#8ea1ff] flex items-center gap-1">
-                  <Sparkles className="w-2.5 h-2.5" />
-                  Discord Member
-                </span>
+                {inGuild ? (
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#5865F2]/20 border border-[#5865F2]/40 text-[10px] font-mono font-bold text-[#8ea1ff] flex items-center gap-1 shadow-sm">
+                    <Sparkles className="w-2.5 h-2.5" />
+                    Discord Member
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded-full bg-zinc-800/90 border border-white/15 text-[10px] font-mono font-bold text-zinc-300 flex items-center gap-1.5 shadow-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    Logged In
+                  </span>
+                )}
               </div>
               <p className="font-mono text-xs text-zinc-400 mt-0.5 truncate">@{user.username}</p>
               <div className="flex items-center gap-3 text-[11px] font-mono text-zinc-500 mt-2 flex-wrap">
