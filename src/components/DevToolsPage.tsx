@@ -256,12 +256,19 @@ export const DevToolsPage: React.FC = () => {
         }
       }
 
-      const currentUrl = new URL(window.location.href);
-      if (activeTab === 'translator') {
-        currentUrl.searchParams.delete('tool');
-      } else {
-        currentUrl.searchParams.set('tool', activeTab);
+      const toolUrl = `https://www.mddevelopment.store/devtools?tool=${activeTab}`;
+      const canonicalEl = document.querySelector<HTMLLinkElement>("link[rel='canonical']");
+      if (canonicalEl) {
+        canonicalEl.setAttribute('href', toolUrl);
       }
+
+      const ogUrl = document.querySelector<HTMLMetaElement>("meta[property='og:url']");
+      if (ogUrl) {
+        ogUrl.setAttribute('content', toolUrl);
+      }
+
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set('tool', activeTab);
       window.history.replaceState(null, '', currentUrl.pathname + currentUrl.search);
     }
   }, [activeTab]);

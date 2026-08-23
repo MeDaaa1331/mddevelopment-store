@@ -85,6 +85,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (currentRoute === '/') {
+        document.title = 'MD Development | FiveM Scripts & Free FiveM Developer Tools Hub';
+        const canonicalEl = document.querySelector<HTMLLinkElement>("link[rel='canonical']");
+        if (canonicalEl) canonicalEl.setAttribute('href', 'https://www.mddevelopment.store/');
+        const ogUrl = document.querySelector<HTMLMetaElement>("meta[property='og:url']");
+        if (ogUrl) ogUrl.setAttribute('content', 'https://www.mddevelopment.store/');
+      } else if (currentRoute === '/admin') {
+        document.title = 'Admin Analytics Dashboard | MD Development';
+      }
+    }
+  }, [currentRoute]);
+
   const loadData = async (silent = false) => {
     if (!silent) setIsLoading(true);
     try {
