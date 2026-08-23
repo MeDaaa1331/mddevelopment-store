@@ -36,6 +36,8 @@ export const ScriptCard: React.FC<ScriptCardProps> = memo(({ pkg }) => {
         <img
           src={pkg.image}
           alt={pkg.name}
+          width="400"
+          height="250"
           className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
           loading="lazy"
           decoding="async"

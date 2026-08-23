@@ -211,7 +211,8 @@ export const Navbar: React.FC = () => {
 
             <button
               onClick={() => setIsWheelOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold bg-gradient-to-r from-amber-500/15 to-amber-600/10 hover:from-amber-500/25 hover:to-amber-600/20 text-amber-300 border border-amber-500/40 hover:border-amber-400/80 transition-all shrink-0 whitespace-nowrap hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(245,158,11,0.2)] group"
+              aria-label="Daily Wheel of Fortune"
+              className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold bg-gradient-to-r from-amber-500/15 to-amber-600/10 hover:from-amber-500/25 hover:to-amber-600/20 text-amber-300 border border-amber-500/40 hover:border-amber-400/80 transition-all shrink-0 whitespace-nowrap hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(245,158,11,0.2)] group"
               data-tooltip="Daily Wheel of Fortune (Win up to 100% OFF)"
               data-tooltip-pos="bottom"
             >
@@ -222,7 +223,8 @@ export const Navbar: React.FC = () => {
             {isLoggedIn && user ? (
               <button
                 onClick={() => setIsProfileModalOpen(true)}
-                className="flex items-center gap-2.5 p-1 pl-2 pr-3.5 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-white/12 hover:border-[#5865F2]/60 hover:shadow-[0_0_15px_rgba(88,101,242,0.3)] transition-all duration-200 text-xs font-bold text-white shadow-sm group shrink-0 whitespace-nowrap hover:scale-105 active:scale-95"
+                aria-label="View Discord Profile"
+                className="hidden md:flex items-center gap-2.5 p-1 pl-2 pr-3.5 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-white/12 hover:border-[#5865F2]/60 hover:shadow-[0_0_15px_rgba(88,101,242,0.3)] transition-all duration-200 text-xs font-bold text-white shadow-sm group shrink-0 whitespace-nowrap hover:scale-105 active:scale-95"
                 data-tooltip="View Discord Profile & History"
                 data-tooltip-pos="bottom"
               >
@@ -241,7 +243,8 @@ export const Navbar: React.FC = () => {
             ) : (
               <button
                 onClick={loginWithDiscord}
-                className="relative overflow-hidden flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#5865F2] hover:bg-[#4752C4] text-white border border-[#5865F2]/60 hover:border-[#5865F2] transition-all duration-200 shadow-glow-sm active:scale-95 hover:scale-105 hover:shadow-[0_0_20px_rgba(88,101,242,0.7)] shrink-0 whitespace-nowrap group"
+                aria-label="Sign in with Discord"
+                className="relative overflow-hidden hidden md:flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#5865F2] hover:bg-[#4752C4] text-white border border-[#5865F2]/60 hover:border-[#5865F2] transition-all duration-200 shadow-glow-sm active:scale-95 hover:scale-105 hover:shadow-[0_0_20px_rgba(88,101,242,0.7)] shrink-0 whitespace-nowrap group"
                 data-tooltip="Sign in with Discord"
                 data-tooltip-pos="bottom"
               >
@@ -253,6 +256,7 @@ export const Navbar: React.FC = () => {
 
             <button
               onClick={() => setIsCartOpen(true)}
+              aria-label={`Shopping Cart${totalCount > 0 ? `, ${totalCount} items` : ''}`}
               className="relative flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white text-black hover:bg-zinc-200 font-bold text-xs transition-all shadow-glow-sm active:scale-95 hover:scale-105 shrink-0 whitespace-nowrap"
             >
               <ShoppingCart className="w-4 h-4 text-black" />
@@ -294,20 +298,43 @@ export const Navbar: React.FC = () => {
         )}
 
         {mobileOpen && (
-          <div className="md:hidden mt-4 p-4 rounded-2xl bg-zinc-950/95 border border-white/15 backdrop-blur-2xl flex flex-col gap-2 shadow-2xl animate-fadeIn">
-            {navCategories.map(cat => (
-              <button key={cat.slug} onClick={() => handleCategory(cat.slug)} className={`w-full text-left px-3 py-2 text-sm font-medium rounded-lg flex items-center justify-between transition-colors ${filters.category === cat.slug ? 'bg-white text-black' : 'text-zinc-300 hover:text-white hover:bg-white/5'}`}>
-                <div className="flex items-center gap-2">
-                  {cat.icon && <span>{cat.icon}</span>}
-                  <span>{cat.label}</span>
+          <div className="md:hidden mt-4 p-4 rounded-2xl bg-zinc-950/95 border border-white/15 backdrop-blur-2xl flex flex-col gap-2.5 shadow-2xl animate-fadeIn">
+            <button
+              onClick={() => {
+                setMobileOpen(false);
+                setIsWheelOpen(true);
+              }}
+              className="w-full p-3 rounded-xl bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-zinc-900/40 border border-amber-500/40 hover:border-amber-400 text-amber-300 flex items-center justify-between transition-all group shadow-[0_0_20px_rgba(245,158,11,0.15)] active:scale-98"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
+                  <Gift className="w-4 h-4 text-amber-400 group-hover:rotate-12 transition-transform" />
                 </div>
-                {cat.slug === 'deals' && <span className="px-1.5 py-0.5 text-[10px] font-bold bg-white text-black rounded-full">SALE</span>}
-                {cat.slug === 'devtools' && <span className="px-1.5 py-0.5 text-[9px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-md">NEW</span>}
-              </button>
-            ))}
-            <button onClick={() => scrollTo('faq-section')} className="w-full text-left px-3 py-2 text-sm font-medium text-zinc-300 hover:text-white rounded-lg hover:bg-white/5">FAQ</button>
+                <div className="flex flex-col text-left">
+                  <span className="text-xs font-black text-amber-200 uppercase tracking-wide">Daily Wheel of Fortune</span>
+                  <span className="text-[10px] text-amber-400/80 font-medium">Win up to 100% OFF coupons</span>
+                </div>
+              </div>
+              <span className="px-2.5 py-1 text-[10px] font-mono font-black bg-amber-500/30 text-amber-200 rounded-md border border-amber-500/40">
+                SPIN →
+              </span>
+            </button>
 
-            <div className="pt-2 border-t border-white/10 flex flex-col gap-2">
+            <div className="flex flex-col gap-1 py-1">
+              {navCategories.map(cat => (
+                <button key={cat.slug} onClick={() => handleCategory(cat.slug)} className={`w-full text-left px-3 py-2 text-sm font-medium rounded-lg flex items-center justify-between transition-colors ${filters.category === cat.slug ? 'bg-white text-black' : 'text-zinc-300 hover:text-white hover:bg-white/5'}`}>
+                  <div className="flex items-center gap-2">
+                    {cat.icon && <span>{cat.icon}</span>}
+                    <span>{cat.label}</span>
+                  </div>
+                  {cat.slug === 'deals' && <span className="px-1.5 py-0.5 text-[10px] font-bold bg-white text-black rounded-full">SALE</span>}
+                  {cat.slug === 'devtools' && <span className="px-1.5 py-0.5 text-[9px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-md">NEW</span>}
+                </button>
+              ))}
+              <button onClick={() => scrollTo('faq-section')} className="w-full text-left px-3 py-2 text-sm font-medium text-zinc-300 hover:text-white rounded-lg hover:bg-white/5">FAQ</button>
+            </div>
+
+            <div className="pt-2.5 border-t border-white/10 flex flex-col gap-2">
               {isLoggedIn && user ? (
                 <button
                   onClick={() => {
@@ -317,10 +344,15 @@ export const Navbar: React.FC = () => {
                   className="w-full py-2.5 px-3 text-xs font-bold rounded-xl bg-zinc-900 border border-white/10 text-white flex items-center justify-between"
                 >
                   <div className="flex items-center gap-2.5">
-                    <img src={user.avatarUrl} alt={user.username} className="w-6 h-6 rounded-lg object-cover" />
-                    <span>{user.global_name || user.username}</span>
+                    <img src={user.avatarUrl} alt={user.username} className="w-7 h-7 rounded-lg object-cover border border-white/10" />
+                    <div className="flex flex-col text-left">
+                      <span className="text-white font-bold text-xs">{user.global_name || user.username}</span>
+                      <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Connected
+                      </span>
+                    </div>
                   </div>
-                  <span className="text-[10px] font-mono text-zinc-400">View Profile →</span>
+                  <span className="text-[10px] font-mono text-zinc-400 px-2 py-1 rounded-md bg-white/5 border border-white/10">Profile →</span>
                 </button>
               ) : (
                 <button
@@ -337,7 +369,7 @@ export const Navbar: React.FC = () => {
 
               <a href={DISCORD} target="_blank" rel="noopener noreferrer" className="w-full py-2 text-xs font-semibold rounded-lg bg-zinc-900/80 text-white flex items-center justify-center gap-2">
                 <MessageSquare className="w-3.5 h-3.5" />
-                <span>Discord Support</span>
+                <span>Discord Community</span>
                 <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-emerald-950 text-emerald-300 rounded-full">
                   ● {discordStats.onlineMembers} Online
                 </span>
