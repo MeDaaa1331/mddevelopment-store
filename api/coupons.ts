@@ -1,5 +1,4 @@
 export default async function handler(req: any, res: any) {
-
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -24,6 +23,37 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
+    const kvUrl = process.env.KV_REST_API_URL || process.env.REDIS_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+    const kvToken = process.env.KV_REST_API_TOKEN || process.env.REDIS_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+
+    let redisCoupon: any = null;
+    if (kvUrl && kvToken) {
+      try {
+        const rRes = await fetch(`${kvUrl}/get/coupons:spin:${encodeURIComponent(rawCode.toUpperCase())}`, {
+          headers: { Authorization: `Bearer ${kvToken}` }
+        });
+        const rData = await rRes.json().catch(() => null);
+        if (rData?.result) {
+          try {
+            redisCoupon = typeof rData.result === 'string' ? JSON.parse(rData.result) : rData.result;
+          } catch {
+            try {
+              redisCoupon = JSON.parse(decodeURIComponent(rData.result));
+            } catch {}
+          }
+        }
+      } catch {}
+    }
+
+    if (redisCoupon && redisCoupon.expiresAt) {
+      if (Date.now() > Number(redisCoupon.expiresAt)) {
+        return res.status(400).json({
+          valid: false,
+          message: 'This coupon has expired (coupons are valid for exactly 24 hours).'
+        });
+      }
+    }
+
     const tebexRes = await fetch('https://plugin.tebex.io/coupons', {
       headers: {
         'X-Tebex-Secret': secret,
@@ -51,7 +81,7 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    if (found.expire && found.expire.expire_never !== 'true' && found.expire.date && !found.expire.date.startsWith('1970')) {
+    if (found.expire && found.expire.expire_never !== 'true' && found.expire.expire_never !== true && found.expire.date && !found.expire.date.startsWith('1970')) {
       const expDate = new Date(found.expire.date);
       if (expDate.getTime() < Date.now()) {
         return res.status(400).json({
@@ -74,13 +104,17 @@ export default async function handler(req: any, res: any) {
       discountPercentage = Math.round(found.discount.percentage);
     } else if (typeof found.discount_percentage === 'number' && found.discount_percentage > 0) {
       discountPercentage = Math.round(found.discount_percentage);
+    } else if (typeof found.discount?.value === 'number' && found.discount.value > 0) {
+      discountPercentage = Math.round(found.discount.value);
     } else if (found.discount?.type === 'percentage' && found.discount.value) {
       discountPercentage = Math.round(Number(found.discount.value));
     } else if (found.discount_type === 'percentage' && found.discount_value) {
       discountPercentage = Math.round(Number(found.discount_value));
-    } else if (found.discount?.value && Number(found.discount.value) > 0) {
-      discountPercentage = Math.round(Number(found.discount.value));
+    } else if (redisCoupon?.discount) {
+      discountPercentage = Math.round(Number(redisCoupon.discount));
     }
+
+    const finalExpiresAt = redisCoupon?.expiresAt || found.expire?.date || found.expires_at || (Date.now() + 86400000);
 
     return res.status(200).json({
       valid: true,
@@ -88,7 +122,7 @@ export default async function handler(req: any, res: any) {
       discountPercentage: discountPercentage > 0 ? discountPercentage : 15,
       discountType: found.discount?.type || found.discount_type || 'percentage',
       discountValue: Number(found.discount?.value ?? found.discount_value ?? 0),
-      expiresAt: found.expire?.date || found.expires_at || null,
+      expiresAt: finalExpiresAt,
       message: `Coupon ${found.code} applied! ${discountPercentage}% discount.`
     });
 

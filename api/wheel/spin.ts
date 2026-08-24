@@ -156,7 +156,6 @@ export default async function handler(req: any, res: any) {
       const tebexSecret = process.env.TEBEX_SECRET_KEY;
       if (tebexSecret) {
         try {
-          const expireDate = new Date(expiresAt).toISOString().split('T')[0];
           const startDate = new Date(now).toISOString().split('T')[0];
 
           let effectiveOn = 'cart';
@@ -186,16 +185,15 @@ export default async function handler(req: any, res: any) {
               discount_percentage: prize.discount,
               discount_amount: 0,
               redeem_unlimited: false,
-              expire_never: false,
+              expire_never: true,
               expire_limit: 1,
-              expire_date: expireDate,
               start_date: startDate,
               basket_type: 'single',
               minimum: 0,
               username: '',
               note: prize.discount === 100
-                ? `100% Free Escrow Script for ${user.username || 'User'}`
-                : `Daily Wheel Reward for ${user.username || 'User'}`
+                ? `100% Free Escrow Script for ${user.username || 'User'} (Valid 24h: ${new Date(expiresAt).toISOString()})`
+                : `Daily Wheel Reward for ${user.username || 'User'} (Valid 24h: ${new Date(expiresAt).toISOString()})`
             })
           });
         } catch (err) {}
@@ -240,7 +238,7 @@ export default async function handler(req: any, res: any) {
     };
 
     if (kvUrl && kvToken) {
-      const pipelineCommands = [
+      const pipelineCommands: any[] = [
         ['SET', `users:discord:${userId}`, JSON.stringify(user)],
         ['SET', `users:discord:${userId}:last_spin`, String(now)],
         ['LPUSH', 'analytics:spin_history', JSON.stringify(historyEntry)],
@@ -260,6 +258,20 @@ export default async function handler(req: any, res: any) {
         })],
         ['LTRIM', 'analytics:recent_events', '0', '99']
       ];
+
+      if (isWin && couponCode) {
+        pipelineCommands.push(
+          ['SET', `coupons:spin:${couponCode}`, JSON.stringify({
+            code: couponCode,
+            discount: prize.discount,
+            userId,
+            username: user.username,
+            createdAt: now,
+            expiresAt
+          })],
+          ['EXPIRE', `coupons:spin:${couponCode}`, '90000']
+        );
+      }
 
       await fetch(`${kvUrl}/pipeline`, {
         method: 'POST',
@@ -288,7 +300,12 @@ export default async function handler(req: any, res: any) {
       reward: rewardEntry,
       nextSpinTime: now + cooldownMs
     });
+
   } catch (err: any) {
-    return res.status(500).json({ error: err.message || 'Spin failed' });
+    return res.status(500).json({
+      success: false,
+      error: 'Server error processing wheel spin.',
+      details: err.message
+    });
   }
 }
