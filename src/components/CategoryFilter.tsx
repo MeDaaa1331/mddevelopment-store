@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, SlidersHorizontal, X, Flame, Code2, Check, ChevronDown, Sparkles, Crown } from 'lucide-react';
+import { Search, SlidersHorizontal, X, Flame, Code2, Check, ChevronDown, Sparkles, Crown, Gift } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { FilterState } from '../types';
 
@@ -67,7 +67,7 @@ export const CategoryFilter: React.FC = () => {
 
           <button
             onClick={() => setOnlyDiscounted(!filters.onlyDiscounted)}
-            className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold border transition-all duration-200 ${
+            className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold border transition-all duration-200 cursor-pointer ${
               filters.onlyDiscounted
                 ? 'bg-white text-black border-white shadow-glow-sm scale-[1.02]'
                 : 'bg-zinc-900/70 text-zinc-300 border-white/10 hover:border-white/30 hover:bg-zinc-800'
@@ -81,7 +81,7 @@ export const CategoryFilter: React.FC = () => {
             <button
               type="button"
               onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
-              className="flex items-center gap-2 pl-3.5 pr-3 py-2.5 bg-zinc-900/70 hover:bg-zinc-800/80 border border-white/10 hover:border-white/30 rounded-xl text-xs font-semibold text-zinc-200 transition-all duration-200 backdrop-blur-md"
+              className="flex items-center gap-2 pl-3.5 pr-3 py-2.5 bg-zinc-900/70 hover:bg-zinc-800/80 border border-white/10 hover:border-white/30 rounded-xl text-xs font-semibold text-zinc-200 transition-all duration-200 backdrop-blur-md cursor-pointer"
             >
               <SlidersHorizontal className="w-3.5 h-3.5 text-zinc-400" />
               <span>{currentSortLabel}</span>
@@ -103,7 +103,7 @@ export const CategoryFilter: React.FC = () => {
                         setSortBy(opt.value);
                         setSortDropdownOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${
+                      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all duration-150 cursor-pointer ${
                         isSelected
                           ? 'bg-white/15 text-white font-semibold'
                           : 'text-zinc-400 hover:text-white hover:bg-white/5'
@@ -129,18 +129,22 @@ export const CategoryFilter: React.FC = () => {
 
             let count = 0;
             if (cat.slug === 'all') count = packages.length;
-            else if (cat.slug === 'paid') count = packages.filter(p => !p.is_open_source && p.category_type !== 'opensource').length;
+            else if (cat.slug === 'paid') count = packages.filter(p => !p.is_open_source && p.category_type !== 'opensource' && p.category_type !== 'free' && p.price > 0).length;
             else if (cat.slug === 'deals') {
               count = packages.filter(p => 
-                p.category_type === 'deals' || 
+                (p.category_type === 'deals' || 
                 (p.discount && p.discount > 0) || 
                 Boolean(p.original_price && p.original_price > p.price) ||
                 /deal|sale|bundle|discount/i.test(p.category_name || '') ||
-                /deal|bundle|all[\s-_]?in[\s-_]?one/i.test(p.name)
+                /deal|bundle|all[\s-_]?in[\s-_]?one/i.test(p.name)) &&
+                p.category_type !== 'free'
               ).length;
             }
             else if (cat.slug === 'opensource') {
-              count = packages.filter(p => p.is_open_source || p.category_type === 'opensource' || /open[\s-_]?source/i.test(p.name)).length;
+              count = packages.filter(p => (p.is_open_source || p.category_type === 'opensource') && p.category_type !== 'free').length;
+            }
+            else if (cat.slug === 'free') {
+              count = packages.filter(p => p.price === 0 || p.category_type === 'free' || p.is_free || /free/i.test(p.category_name || '') || /free/i.test(p.name)).length;
             }
             else if (cat.packages) {
               count = cat.packages.length;
@@ -150,7 +154,7 @@ export const CategoryFilter: React.FC = () => {
               <button
                 key={cat.slug}
                 onClick={() => setCategory(cat.slug)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-200 border ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-200 border cursor-pointer ${
                   isActive
                     ? 'bg-white text-black border-white shadow-glow-sm scale-[1.02]'
                     : 'bg-zinc-900/60 text-zinc-400 hover:text-white border-white/10 hover:border-white/25 hover:bg-zinc-800/60'
@@ -164,6 +168,9 @@ export const CategoryFilter: React.FC = () => {
                 )}
                 {cat.slug === 'opensource' && (
                   <Code2 className={`w-3.5 h-3.5 ${isActive ? 'text-black' : 'text-zinc-400'}`} />
+                )}
+                {cat.slug === 'free' && (
+                  <Gift className={`w-3.5 h-3.5 ${isActive ? 'text-emerald-950 font-bold' : 'text-emerald-400'}`} />
                 )}
                 <span>{cat.name}</span>
                 <span className={`px-1.5 py-0.2 text-[10px] rounded-full font-mono font-bold ${

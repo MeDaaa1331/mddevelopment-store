@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { ShoppingCart, Eye, Check, Code2, Sparkles, Flame, Play } from 'lucide-react';
+import { ShoppingCart, Eye, Check, Code2, Sparkles, Flame, Play, Gift, Download } from 'lucide-react';
 import { TebexPackage } from '../types';
 import { useCart } from '../context/CartContext';
 import { useStore } from '../context/StoreContext';
@@ -13,14 +13,19 @@ export const ScriptCard: React.FC<ScriptCardProps> = memo(({ pkg }) => {
   const { addToCart } = useCart();
   const { setSelectedPackage } = useStore();
   const youtubeId = pkg.youtube_id || extractYouTubeId(pkg.description);
+  const isFree = pkg.price === 0 || pkg.category_type === 'free' || pkg.is_free;
 
   const handleCardClick = () => {
     setSelectedPackage(pkg);
   };
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleActionClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    addToCart(pkg);
+    if (isFree) {
+      setSelectedPackage(pkg);
+    } else {
+      addToCart(pkg);
+    }
   };
 
   const cleanDescription = pkg.description
@@ -47,19 +52,24 @@ export const ScriptCard: React.FC<ScriptCardProps> = memo(({ pkg }) => {
 
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 flex-wrap pointer-events-none">
-            {pkg.discount && pkg.discount > 0 ? (
+            {isFree ? (
+              <span className="px-2.5 py-1 text-[10px] font-mono font-black bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 rounded-lg shadow-[0_0_15px_rgba(16,185,129,0.3)] flex items-center gap-1">
+                <Gift className="w-3 h-3 text-emerald-400" />
+                FREE SCRIPT
+              </span>
+            ) : pkg.discount && pkg.discount > 0 ? (
               <span className="px-2.5 py-1 text-[10px] font-mono font-black bg-red-600 text-white rounded-lg shadow-[0_0_18px_rgba(220,38,38,0.6)] flex items-center gap-1 animate-pulse-subtle border border-red-400/30">
                 <Flame className="w-3.5 h-3.5 fill-white text-white" />
                 −{pkg.discount}% SALE
               </span>
             ) : null}
-            {pkg.is_open_source && (
+            {pkg.is_open_source && !isFree && (
               <span className="px-2.5 py-1 text-[10px] font-mono font-bold bg-zinc-950/90 text-white border border-white/20 rounded-lg backdrop-blur-md flex items-center gap-1 shadow-md">
                 <Code2 className="w-3 h-3 text-emerald-400" />
                 OPEN SOURCE
               </span>
             )}
-            {pkg.is_bestseller && !pkg.discount && (
+            {pkg.is_bestseller && !pkg.discount && !isFree && (
               <span className="px-2.5 py-1 text-[10px] font-mono font-bold bg-zinc-900/90 text-zinc-200 border border-white/15 rounded-lg backdrop-blur-md flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-amber-400" />
                 POPULAR
@@ -97,7 +107,7 @@ export const ScriptCard: React.FC<ScriptCardProps> = memo(({ pkg }) => {
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-mono font-bold text-zinc-400 uppercase tracking-widest">
-              {pkg.category_name || (pkg.is_open_source ? 'Open Source' : 'Paid Resources')}
+              {pkg.category_name || (isFree ? 'Free Resource' : (pkg.is_open_source ? 'Open Source' : 'Paid Resources'))}
             </span>
           </div>
 
@@ -126,16 +136,24 @@ export const ScriptCard: React.FC<ScriptCardProps> = memo(({ pkg }) => {
         <div className="pt-4 border-t border-white/10 flex items-center justify-between mt-auto">
           <div className="flex flex-col">
             <span className="text-[10px] text-zinc-400 font-mono uppercase tracking-wider">
-              CFX Keymaster
+              {isFree ? 'Discord Verified' : 'CFX Keymaster'}
             </span>
             <div className="flex items-baseline gap-2">
-              <span className="font-mono text-xl sm:text-2xl font-extrabold text-white">
-                €{pkg.price.toFixed(2)}
-              </span>
-              {pkg.original_price && (
-                <span className="font-mono text-xs sm:text-sm text-red-500 font-bold line-through decoration-red-500/80 decoration-2">
-                  €{pkg.original_price.toFixed(2)}
+              {isFree ? (
+                <span className="font-mono text-xl sm:text-2xl font-black text-emerald-400">
+                  FREE
                 </span>
+              ) : (
+                <>
+                  <span className="font-mono text-xl sm:text-2xl font-extrabold text-white">
+                    €{pkg.price.toFixed(2)}
+                  </span>
+                  {pkg.original_price && (
+                    <span className="font-mono text-xs sm:text-sm text-red-500 font-bold line-through decoration-red-500/80 decoration-2">
+                      €{pkg.original_price.toFixed(2)}
+                    </span>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -143,7 +161,7 @@ export const ScriptCard: React.FC<ScriptCardProps> = memo(({ pkg }) => {
           <div className="flex items-center gap-2">
             <button
               onClick={handleCardClick}
-              className="p-2.5 rounded-xl text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-white/10 hover:border-white/20 transition-all duration-200 active:scale-95"
+              className="p-2.5 rounded-xl text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-white/10 hover:border-white/20 transition-all duration-200 active:scale-95 cursor-pointer"
               data-tooltip="Preview Details"
               data-tooltip-pos="left"
               aria-label="Preview script details"
@@ -151,12 +169,25 @@ export const ScriptCard: React.FC<ScriptCardProps> = memo(({ pkg }) => {
               <Eye className="w-4 h-4" />
             </button>
             <button
-              onClick={handleAddToCart}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-black hover:bg-zinc-100 font-extrabold text-xs transition-all duration-200 shadow-glow-sm active:scale-95 hover:scale-[1.02]"
-              aria-label="Buy script"
+              onClick={handleActionClick}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-extrabold text-xs transition-all duration-200 active:scale-95 hover:scale-[1.02] cursor-pointer ${
+                isFree
+                  ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
+                  : 'bg-white text-black hover:bg-zinc-100 shadow-glow-sm'
+              }`}
+              aria-label={isFree ? 'Get free script' : 'Buy script'}
             >
-              <ShoppingCart className="w-3.5 h-3.5 text-black" />
-              <span>Buy</span>
+              {isFree ? (
+                <>
+                  <Download className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Get Free</span>
+                </>
+              ) : (
+                <>
+                  <ShoppingCart className="w-3.5 h-3.5 text-black" />
+                  <span>Buy</span>
+                </>
+              )}
             </button>
           </div>
         </div>

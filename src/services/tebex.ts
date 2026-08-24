@@ -46,7 +46,6 @@ export class TebexService {
     }
 
     try {
-
       const accRes = await fetch(`${TEBEX_HEADLESS_BASE}/accounts/${token}`, {
         headers: { 'Accept': 'application/json' }
       });
@@ -87,15 +86,17 @@ export class TebexService {
           discountPercent = Math.round(((origPrice - current) / origPrice) * 100);
         }
 
+        const pkgPrice = Number(rawPkg.total_price ?? rawPkg.price ?? 0);
         const pkgName = rawPkg.name || 'Script Package';
-        const isOpenSource = /open[\s-_]?source|unlocked/i.test(pkgName) || /open[\s-_]?source/i.test(categoryName || '');
-        const isDeal = Boolean(
+        const isFree = pkgPrice === 0 || /free/i.test(categoryName || '') || /free/i.test(pkgName) || rawPkg.category_type === 'free';
+        const isOpenSource = !isFree && (/open[\s-_]?source|unlocked/i.test(pkgName) || /open[\s-_]?source/i.test(categoryName || ''));
+        const isDeal = !isFree && Boolean(
           (discountPercent && discountPercent > 0) || 
           /deal|sale|bundle|discount/i.test(categoryName || '') || 
           /deal|bundle|all[\s-_]?in[\s-_]?one/i.test(pkgName)
         );
 
-        const categoryType = isOpenSource ? 'opensource' : (isDeal ? 'deals' : 'paid');
+        const categoryType = isFree ? 'free' : (isOpenSource ? 'opensource' : (isDeal ? 'deals' : 'paid'));
         const desc = rawPkg.description || '<p>High performance FiveM resource for ESX & QBCore.</p>';
         const youtubeId = extractYouTubeId(desc) || rawPkg.youtube_id || undefined;
 
@@ -125,12 +126,12 @@ export class TebexService {
           description: desc,
           image: primaryImage,
           screenshots: screenshots.length > 0 ? screenshots : [primaryImage],
-          price: Number(rawPkg.total_price ?? rawPkg.price ?? 0),
+          price: pkgPrice,
           original_price: origPrice,
           discount: discountPercent,
           currency: account.currency,
           category_id: categoryId || rawPkg.category?.id || 1,
-          category_name: categoryName || rawPkg.category?.name || 'Scripts',
+          category_name: categoryName || rawPkg.category?.name || (isFree ? 'Free' : 'Scripts'),
           category_type: categoryType,
           slug: rawPkg.slug || `package-${rawPkg.id}`,
           order: rawPkg.order || 0,
@@ -138,13 +139,15 @@ export class TebexService {
           resmon: '0.00ms',
           youtube_id: youtubeId,
           is_open_source: isOpenSource,
+          is_free: isFree,
+          download_url: isFree ? (rawPkg.download_url || 'https://github.com/MeDaaa1331/mddevelopment-store/archive/refs/heads/main.zip') : undefined,
           features: [
-            'Instant CFX.re Keymaster asset delivery',
+            isFree ? 'Discord Member Exclusive direct free download' : 'Instant CFX.re Keymaster asset delivery',
             'Native ESX & QBCore framework support',
             '0.00ms ultra-optimized idle resmon',
             'Lifetime updates and Discord support access'
           ],
-          config_preview: `-- Configuration for ${rawPkg.name}\nConfig = {}\nConfig.Framework = "auto" -- ESX / QB\nConfig.Debug = false`
+          config_preview: `Config = {}\nConfig.Framework = "auto"\nConfig.Debug = false`
         };
 
         allPackages.push(pkg);
@@ -202,7 +205,7 @@ export class TebexService {
           slug: 'paid',
           description: 'Premium scripts for ESX and QBCore.',
           order: 2,
-          packages: finalPackages.filter(p => !p.is_open_source && p.category_type !== 'opensource')
+          packages: finalPackages.filter(p => !p.is_open_source && p.category_type !== 'opensource' && p.category_type !== 'free')
         },
         {
           id: 2,
@@ -211,11 +214,12 @@ export class TebexService {
           description: 'Discounted scripts, bundles and special offers.',
           order: 3,
           packages: finalPackages.filter(p => 
-            p.category_type === 'deals' || 
+            (p.category_type === 'deals' || 
             (p.discount && p.discount > 0) || 
             Boolean(p.original_price && p.original_price > p.price) ||
             /deal|sale|bundle|discount/i.test(p.category_name || '') ||
-            /deal|bundle|all[\s-_]?in[\s-_]?one/i.test(p.name)
+            /deal|bundle|all[\s-_]?in[\s-_]?one/i.test(p.name)) &&
+            p.category_type !== 'free'
           )
         },
         {
@@ -224,7 +228,15 @@ export class TebexService {
           slug: 'opensource',
           description: '100% unlocked source code for developers.',
           order: 4,
-          packages: finalPackages.filter(p => p.is_open_source || p.category_type === 'opensource')
+          packages: finalPackages.filter(p => (p.is_open_source || p.category_type === 'opensource') && p.category_type !== 'free')
+        },
+        {
+          id: 4,
+          name: 'Free',
+          slug: 'free',
+          description: 'Free community FiveM resources (Discord Member Exclusive).',
+          order: 5,
+          packages: finalPackages.filter(p => p.price === 0 || p.category_type === 'free' || p.is_free || /free/i.test(p.category_name || '') || /free/i.test(p.name))
         }
       ];
 

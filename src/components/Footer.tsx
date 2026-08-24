@@ -107,14 +107,20 @@ export const Footer: React.FC = () => {
                 </button>
               </li>
               <li>
-                <button onClick={() => scrollTo('scripts-store', 'opensource')} className="hover:text-white transition-colors duration-200">
+                <button onClick={() => scrollTo('scripts-store', 'opensource')} className="hover:text-white transition-colors duration-200 cursor-pointer">
                   Open Source Code
                 </button>
               </li>
               <li>
-                <button onClick={() => scrollTo('devtools-section')} className="hover:text-white transition-colors duration-200 text-emerald-400 font-semibold flex items-center gap-1">
+                <button onClick={() => scrollTo('scripts-store', 'free')} className="hover:text-white transition-colors duration-200 text-emerald-400 font-semibold flex items-center gap-1 cursor-pointer">
+                  <span>Free Scripts</span>
+                  <span className="px-1 py-0.2 text-[9px] bg-emerald-500/20 text-emerald-300 font-bold rounded border border-emerald-500/30">FREE</span>
+                </button>
+              </li>
+              <li>
+                <button onClick={() => scrollTo('devtools-section')} className="hover:text-white transition-colors duration-200 text-cyan-400 font-semibold flex items-center gap-1 cursor-pointer">
                   <span>DEV Tools Hub</span>
-                  <span className="px-1 py-0.2 text-[9px] bg-emerald-500/20 text-emerald-300 font-bold rounded border border-emerald-500/30">NEW</span>
+                  <span className="px-1 py-0.2 text-[9px] bg-cyan-500/20 text-cyan-300 font-bold rounded border border-cyan-500/30">HOT</span>
                 </button>
               </li>
             </ul>

@@ -321,8 +321,67 @@ Config.GroupWorkMax = 4`
       "Easy custom exports for vehicle stats and keys",
       "Editable showroom UI themes and colors"
     ],
-    config_preview: `-- Open Source Edition
--- Full access to all events and exports`
+    config_preview: `Config = {}\nConfig.Framework = "auto"`
+  },
+  {
+    id: 209,
+    name: "MD Developer QuickAdmin & Coords [Free]",
+    description: `<h3>Free Essential FiveM Developer & Admin Utility</h3>
+<p>Official free FiveM developer resource created by MD Development. Includes instant teleportation, ped spawner, vehicle spawner, live vector3 / vector4 coords copying to clipboard, and entity inspector.</p>
+<h4>Key Features:</h4>
+<ul>
+  <li>Instant /coords command with automated clipboard copy</li>
+  <li>Lightweight NUI overlay with 0.00ms idle resmon</li>
+  <li>ACE permissions and Discord role integration</li>
+  <li>Compatible with ESX, QBCore, Qbox and Standalone</li>
+</ul>
+<p>Exclusive free download for verified MD Development Discord members.</p>`,
+    price: 0,
+    currency: "EUR",
+    category_id: 4,
+    category_name: "Free",
+    category_type: "free",
+    slug: "md-developer-quickadmin-free",
+    frameworks: ['ESX', 'QB'],
+    resmon: "0.00ms",
+    image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=600&q=75&fm=webp",
+    is_featured: false,
+    is_open_source: true,
+    is_free: true,
+    download_url: "https://github.com/MeDaaa1331/mddevelopment-store/archive/refs/heads/main.zip",
+    features: [
+      "Instant Vector3 & Vector4 coords copy to clipboard",
+      "Interactive 0.00ms in-game developer NUI tool",
+      "Discord Member Exclusive free direct download",
+      "Lifetime free updates"
+    ],
+    config_preview: `Config = {}\nConfig.Command = "devcoords"\nConfig.Permission = "admin"`
+  },
+  {
+    id: 210,
+    name: "MD Discord Webhook Audit Logs [Free]",
+    description: `<h3>Advanced Free Discord Logging System for FiveM</h3>
+<p>Clean, high-performance Discord webhook audit logger for player connections, admin commands, item drops, death kills, money transactions, and vehicle spawns with rich embed colors and steam avatar integration.</p>`,
+    price: 0,
+    currency: "EUR",
+    category_id: 4,
+    category_name: "Free",
+    category_type: "free",
+    slug: "md-discord-logs-free",
+    frameworks: ['ESX', 'QB'],
+    resmon: "0.00ms",
+    image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=75&fm=webp",
+    is_featured: false,
+    is_open_source: true,
+    is_free: true,
+    download_url: "https://github.com/MeDaaa1331/mddevelopment-store/archive/refs/heads/main.zip",
+    features: [
+      "Automated Discord embed logs with custom colors and avatar",
+      "0.00ms resmon async HTTP webhook dispatcher",
+      "Pre-configured logs for ESX & QBCore events",
+      "Discord Member Exclusive free resource"
+    ],
+    config_preview: `Config = {}\nConfig.Webhooks = {\n  ['joins'] = 'https://discord.com/api/webhooks/...',\n  ['kills'] = 'https://discord.com/api/webhooks/...'\n}`
   }
 ];
 
@@ -341,7 +400,7 @@ export const SAMPLE_CATEGORIES: TebexCategory[] = [
     slug: "paid",
     description: "Premium standalone & framework scripts for ESX and QBCore.",
     order: 2,
-    packages: SAMPLE_PACKAGES.filter(p => !p.is_open_source)
+    packages: SAMPLE_PACKAGES.filter(p => !p.is_open_source && p.category_type !== 'opensource' && p.category_type !== 'free')
   },
   {
     id: 2,
@@ -357,7 +416,15 @@ export const SAMPLE_CATEGORIES: TebexCategory[] = [
     slug: "opensource",
     description: "100% unlocked source code packages for advanced developers and server teams.",
     order: 4,
-    packages: SAMPLE_PACKAGES.filter(p => p.is_open_source || p.category_type === 'opensource')
+    packages: SAMPLE_PACKAGES.filter(p => (p.is_open_source || p.category_type === 'opensource') && p.category_type !== 'free')
+  },
+  {
+    id: 4,
+    name: "Free",
+    slug: "free",
+    description: "Free community FiveM resources (Discord Member Exclusive).",
+    order: 5,
+    packages: SAMPLE_PACKAGES.filter(p => p.price === 0 || p.category_type === 'free' || p.is_free)
   }
 ];
 

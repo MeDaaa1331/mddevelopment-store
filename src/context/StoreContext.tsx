@@ -145,22 +145,33 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (filters.category && filters.category !== 'all') {
       const cat = filters.category.toLowerCase();
       if (cat === 'paid') {
-        if (pkg.is_open_source || pkg.category_type === 'opensource') return false;
+        if (pkg.is_open_source || pkg.category_type === 'opensource' || pkg.category_type === 'free' || pkg.price === 0) return false;
       } else if (cat === 'deals') {
-        const isDeal = (pkg.discount && pkg.discount > 0) || 
+        const isDeal = ((pkg.discount && pkg.discount > 0) || 
                        pkg.category_type === 'deals' || 
                        pkg.category_id === 2 || 
                        Boolean(pkg.original_price && pkg.original_price > pkg.price) ||
                        /deal|sale|bundle|discount/i.test(pkg.category_name || '') ||
-                       /deal|bundle|all[\s-_]?in[\s-_]?one/i.test(pkg.name);
+                       /deal|bundle|all[\s-_]?in[\s-_]?one/i.test(pkg.name)) && pkg.category_type !== 'free';
         if (!isDeal) return false;
       } else if (cat === 'opensource') {
-        const isOpenSource = pkg.is_open_source || 
+        const isOpenSource = (pkg.is_open_source || 
                              pkg.category_type === 'opensource' || 
                              pkg.category_id === 3 || 
                              /open[\s-_]?source|unlocked/i.test(pkg.name) ||
-                             /open[\s-_]?source/i.test(pkg.category_name || '');
+                             /open[\s-_]?source/i.test(pkg.category_name || '')) && pkg.category_type !== 'free';
         if (!isOpenSource) return false;
+      } else if (cat === 'free') {
+        const isFree = pkg.price === 0 || 
+                       pkg.category_type === 'free' || 
+                       pkg.is_free || 
+                       pkg.category_id === 4 ||
+                       /free/i.test(pkg.name) || 
+                       /free/i.test(pkg.category_name || '');
+        if (!isFree) return false;
+      } else {
+        const matchesCategory = pkg.category_name?.toLowerCase().includes(cat) || pkg.slug?.toLowerCase().includes(cat);
+        if (!matchesCategory) return false;
       }
     }
 

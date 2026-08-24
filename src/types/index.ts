@@ -23,7 +23,7 @@ export interface TebexPackage {
   currency: string;
   category_id?: number;
   category_name?: string;
-  category_type?: 'paid' | 'deals' | 'opensource';
+  category_type?: 'paid' | 'deals' | 'opensource' | 'free';
   slug?: string;
   order?: number;
   created_at?: string;
@@ -37,6 +37,8 @@ export interface TebexPackage {
   is_new?: boolean;
   is_bestseller?: boolean;
   is_open_source?: boolean;
+  is_free?: boolean;
+  download_url?: string;
   config_preview?: string;
 }
 
@@ -58,29 +60,22 @@ export interface CartItem {
 export interface Coupon {
   code: string;
   discountPercentage: number;
-  description: string;
+  minimumSpend?: number;
+  expiryDate?: string;
+  description?: string;
+}
+
+export interface FilterState {
+  search: string;
+  category: string;
+  framework: Framework;
+  sortBy: 'featured' | 'newest' | 'price-asc' | 'price-desc';
+  onlyDiscounted: boolean;
 }
 
 export interface FAQItem {
   id: string;
   question: string;
   answer: string;
-  category: 'general' | 'installation' | 'payments';
-}
-
-export interface FilterState {
-  search: string;
-  category: string; 
-  framework: Framework; 
-  sortBy: 'featured' | 'newest' | 'price-asc' | 'price-desc';
-  onlyDiscounted: boolean;
-}
-
-export interface BasketResult {
-  ident?: string;
-  checkoutUrl: string;
-  success: boolean;
-  isLive?: boolean;
-  hasPackagesInBasket?: boolean;
-  requiresAuth?: boolean;
+  category?: 'general' | 'technical' | 'billing' | 'installation' | 'payments' | string;
 }

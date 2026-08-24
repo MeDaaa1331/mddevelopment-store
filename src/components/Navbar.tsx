@@ -113,6 +113,7 @@ export const Navbar: React.FC = () => {
     { slug: 'paid', label: 'Paid', icon: <Crown className="w-3.5 h-3.5" /> },
     { slug: 'deals', label: 'Deals', icon: <Flame className="w-3.5 h-3.5" /> },
     { slug: 'opensource', label: 'Open Source', icon: <Code2 className="w-3.5 h-3.5" /> },
+    { slug: 'free', label: 'Free', icon: <Gift className="w-3.5 h-3.5" /> },
     { slug: 'devtools', label: 'DEV Tools', icon: <Wrench className="w-3.5 h-3.5" /> },
   ];
 
