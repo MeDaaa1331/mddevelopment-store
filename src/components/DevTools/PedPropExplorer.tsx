@@ -1,5 +1,18 @@
 import React, { useState, useMemo } from 'react';
-import { User, Box, Search, Copy, Check, Sparkles, ExternalLink } from 'lucide-react';
+import {
+  User,
+  Box,
+  Search,
+  Copy,
+  Check,
+  Sparkles,
+  Sliders,
+  Layers,
+  Shield,
+  Zap,
+  Tag,
+  Maximize2
+} from 'lucide-react';
 import { GTA_PED_PROP_DATABASE, ModelEntry } from '../../data/gtaPeds';
 import { trackEvent } from '../../utils/analytics';
 
@@ -20,11 +33,24 @@ export const PedPropExplorer: React.FC = () => {
   const [freeze, setFreeze] = useState(true);
   const [invincible, setInvincible] = useState(true);
   const [blockEvents, setBlockEvents] = useState(true);
+  const [placeOnGround, setPlaceOnGround] = useState(true);
   const [scenario, setScenario] = useState('WORLD_HUMAN_GUARD_STAND');
   const [typeFilter, setTypeFilter] = useState<'all' | 'ped' | 'prop'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
+
+  const availableCategories = useMemo(() => {
+    const list = Array.from(
+      new Set(
+        GTA_PED_PROP_DATABASE.filter(m => typeFilter === 'all' || m.type === typeFilter).map(
+          m => m.category
+        )
+      )
+    );
+    return ['all', ...list];
+  }, [typeFilter]);
 
   const selectedModel = useMemo(() => {
     return GTA_PED_PROP_DATABASE.find(m => m.id === selectedModelId) || GTA_PED_PROP_DATABASE[0];
@@ -33,6 +59,7 @@ export const PedPropExplorer: React.FC = () => {
   const filteredModels = useMemo(() => {
     return GTA_PED_PROP_DATABASE.filter(m => {
       if (typeFilter !== 'all' && m.type !== typeFilter) return false;
+      if (selectedCategory !== 'all' && m.category !== selectedCategory) return false;
       if (!search.trim()) return true;
       const q = search.toLowerCase();
       return (
@@ -42,7 +69,7 @@ export const PedPropExplorer: React.FC = () => {
         m.hash.toLowerCase().includes(q)
       );
     });
-  }, [typeFilter, search]);
+  }, [typeFilter, selectedCategory, search]);
 
   const handleCopy = (key: string, code: string) => {
     navigator.clipboard.writeText(code);
@@ -90,15 +117,17 @@ end)`;
 
     local obj = CreateObject(modelHash, ${coords.x}, ${coords.y}, ${coords.z}, false, false, false)
     SetEntityHeading(obj, ${coords.h})
+    ${placeOnGround ? 'PlaceObjectOnGroundProperly(obj)' : ''}
     ${freeze ? 'FreezeEntityPosition(obj, true)' : '-- FreezeEntityPosition(obj, false)'}
     ${invincible ? 'SetEntityInvincible(obj, true)' : ''}
     SetModelAsNoLongerNeeded(modelHash)
 end)`;
     }
-  }, [selectedModel, coords, freeze, invincible, blockEvents, scenario]);
+  }, [selectedModel, coords, freeze, invincible, blockEvents, placeOnGround, scenario]);
 
   const oxTargetHook = useMemo(() => {
-    return `exports.ox_target:addLocalEntity(ped, {
+    if (selectedModel.type === 'ped') {
+      return `exports.ox_target:addLocalEntity(ped, {
     {
         name = '${selectedModel.id}_interaction',
         icon = 'fa-solid fa-comments',
@@ -108,6 +137,19 @@ end)`;
         end
     }
 })`;
+    } else {
+      return `exports.ox_target:addModel('${selectedModel.id}', {
+    {
+        name = '${selectedModel.id}_target',
+        icon = 'fa-solid fa-hand',
+        label = 'Interact with ${selectedModel.name}',
+        distance = 2.0,
+        onSelect = function(data)
+            print('Interacted with prop ${selectedModel.id}!')
+        end
+    }
+})`;
+    }
   }, [selectedModel]);
 
   const selectedImageUrl = getModelImageUrl(selectedModel);
@@ -117,12 +159,12 @@ end)`;
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-zinc-950/60 border border-white/10">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-white shadow-glow-sm">
-            <User className="w-5 h-5" />
+            <Layers className="w-5 h-5" />
           </div>
           <div>
             <h3 className="font-display font-bold text-base text-white">Ped & Prop Spawner / Model Explorer</h3>
             <p className="text-xs text-zinc-400">
-              Live visual directory of all GTA V & FiveM Character Peds with instant high-res renders, scenarios, and Lua code generator.
+              Live visual database of GTA V Character Peds and Interactive World Props with instant renders, coordinates, and Lua generators.
             </p>
           </div>
         </div>
@@ -143,7 +185,7 @@ end)`;
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Search peds & props (cop, medic, michael, ballas, chop...)"
+                placeholder="Search peds & props (cop, atm, vault, medic, barrier...)"
                 className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white/30"
               />
             </div>
@@ -152,14 +194,33 @@ end)`;
               {(['all', 'ped', 'prop'] as const).map(t => (
                 <button
                   key={t}
-                  onClick={() => setTypeFilter(t)}
-                  className={`flex-1 py-1.5 rounded-lg text-xs font-mono font-bold capitalize transition-all ${
+                  onClick={() => {
+                    setTypeFilter(t);
+                    setSelectedCategory('all');
+                  }}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-mono font-bold capitalize transition-all cursor-pointer ${
                     typeFilter === t
                       ? 'bg-white text-black shadow-sm'
                       : 'text-zinc-400 hover:text-white bg-zinc-900/60 border border-white/5'
                   }`}
                 >
-                  {t === 'all' ? 'All Models' : t === 'ped' ? 'NPC Peds' : 'Props'}
+                  {t === 'all' ? 'All Models' : t === 'ped' ? 'NPC Peds' : 'World Props'}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-1 overflow-x-auto py-1 no-scrollbar">
+              {availableCategories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono whitespace-nowrap transition-all cursor-pointer ${
+                    selectedCategory === cat
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold'
+                      : 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-200 border border-white/5'
+                  }`}
+                >
+                  {cat === 'all' ? 'All Categories' : cat}
                 </button>
               ))}
             </div>
@@ -193,7 +254,9 @@ end)`;
                       ) : model.type === 'ped' ? (
                         <User className="w-5 h-5 text-zinc-500" />
                       ) : (
-                        <Box className="w-5 h-5 text-zinc-500" />
+                        <div className="flex flex-col items-center justify-center text-cyan-400">
+                          <Box className="w-5 h-5" />
+                        </div>
                       )}
                     </div>
 
@@ -220,8 +283,9 @@ end)`;
         <div className="lg:col-span-7 flex flex-col gap-4">
           <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 space-y-4">
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 border-b border-white/5 pb-4">
-              <div className="w-36 h-48 sm:w-40 sm:h-52 rounded-2xl bg-gradient-to-b from-white/10 via-black/40 to-black border border-white/15 p-2 flex items-center justify-center relative overflow-hidden shadow-2xl shrink-0 group">
+              <div className="w-36 h-48 sm:w-40 sm:h-52 rounded-2xl bg-gradient-to-b from-white/10 via-black/40 to-black border border-white/15 p-3 flex flex-col items-center justify-center relative overflow-hidden shadow-2xl shrink-0 group">
                 <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/10 via-transparent to-transparent opacity-60 pointer-events-none" />
+
                 {selectedImageUrl ? (
                   <img
                     src={selectedImageUrl}
@@ -232,8 +296,21 @@ end)`;
                 ) : selectedModel.type === 'ped' ? (
                   <User className="w-16 h-16 text-zinc-600" />
                 ) : (
-                  <Box className="w-16 h-16 text-zinc-600" />
+                  <div className="flex flex-col items-center justify-center text-center p-2">
+                    <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-2 shadow-glow-sm">
+                      <Box className="w-8 h-8" />
+                    </div>
+                    <span className="text-[10px] font-mono text-cyan-300 font-bold block uppercase tracking-wider">
+                      3D World Prop
+                    </span>
+                    {selectedModel.dimensions && (
+                      <span className="text-[9px] font-mono text-zinc-400 mt-1 block">
+                        {selectedModel.dimensions}
+                      </span>
+                    )}
+                  </div>
                 )}
+
                 <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-black/80 border border-white/15 text-[9px] font-mono font-bold text-zinc-300">
                   {selectedModel.type.toUpperCase()}
                 </span>
@@ -248,6 +325,11 @@ end)`;
                     <span className="px-2 py-0.5 rounded-full bg-zinc-900 border border-white/10 text-[10px] font-mono font-bold text-zinc-400">
                       GTA V Native
                     </span>
+                    {selectedModel.dimensions && (
+                      <span className="px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-[10px] font-mono font-bold text-cyan-300">
+                        {selectedModel.dimensions}
+                      </span>
+                    )}
                   </div>
 
                   <h4 className="font-display font-extrabold text-xl text-white">{selectedModel.name}</h4>
@@ -327,7 +409,7 @@ end)`;
                 </div>
               </div>
 
-              {selectedModel.type === 'ped' && (
+              {selectedModel.type === 'ped' ? (
                 <div>
                   <label className="text-[11px] font-mono font-bold text-zinc-400 uppercase tracking-wider block mb-1">
                     Ped Scenario / Idle Animation
@@ -344,30 +426,52 @@ end)`;
                     ))}
                   </select>
                 </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="flex items-center gap-2 p-2.5 rounded-xl bg-zinc-900 border border-white/5 cursor-pointer text-xs select-none hover:border-white/20 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={placeOnGround}
+                      onChange={e => setPlaceOnGround(e.target.checked)}
+                      className="accent-emerald-400 rounded"
+                    />
+                    <span className="text-zinc-300 font-medium text-[11px]">Place On Ground Properly</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-2.5 rounded-xl bg-zinc-900 border border-white/5 cursor-pointer text-xs select-none hover:border-white/20 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={freeze}
+                      onChange={e => setFreeze(e.target.checked)}
+                      className="accent-emerald-400 rounded"
+                    />
+                    <span className="text-zinc-300 font-medium text-[11px]">Freeze Object Position</span>
+                  </label>
+                </div>
               )}
 
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/5">
-                <label className="flex items-center gap-2 p-2 rounded-xl bg-zinc-900 border border-white/5 cursor-pointer text-xs select-none hover:border-white/20 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={freeze}
-                    onChange={e => setFreeze(e.target.checked)}
-                    className="accent-emerald-400 rounded"
-                  />
-                  <span className="text-zinc-300 font-medium text-[11px]">Freeze Position</span>
-                </label>
+              {selectedModel.type === 'ped' && (
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/5">
+                  <label className="flex items-center gap-2 p-2 rounded-xl bg-zinc-900 border border-white/5 cursor-pointer text-xs select-none hover:border-white/20 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={freeze}
+                      onChange={e => setFreeze(e.target.checked)}
+                      className="accent-emerald-400 rounded"
+                    />
+                    <span className="text-zinc-300 font-medium text-[11px]">Freeze Position</span>
+                  </label>
 
-                <label className="flex items-center gap-2 p-2 rounded-xl bg-zinc-900 border border-white/5 cursor-pointer text-xs select-none hover:border-white/20 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={invincible}
-                    onChange={e => setInvincible(e.target.checked)}
-                    className="accent-emerald-400 rounded"
-                  />
-                  <span className="text-zinc-300 font-medium text-[11px]">Invincible</span>
-                </label>
+                  <label className="flex items-center gap-2 p-2 rounded-xl bg-zinc-900 border border-white/5 cursor-pointer text-xs select-none hover:border-white/20 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={invincible}
+                      onChange={e => setInvincible(e.target.checked)}
+                      className="accent-emerald-400 rounded"
+                    />
+                    <span className="text-zinc-300 font-medium text-[11px]">Invincible</span>
+                  </label>
 
-                {selectedModel.type === 'ped' && (
                   <label className="flex items-center gap-2 p-2 rounded-xl bg-zinc-900 border border-white/5 cursor-pointer text-xs select-none hover:border-white/20 transition-colors">
                     <input
                       type="checkbox"
@@ -377,24 +481,24 @@ end)`;
                     />
                     <span className="text-zinc-300 font-medium text-[11px]">Block Events</span>
                   </label>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
 
           <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="font-display font-extrabold text-sm text-white">FiveM Lua Spawner Code</h4>
+              <h4 className="font-display font-extrabold text-sm text-white">
+                {selectedModel.type === 'ped' ? 'FiveM Lua Ped Spawner' : 'FiveM Lua Prop Spawner'}
+              </h4>
               <div className="flex items-center gap-2">
-                {selectedModel.type === 'ped' && (
-                  <button
-                    onClick={() => handleCopy('ox', oxTargetHook)}
-                    className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-white/10 font-mono text-[11px] font-semibold text-zinc-300 hover:text-white transition-all flex items-center gap-1 cursor-pointer"
-                  >
-                    {copiedKey === 'ox' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                    <span>ox_target Hook</span>
-                  </button>
-                )}
+                <button
+                  onClick={() => handleCopy('ox', oxTargetHook)}
+                  className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-white/10 font-mono text-[11px] font-semibold text-zinc-300 hover:text-white transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  {copiedKey === 'ox' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                  <span>ox_target Hook</span>
+                </button>
 
                 <button
                   onClick={() => handleCopy('lua', clientLuaCode)}
