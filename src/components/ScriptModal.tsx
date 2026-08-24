@@ -343,23 +343,23 @@ export const ScriptModal: React.FC = () => {
                         <span>Sign in with Discord to Download</span>
                       </button>
                     ) : inGuild === false ? (
-                      <div className="flex flex-col sm:flex-row items-center gap-2">
+                      <div className="flex items-center gap-2">
                         <a
                           href={TEBEX_CONFIG.discordUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-full sm:flex-1 py-3.5 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] text-white font-extrabold text-sm transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer active:scale-98"
+                          className="flex-1 py-3.5 px-3 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] text-white font-extrabold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 shadow-md cursor-pointer active:scale-98 whitespace-nowrap"
                         >
-                          <MessageSquare className="w-4 h-4" />
-                          <span>Join Discord to Download</span>
+                          <MessageSquare className="w-4 h-4 shrink-0" />
+                          <span className="whitespace-nowrap">Join Discord</span>
                         </a>
                         <button
                           onClick={() => checkDiscordMembership(user.id)}
                           disabled={isCheckingGuild}
-                          className="w-full sm:w-auto px-4 py-3.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-xs font-mono font-bold text-zinc-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-98"
+                          className="px-3.5 sm:px-4 py-3.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-xs font-mono font-bold text-zinc-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-98 shrink-0 whitespace-nowrap"
                         >
                           <RefreshCw className={`w-3.5 h-3.5 ${isCheckingGuild ? 'animate-spin' : ''}`} />
-                          <span>Check Again</span>
+                          <span className="whitespace-nowrap">Check Again</span>
                         </button>
                       </div>
                     ) : (
