@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   BarChart3,
   TrendingUp,
@@ -81,6 +81,65 @@ export const AdminStatsPage: React.FC = () => {
       setIsRefreshing(false);
     }
   };
+
+  const [indicatorStyle, setIndicatorStyle] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+    opacity: number;
+  }>({
+    left: 0,
+    top: 0,
+    width: 0,
+    height: 0,
+    opacity: 0
+  });
+
+  const tabContainerRef = useRef<HTMLDivElement>(null);
+
+  const updateIndicator = () => {
+    if (!tabContainerRef.current) return;
+    const activeBtn = tabContainerRef.current.querySelector(`[data-tab="${activeTab}"]`) as HTMLElement | null;
+    if (activeBtn) {
+      setIndicatorStyle({
+        left: activeBtn.offsetLeft,
+        top: activeBtn.offsetTop,
+        width: activeBtn.offsetWidth,
+        height: activeBtn.offsetHeight,
+        opacity: 1
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    updateIndicator();
+    const raf = requestAnimationFrame(updateIndicator);
+    const t1 = setTimeout(updateIndicator, 50);
+    const t2 = setTimeout(updateIndicator, 150);
+    const t3 = setTimeout(updateIndicator, 350);
+
+    if (document.fonts?.ready) {
+      document.fonts.ready.then(updateIndicator);
+    }
+
+    let observer: ResizeObserver | null = null;
+    if (tabContainerRef.current && typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => updateIndicator());
+      observer.observe(tabContainerRef.current);
+    }
+
+    window.addEventListener('resize', updateIndicator);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      if (observer) observer.disconnect();
+      window.removeEventListener('resize', updateIndicator);
+    };
+  }, [activeTab, isAuthenticated, data, wheelData]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -352,7 +411,21 @@ export const AdminStatsPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 p-1.5 bg-zinc-950/80 rounded-2xl border border-white/10 overflow-x-auto no-scrollbar scrollbar-none">
+        <div
+          ref={tabContainerRef}
+          className="relative flex flex-wrap items-center gap-1.5 p-1.5 bg-zinc-950/80 rounded-2xl border border-white/10 w-full backdrop-blur-md"
+        >
+          <div
+            className="absolute rounded-xl bg-white transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] shadow-glow-sm pointer-events-none"
+            style={{
+              left: `${indicatorStyle.left}px`,
+              top: `${indicatorStyle.top}px`,
+              width: `${indicatorStyle.width}px`,
+              height: `${indicatorStyle.height}px`,
+              opacity: indicatorStyle.opacity,
+            }}
+          />
+
           {[
             { id: 'overview', label: 'Overview & Top Charts', icon: BarChart3 },
             { id: 'downloads', label: `Free Downloads (${data?.freeDownloads?.totalDownloads || 0})`, icon: Download },
@@ -368,14 +441,17 @@ export const AdminStatsPage: React.FC = () => {
             return (
               <button
                 key={tab.id}
+                data-tab={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center gap-2 whitespace-nowrap ${
+                className={`group relative z-10 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 select-none whitespace-nowrap ${
                   active
-                    ? 'bg-white text-black shadow-sm'
+                    ? 'text-black font-extrabold'
                     : 'text-zinc-400 hover:text-white bg-zinc-900/40 hover:bg-zinc-900/80 border border-transparent'
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className={`w-4 h-4 transition-transform duration-200 group-hover:scale-110 ${
+                  active ? 'text-black' : 'text-zinc-400 group-hover:text-white'
+                }`} />
                 <span>{tab.label}</span>
               </button>
             );
