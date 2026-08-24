@@ -123,7 +123,7 @@ export const CategoryFilter: React.FC = () => {
       </div>
 
       <div className="flex items-center justify-between gap-2 border-b border-white/5 pb-3">
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap overflow-x-auto no-scrollbar scrollbar-none">
           {categories.map((cat) => {
             const isActive = filters.category === cat.slug;
 

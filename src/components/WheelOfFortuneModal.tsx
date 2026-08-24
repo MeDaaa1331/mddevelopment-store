@@ -351,19 +351,19 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
                     href={TEBEX_CONFIG.discordUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 py-2.5 rounded-lg bg-[#5865F2] hover:bg-[#4752C4] text-white font-medium text-xs flex items-center justify-center gap-1.5"
+                    className="flex-1 py-2.5 px-3 rounded-lg bg-[#5865F2] hover:bg-[#4752C4] text-white font-medium text-xs flex items-center justify-center gap-1.5 whitespace-nowrap active:scale-98"
                   >
-                    <span>Join Discord Server</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span className="whitespace-nowrap">Join Discord</span>
+                    <ExternalLink className="w-3.5 h-3.5 shrink-0" />
                   </a>
                   <button
                     onClick={checkStatus}
                     disabled={isCheckingStatus}
-                    className="px-3.5 py-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-white/10 text-xs font-medium text-zinc-200 flex items-center gap-1.5"
+                    className="px-3.5 py-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-white/10 text-xs font-medium text-zinc-200 flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-50 active:scale-98"
                     data-tooltip="Recheck Discord Membership"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isCheckingStatus ? 'animate-spin' : ''}`} />
-                    <span>Check</span>
+                    <span className="whitespace-nowrap">Check</span>
                   </button>
                 </div>
               </div>
