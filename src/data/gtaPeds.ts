@@ -5,6 +5,7 @@ export interface ModelEntry {
   category: 'Law & Military' | 'EMS & Fire' | 'Services & Jobs' | 'Gangs & Crime' | 'Story Characters' | 'Ambient Civilians' | 'Animals' | 'Props & Objects';
   type: 'ped' | 'prop';
   description: string;
+  imageUrl?: string;
 }
 
 export const GTA_PED_PROP_DATABASE: ModelEntry[] = [
@@ -25,12 +26,17 @@ export const GTA_PED_PROP_DATABASE: ModelEntry[] = [
   { id: 's_m_y_blackops_01', name: 'Merryweather Mercenary', hash: '0xDF85655D', category: 'Law & Military', type: 'ped', description: 'Merryweather private security contractor' },
   { id: 's_m_y_blackops_02', name: 'Merryweather Heavy Assault', hash: '0x356CE929', category: 'Law & Military', type: 'ped', description: 'Merryweather tactical operative' },
   { id: 's_m_y_uscg_01', name: 'Coast Guard Officer', hash: '0x4386760B', category: 'Law & Military', type: 'ped', description: 'San Andreas Coast Guard officer' },
+  { id: 's_m_m_snowcop_01', name: 'North Yankton Police', hash: '0x09B0E8FA', category: 'Law & Military', type: 'ped', description: 'North Yankton State Patrol winter officer' },
+  { id: 's_m_y_ranger_01', name: 'Park Ranger Officer Male', hash: '0x2B1D3692', category: 'Law & Military', type: 'ped', description: 'San Andreas Park Ranger officer male' },
+  { id: 's_f_y_ranger_01', name: 'Park Ranger Officer Female', hash: '0x0D09B661', category: 'Law & Military', type: 'ped', description: 'San Andreas Park Ranger officer female' },
 
   { id: 's_m_m_paramedic_01', name: 'Paramedic / EMS Male', hash: '0x11D121FE', category: 'EMS & Fire', type: 'ped', description: 'LSFD paramedic medical responder' },
+  { id: 's_f_y_paramedic_01', name: 'Paramedic / EMS Female', hash: '0x99564EB2', category: 'EMS & Fire', type: 'ped', description: 'LSFD paramedic emergency medical technician' },
   { id: 's_m_y_fireman_01', name: 'Firefighter Male', hash: '0xD63CE169', category: 'EMS & Fire', type: 'ped', description: 'Los Santos Fire Department firefighter' },
   { id: 's_m_m_doctor_01', name: 'Hospital Doctor / Surgeon', hash: '0xD47DA357', category: 'EMS & Fire', type: 'ped', description: 'Pillbox Hill Medical Center doctor' },
   { id: 's_f_y_scrubs_01', name: 'Hospital Nurse / Scrubs Female', hash: '0x50C3A013', category: 'EMS & Fire', type: 'ped', description: 'Hospital nurse in scrubs' },
   { id: 's_m_m_lifeinvad_01', name: 'Hospital Attendant', hash: '0xA924F087', category: 'EMS & Fire', type: 'ped', description: 'Medical orderly / clinic staff' },
+  { id: 's_m_y_airworker', name: 'Airport Ground Crew', hash: '0x53460A7C', category: 'EMS & Fire', type: 'ped', description: 'Airport tarmac safety personnel' },
 
   { id: 's_m_m_autoshop_01', name: 'Mechanic Bennys', hash: '0x99564EB2', category: 'Services & Jobs', type: 'ped', description: 'Bennys Original Motorworks mechanic' },
   { id: 's_m_m_autoshop_02', name: 'Mechanic Los Santos Customs', hash: '0x2649B283', category: 'Services & Jobs', type: 'ped', description: 'LSC vehicle tuner technician' },
@@ -48,20 +54,34 @@ export const GTA_PED_PROP_DATABASE: ModelEntry[] = [
   { id: 's_m_y_waiter_01', name: 'Restaurant Waiter', hash: '0x0D09B661', category: 'Services & Jobs', type: 'ped', description: 'Luxury restaurant waiter server' },
   { id: 's_f_y_bartender_01', name: 'Nightclub Bartender Female', hash: '0x4386760B', category: 'Services & Jobs', type: 'ped', description: 'Bar / club cocktail bartender' },
   { id: 's_m_y_construct_01', name: 'Construction Worker Male', hash: '0xD7DA9E99', category: 'Services & Jobs', type: 'ped', description: 'Mile High Club building site worker' },
+  { id: 's_m_y_construct_02', name: 'Construction Foreman', hash: '0x62CA9A0C', category: 'Services & Jobs', type: 'ped', description: 'Building site supervisor' },
   { id: 's_m_y_busboy_01', name: 'Hotel Bellhop / Busboy', hash: '0x65F93DA2', category: 'Services & Jobs', type: 'ped', description: 'Richman Hotel luggage attendant' },
+  { id: 's_m_m_gardener_01', name: 'Landscape Gardener', hash: '0x3275CA49', category: 'Services & Jobs', type: 'ped', description: 'Vinewood hills mansion groundskeeper' },
+  { id: 's_m_m_janitor', name: 'Building Janitor / Custodian', hash: '0xDF85655D', category: 'Services & Jobs', type: 'ped', description: 'Commercial cleaning custodian' },
+  { id: 's_f_y_casino_01', name: 'Casino Dealer Female', hash: '0x15F8700D', category: 'Services & Jobs', type: 'ped', description: 'Diamond Casino blackjack dealer female' },
+  { id: 's_m_y_casino_01', name: 'Casino Dealer Male', hash: '0x356CE929', category: 'Services & Jobs', type: 'ped', description: 'Diamond Casino blackjack dealer male' },
 
   { id: 'g_m_y_ballaeast_01', name: 'East Ballas Gangster', hash: '0x23180323', category: 'Gangs & Crime', type: 'ped', description: 'East Los Santos Ballas member' },
   { id: 'g_m_y_ballaorig_01', name: 'Original Ballas Leader', hash: '0x23180323', category: 'Gangs & Crime', type: 'ped', description: 'South Los Santos Ballas OG' },
+  { id: 'g_m_y_ballasout_01', name: 'South Ballas Soldier', hash: '0x7E6A7D97', category: 'Gangs & Crime', type: 'ped', description: 'Ballas gang soldier in purple' },
   { id: 'g_m_y_famca_01', name: 'Families Carson Ave Member', hash: '0x7E6A7D97', category: 'Gangs & Crime', type: 'ped', description: 'Chamberlain Gangster Families' },
   { id: 'g_m_y_famdn_01', name: 'Families Forum Drive Member', hash: '0x8B321356', category: 'Gangs & Crime', type: 'ped', description: 'Grove Street Families gangster' },
+  { id: 'g_m_y_famfor_01', name: 'Families Forum OG', hash: '0x9B22DBAF', category: 'Gangs & Crime', type: 'ped', description: 'Families Forum Drive veteran' },
   { id: 'g_m_y_salvagoon_01', name: 'Vagos Street Soldier', hash: '0x960A7C7A', category: 'Gangs & Crime', type: 'ped', description: 'Los Santos Vagos member' },
+  { id: 'g_m_y_salvagoon_02', name: 'Vagos Enforcer Male', hash: '0x2BE6766B', category: 'Gangs & Crime', type: 'ped', description: 'Rancho Vagos gang enforcer' },
   { id: 'g_m_y_mexgoon_01', name: 'Madrazo Cartel Enforcer', hash: '0x3235658F', category: 'Gangs & Crime', type: 'ped', description: 'Martin Madrazo cartel hitman' },
+  { id: 'g_m_y_mexgoon_02', name: 'Madrazo Cartel Guard', hash: '0x8D9E8F66', category: 'Gangs & Crime', type: 'ped', description: 'Madrazo compound guard' },
   { id: 'g_m_y_lost_01', name: 'The Lost MC Road Captain', hash: '0x6B626786', category: 'Gangs & Crime', type: 'ped', description: 'The Lost Motorcycle Club biker' },
   { id: 'g_m_y_lost_02', name: 'The Lost MC Enforcer', hash: '0x2BE6766B', category: 'Gangs & Crime', type: 'ped', description: 'The Lost MC biker gang member' },
+  { id: 'g_m_y_lost_03', name: 'The Lost MC Veteran', hash: '0x5B3BD996', category: 'Gangs & Crime', type: 'ped', description: 'Stab City biker club member' },
   { id: 'g_m_y_korean_01', name: 'Kkangpae Korean Mobster', hash: '0x8D9E8F66', category: 'Gangs & Crime', type: 'ped', description: 'Little Seoul Korean syndicate' },
+  { id: 'g_m_y_korean_02', name: 'Korean Syndicate Enforcer', hash: '0x106D9A99', category: 'Gangs & Crime', type: 'ped', description: 'Little Seoul mob lieutenant' },
   { id: 'g_m_y_pologoon_01', name: 'Marabunta Grande Gangster', hash: '0x5C4A456C', category: 'Gangs & Crime', type: 'ped', description: 'El Burro Heights Marabunta member' },
   { id: 'g_m_y_armgoon_02', name: 'Armenian Mob Hitman', hash: '0xE899F139', category: 'Gangs & Crime', type: 'ped', description: 'La Puerta Armenian mobster' },
+  { id: 'g_m_y_azteca_01', name: 'Varrios Los Aztecas Member', hash: '0x68076632', category: 'Gangs & Crime', type: 'ped', description: 'Los Aztecas street soldier' },
   { id: 'g_f_y_vagos_01', name: 'Vagos Female Gangster', hash: '0xA924F087', category: 'Gangs & Crime', type: 'ped', description: 'Vagos female member' },
+  { id: 'g_f_y_ballas_01', name: 'Ballas Female Gangster', hash: '0x50C3A013', category: 'Gangs & Crime', type: 'ped', description: 'East Los Santos Ballas female' },
+  { id: 'g_f_y_families_01', name: 'Families Female Gangster', hash: '0x9D92BE02', category: 'Gangs & Crime', type: 'ped', description: 'Chamberlain Families female member' },
 
   { id: 'player_zero', name: 'Michael De Santa', hash: '0x0D7114C9', category: 'Story Characters', type: 'ped', description: 'Protagonist Michael De Santa' },
   { id: 'player_one', name: 'Franklin Clinton', hash: '0x9B22DBAF', category: 'Story Characters', type: 'ped', description: 'Protagonist Franklin Clinton' },
@@ -75,11 +95,36 @@ export const GTA_PED_PROP_DATABASE: ModelEntry[] = [
   { id: 'ig_chef', name: 'Chef (Meth Cook)', hash: '0x1C13E784', category: 'Story Characters', type: 'ped', description: 'Trevor Philips Enterprises chemist' },
   { id: 'ig_paige', name: 'Paige Harris', hash: '0xD2B1DB15', category: 'Story Characters', type: 'ped', description: 'Expert heist hacker operative' },
   { id: 'ig_agatha', name: 'Agatha Baker', hash: '0xAA6F32A3', category: 'Story Characters', type: 'ped', description: 'Diamond Casino & Resort general manager' },
+  { id: 'ig_davenorton', name: 'Dave Norton', hash: '0x3275CA49', category: 'Story Characters', type: 'ped', description: 'FIB senior handler agent' },
+  { id: 'ig_stevehains', name: 'Steve Haines', hash: '0xFB5448C0', category: 'Story Characters', type: 'ped', description: 'Underbelly of Paradise TV host & FIB chief' },
+  { id: 'ig_andreas', name: 'Andreas Sanchez', hash: '0x62CA9A0C', category: 'Story Characters', type: 'ped', description: 'FIB special operations operative' },
+  { id: 'ig_hao', name: 'Hao (Street Racer)', hash: '0x88DC6D82', category: 'Story Characters', type: 'ped', description: 'Los Santos Customs tuner & underground racer' },
+  { id: 'ig_lazlow', name: 'Lazlow Jones', hash: '0xDF85655D', category: 'Story Characters', type: 'ped', description: 'Celebrity radio host and DJ' },
+  { id: 'ig_solomon', name: 'Solomon Richards', hash: '0x6A8D08D2', category: 'Story Characters', type: 'ped', description: 'Richards Majestic movie producer mogul' },
+  { id: 'ig_tanisha', name: 'Tanisha Jackson', hash: '0x4386760B', category: 'Story Characters', type: 'ped', description: 'Franklin Clinton long-time associate' },
+  { id: 'ig_wade', name: 'Wade Hebert', hash: '0xD7DA9E99', category: 'Story Characters', type: 'ped', description: 'Trevor Philips Enterprises loyal scout' },
+
+  { id: 'a_m_y_beach_01', name: 'Vespucci Beachgoer Male', hash: '0xC620CE0A', category: 'Ambient Civilians', type: 'ped', description: 'Vespucci beach swimsuit civilian' },
+  { id: 'a_f_y_beach_01', name: 'Vespucci Beachgoer Female', hash: '0x2287FC2A', category: 'Ambient Civilians', type: 'ped', description: 'Vespucci beach bikini civilian' },
+  { id: 'a_m_y_business_01', name: 'Downtown Businessman', hash: '0x3AC3A92A', category: 'Ambient Civilians', type: 'ped', description: 'Financial district executive in suit' },
+  { id: 'a_f_y_business_01', name: 'Downtown Businesswoman', hash: '0xAA6F32A3', category: 'Ambient Civilians', type: 'ped', description: 'Financial district executive female' },
+  { id: 'a_m_y_clubcust_01', name: 'Nightclub VIP Clubber', hash: '0x65F93DA2', category: 'Ambient Civilians', type: 'ped', description: 'Nightclub partygoer in luxury outfit' },
+  { id: 'a_f_y_clubcust_01', name: 'Nightclub Partygoer Female', hash: '0x4386760B', category: 'Ambient Civilians', type: 'ped', description: 'Nightclub partygoer dancer female' },
+  { id: 'a_m_y_skater_01', name: 'Skater Park Youth', hash: '0x8B321356', category: 'Ambient Civilians', type: 'ped', description: 'Los Santos skatepark resident' },
+  { id: 'a_m_y_runner_01', name: 'Morning Jogger Male', hash: '0xDF85655D', category: 'Ambient Civilians', type: 'ped', description: 'Vinewood fitness morning jogger' },
+  { id: 'a_f_y_runner_01', name: 'Morning Jogger Female', hash: '0x50C3A013', category: 'Ambient Civilians', type: 'ped', description: 'Vinewood fitness morning jogger female' },
+  { id: 'a_m_y_hipster_01', name: 'Mirror Park Hipster Male', hash: '0x99564EB2', category: 'Ambient Civilians', type: 'ped', description: 'Mirror Park trendy hipster male' },
+  { id: 'a_f_y_hipster_01', name: 'Mirror Park Hipster Female', hash: '0x9D92BE02', category: 'Ambient Civilians', type: 'ped', description: 'Mirror Park trendy hipster female' },
+  { id: 'a_m_m_tramp_01', name: 'Homeless Street Tramp', hash: '0x2C40B8F8', category: 'Ambient Civilians', type: 'ped', description: 'Downtown alleyway tramp civilian' },
+  { id: 'a_m_m_farmer_01', name: 'Grapeseed Farmer', hash: '0x5B3BD996', category: 'Ambient Civilians', type: 'ped', description: 'Grapeseed rural farmer worker' },
+  { id: 'a_f_y_tourist_01', name: 'Vinewood Tourist Female', hash: '0xAA6F32A3', category: 'Ambient Civilians', type: 'ped', description: 'Vinewood Boulevard camera tourist' },
 
   { id: 'a_c_husky', name: 'Siberian Husky Dog', hash: '0x4E89C1D9', category: 'Animals', type: 'ped', description: 'Siberian husky domestic dog' },
   { id: 'a_c_rottweiler', name: 'Rottweiler Dog (Chop)', hash: '0x9563221D', category: 'Animals', type: 'ped', description: 'Rottweiler canine companion' },
   { id: 'a_c_shepherd', name: 'German Shepherd Dog', hash: '0x25557DA1', category: 'Animals', type: 'ped', description: 'K9 police patrol dog' },
   { id: 'a_c_retriever', name: 'Golden Retriever', hash: '0x349F33E1', category: 'Animals', type: 'ped', description: 'Domestic retriever dog' },
+  { id: 'a_c_poodle', name: 'Domestic Poodle Dog', hash: '0x431FC24C', category: 'Animals', type: 'ped', description: 'Luxury Vinewood poodle dog' },
+  { id: 'a_c_pug', name: 'Domestic Pug Dog', hash: '0x6D362854', category: 'Animals', type: 'ped', description: 'Small domestic pug companion' },
   { id: 'a_c_cat_01', name: 'Domestic Cat', hash: '0x573201B8', category: 'Animals', type: 'ped', description: 'Domestic feline cat' },
   { id: 'a_c_chimp', name: 'Chimpanzee Ape', hash: '0xA8683715', category: 'Animals', type: 'ped', description: 'Primate chimp animal' },
   { id: 'a_c_cow', name: 'Farm Dairy Cow', hash: '0xFC55C24', category: 'Animals', type: 'ped', description: 'Rural farm livestock cow' },
@@ -87,6 +132,8 @@ export const GTA_PED_PROP_DATABASE: ModelEntry[] = [
   { id: 'a_c_pig', name: 'Farm Pig', hash: '0xB11BAB56', category: 'Animals', type: 'ped', description: 'Domestic farm swine' },
   { id: 'a_c_coyote', name: 'Desert Coyote', hash: '0x644AC79E', category: 'Animals', type: 'ped', description: 'Senora Desert wild coyote' },
   { id: 'a_c_mtlion', name: 'Mountain Lion / Cougar', hash: '0x12572952', category: 'Animals', type: 'ped', description: 'Wild mountain cougar feline predator' },
+  { id: 'a_c_boar', name: 'Wild Forest Boar', hash: '0xDEAD5467', category: 'Animals', type: 'ped', description: 'Wild wilderness tusker boar' },
+  { id: 'a_c_crow', name: 'Black Crow Bird', hash: '0x18012A3B', category: 'Animals', type: 'ped', description: 'Wild avian crow bird' },
 
   { id: 'prop_atm_01', name: 'Fleeca Street ATM', hash: '0x27C50C20', category: 'Props & Objects', type: 'prop', description: 'Standard city Fleeca cash machine' },
   { id: 'prop_atm_02', name: 'Bank of Liberty Wall ATM', hash: '0x99276926', category: 'Props & Objects', type: 'prop', description: 'Wall mounted red bank ATM' },
@@ -101,5 +148,7 @@ export const GTA_PED_PROP_DATABASE: ModelEntry[] = [
   { id: 'prop_vend_soda_01', name: 'eCola Vending Machine', hash: '0x4386760B', category: 'Props & Objects', type: 'prop', description: 'eCola soft drink dispenser' },
   { id: 'prop_vend_snak_01', name: 'Snack Vending Machine', hash: '0x3235658F', category: 'Props & Objects', type: 'prop', description: 'Meteorite candy & chips vending machine' },
   { id: 'prop_dumpster_01a', name: 'Street Dumpster Bin', hash: '0x2BE6766B', category: 'Props & Objects', type: 'prop', description: 'Large blue alleyway dumpster' },
-  { id: 'prop_cctv_cam_01a', name: 'Surveillance Security Camera', hash: '0x5C4A456C', category: 'Props & Objects', type: 'prop', description: 'Wall mounted 360 security dome camera' }
+  { id: 'prop_cctv_cam_01a', name: 'Surveillance Security Camera', hash: '0x5C4A456C', category: 'Props & Objects', type: 'prop', description: 'Wall mounted 360 security dome camera' },
+  { id: 'prop_table_03', name: 'Office Meeting Table', hash: '0x2052C8F3', category: 'Props & Objects', type: 'prop', description: 'Conference wooden office table' },
+  { id: 'prop_chair_01a', name: 'Office Armchair', hash: '0x6295C197', category: 'Props & Objects', type: 'prop', description: 'Leather executive office desk chair' }
 ];
