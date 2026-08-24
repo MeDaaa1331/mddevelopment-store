@@ -404,13 +404,21 @@ export const ScriptModal: React.FC = () => {
                           className="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-sm transition-all flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(16,185,129,0.5)] cursor-pointer active:scale-98"
                         >
                           <Download className="w-4 h-4 text-black" />
-                          <span>Download Free Script (.ZIP)</span>
+                          <span>Claim & Download Free Script (.ZIP via Tebex)</span>
                         </button>
+
+                        <div className="flex items-center justify-center gap-2 text-[11px] font-mono text-zinc-400">
+                          <span className="flex items-center gap-1 text-emerald-400">
+                            <ShieldCheck className="w-3.5 h-3.5" /> Tebex 0.00€ File Delivery
+                          </span>
+                          <span>•</span>
+                          <span>Instant ZIP Download</span>
+                        </div>
 
                         {downloadSuccess && (
                           <div className="p-2.5 rounded-xl bg-emerald-900/40 border border-emerald-500/30 text-[11px] text-emerald-200 flex items-center gap-2 font-mono">
                             <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                            <span>Download started! Enjoy the script on your server.</span>
+                            <span>Tebex checkout opened in a new tab to download your .ZIP file!</span>
                           </div>
                         )}
                       </div>
