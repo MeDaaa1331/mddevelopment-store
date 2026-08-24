@@ -3,7 +3,7 @@ export interface DevToolEvent {
   timestamp: number;
   toolId: string;
   toolName: string;
-  action: 'view' | 'copy_lua' | 'copy_ox' | 'copy_xml' | 'copy_json' | 'copy_hash' | 'copy_hex' | 'copy_csharp' | 'search' | 'format';
+  action: 'view' | 'copy_lua' | 'copy_ox' | 'copy_xml' | 'copy_json' | 'copy_hash' | 'copy_hex' | 'copy_csharp' | 'search' | 'format' | 'download';
   label?: string;
   meta?: Record<string, any>;
   country?: string;
@@ -17,6 +17,12 @@ export interface ToolRankItem {
   views: number;
   copies: number;
   copyRate: number;
+}
+
+export interface FreeDownloadItem {
+  name: string;
+  count: number;
+  percentage: number;
 }
 
 export interface AnalyticsSummary {
@@ -33,6 +39,11 @@ export interface AnalyticsSummary {
   recentEvents: DevToolEvent[];
   discordUsers?: any[];
   totalDiscordUsers?: number;
+  freeDownloads?: {
+    totalDownloads: number;
+    packageDownloads: FreeDownloadItem[];
+    recentDownloads: any[];
+  };
 }
 
 const LOCAL_EVENTS_KEY = 'md_dev_analytics_events_v3';
@@ -53,7 +64,8 @@ export const TOOL_NAMES: Record<string, string> = {
   webhook: 'Discord Webhooks',
   controls: 'GTA Controls',
   manifest: 'fxmanifest.lua',
-  anim: 'Anim Explorer'
+  anim: 'Anim Explorer',
+  free_download: 'Free Scripts Download'
 };
 
 export const normalizeToolId = (id: string): string => {
@@ -67,7 +79,8 @@ export const normalizeToolId = (id: string): string => {
     json_formatter: 'json',
     hash_converter: 'hash',
     color_picker: 'colors',
-    locales_translator: 'translator'
+    locales_translator: 'translator',
+    free_script: 'free_download'
   };
   return map[id] || id;
 };
@@ -76,7 +89,9 @@ interface LocalCounts {
   totalEvents: number;
   totalViews: number;
   totalCopies: number;
+  totalFreeDownloads: number;
   toolStats: Record<string, { views: number; copies: number }>;
+  freeDownloads: Record<string, number>;
   searches: Record<string, number>;
   items: Record<string, { name: string; type: string; count: number }>;
   countries: Record<string, number>;
@@ -90,7 +105,9 @@ function getLocalCounts(): LocalCounts {
       totalEvents: 0,
       totalViews: 0,
       totalCopies: 0,
+      totalFreeDownloads: 0,
       toolStats: {},
+      freeDownloads: {},
       searches: {},
       items: {},
       countries: {},
@@ -113,7 +130,9 @@ function getLocalCounts(): LocalCounts {
     totalEvents: 0,
     totalViews: 0,
     totalCopies: 0,
+    totalFreeDownloads: 0,
     toolStats: initialToolStats,
+    freeDownloads: {},
     searches: {},
     items: {},
     countries: {},
@@ -185,6 +204,15 @@ export const trackEvent = async (
       const isCopy = action.startsWith('copy_') || action === 'format';
       const isView = action === 'view';
       const isSearch = action === 'search';
+      const isDownload = action === 'download' || toolId === 'free_download';
+
+      if (isDownload) {
+        counts.totalFreeDownloads = (counts.totalFreeDownloads || 0) + 1;
+        if (label) {
+          counts.freeDownloads = counts.freeDownloads || {};
+          counts.freeDownloads[label] = (counts.freeDownloads[label] || 0) + 1;
+        }
+      }
 
       if (isView) counts.totalViews = (counts.totalViews || 0) + 1;
       if (isCopy) counts.totalCopies = (counts.totalCopies || 0) + 1;
@@ -200,7 +228,7 @@ export const trackEvent = async (
         counts.searches[q] = (counts.searches[q] || 0) + 1;
       }
 
-      if (label && !isSearch) {
+      if (label && !isSearch && !isDownload) {
         const itemKey = `${toolId}::${label.trim()}`;
         let type = 'Item';
         if (toolId === 'weapons') type = 'Weapon';
@@ -264,10 +292,18 @@ export const getStoredAnalytics = async (): Promise<AnalyticsSummary> => {
   });
   const recentEvents = Array.from(mergedEventsMap.values()).sort((a, b) => b.timestamp - a.timestamp).slice(0, 50);
 
+  const localFreeDownloadsList: FreeDownloadItem[] = Object.entries(localCounts.freeDownloads || {})
+    .map(([name, count]) => ({
+      name,
+      count,
+      percentage: (localCounts.totalFreeDownloads || 1) > 0 ? Math.round((count / Math.max(1, localCounts.totalFreeDownloads)) * 100) : 0
+    }))
+    .sort((a, b) => b.count - a.count);
+
   if (serverData && Array.isArray(serverData.toolRankings) && serverData.toolRankings.length > 0) {
     const serverToolStats = serverData.toolStats || {};
 
-    const toolRankings = Object.keys(TOOL_NAMES).map(toolId => {
+    const toolRankings = Object.keys(TOOL_NAMES).filter(k => k !== 'free_download').map(toolId => {
       const serverStats = serverToolStats[toolId] || { views: 0, copies: 0 };
       const views = serverStats.views || 0;
       const copies = serverStats.copies || 0;
@@ -302,11 +338,16 @@ export const getStoredAnalytics = async (): Promise<AnalyticsSummary> => {
       deviceBreakdown: serverData.deviceBreakdown || { desktop: 100, mobile: 0, tablet: 0 },
       recentEvents,
       discordUsers: serverData.discordUsers || [],
-      totalDiscordUsers: serverData.totalDiscordUsers || (serverData.discordUsers?.length || 0)
+      totalDiscordUsers: serverData.totalDiscordUsers || (serverData.discordUsers?.length || 0),
+      freeDownloads: serverData.freeDownloads || {
+        totalDownloads: localCounts.totalFreeDownloads || 0,
+        packageDownloads: localFreeDownloadsList,
+        recentDownloads: recentEvents.filter(ev => ev.action === 'download')
+      }
     };
   }
 
-  const toolRankings = Object.keys(TOOL_NAMES).map(toolId => {
+  const toolRankings = Object.keys(TOOL_NAMES).filter(k => k !== 'free_download').map(toolId => {
     const stats = localCounts.toolStats[toolId] || { views: 0, copies: 0 };
     const copyRate = stats.views > 0 ? Math.min(100, Math.round((stats.copies / stats.views) * 100)) : 0;
     return {
@@ -370,7 +411,12 @@ export const getStoredAnalytics = async (): Promise<AnalyticsSummary> => {
       mobile: Math.round((localCounts.devices.mobile / totalDevices) * 100) || 0,
       tablet: 0
     },
-    recentEvents
+    recentEvents,
+    freeDownloads: {
+      totalDownloads: localCounts.totalFreeDownloads || 0,
+      packageDownloads: localFreeDownloadsList,
+      recentDownloads: recentEvents.filter(ev => ev.action === 'download')
+    }
   };
 };
 

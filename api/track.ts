@@ -29,6 +29,7 @@ export default async function handler(req: any, res: any) {
       const isCopy = event.action && (event.action.startsWith('copy_') || event.action === 'format');
       const isView = event.action === 'view';
       const isSearch = event.action === 'search';
+      const isDownload = event.action === 'download' || event.toolId === 'free_download';
       const toolId = event.toolId;
 
       const promises: Promise<any>[] = [
@@ -51,6 +52,28 @@ export default async function handler(req: any, res: any) {
           headers: { Authorization: `Bearer ${kvToken}` }
         })
       ];
+
+      if (isDownload) {
+        promises.push(
+          fetch(`${kvUrl}/incr/analytics:total_free_downloads`, {
+            headers: { Authorization: `Bearer ${kvToken}` }
+          }),
+          fetch(`${kvUrl}/lpush/analytics:recent_downloads/${encodeURIComponent(JSON.stringify(enrichedEvent))}`, {
+            headers: { Authorization: `Bearer ${kvToken}` }
+          }),
+          fetch(`${kvUrl}/ltrim/analytics:recent_downloads/0/99`, {
+            headers: { Authorization: `Bearer ${kvToken}` }
+          })
+        );
+        if (event.label) {
+          const cleanName = event.label.trim().slice(0, 80);
+          promises.push(
+            fetch(`${kvUrl}/hincrby/analytics:free_downloads/${encodeURIComponent(cleanName)}/1`, {
+              headers: { Authorization: `Bearer ${kvToken}` }
+            })
+          );
+        }
+      }
 
       if (isView) {
         promises.push(
@@ -91,7 +114,7 @@ export default async function handler(req: any, res: any) {
         }
       }
 
-      if (event.label && !isSearch) {
+      if (event.label && !isSearch && !isDownload) {
         const cleanItem = event.label.trim().slice(0, 60);
         if (cleanItem) {
           promises.push(

@@ -41,7 +41,8 @@ export const AdminStatsPage: React.FC = () => {
   const [pinError, setPinError] = useState(false);
   const [data, setData] = useState<AnalyticsSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'tools' | 'items' | 'live' | 'geo' | 'discord' | 'wheel'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'downloads' | 'tools' | 'items' | 'live' | 'geo' | 'discord' | 'wheel'>('overview');
+  const [downloadSearch, setDownloadSearch] = useState('');
   const [discordSearch, setDiscordSearch] = useState('');
   const [wheelSearch, setWheelSearch] = useState('');
   const [wheelFilter, setWheelFilter] = useState<'all' | 'wins' | 'jackpots' | 'noluck'>('all');
@@ -306,6 +307,22 @@ export const AdminStatsPage: React.FC = () => {
 
           <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 relative overflow-hidden flex flex-col justify-between">
             <div className="flex items-center justify-between text-zinc-400 text-xs font-mono font-bold uppercase tracking-wider">
+              <span>Free Script Downloads</span>
+              <Download className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div className="mt-3">
+              <span className="font-display font-black text-3xl text-white">
+                {(data?.freeDownloads?.totalDownloads || 0).toLocaleString()}
+              </span>
+              <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium mt-1">
+                <Gift className="w-3.5 h-3.5" />
+                <span>{data?.freeDownloads?.packageDownloads?.length || 0} unique free scripts</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 relative overflow-hidden flex flex-col justify-between">
+            <div className="flex items-center justify-between text-zinc-400 text-xs font-mono font-bold uppercase tracking-wider">
               <span>Code Copies & Exports</span>
               <Copy className="w-4 h-4 text-cyan-400" />
             </div>
@@ -315,21 +332,6 @@ export const AdminStatsPage: React.FC = () => {
               </span>
               <div className="flex items-center gap-1.5 text-xs text-cyan-400 font-medium mt-1">
                 <span>Lua, ox_lib, XML & JSON</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 relative overflow-hidden flex flex-col justify-between">
-            <div className="flex items-center justify-between text-zinc-400 text-xs font-mono font-bold uppercase tracking-wider">
-              <span>Copy Conversion Rate</span>
-              <Flame className="w-4 h-4 text-amber-400" />
-            </div>
-            <div className="mt-3">
-              <span className="font-display font-black text-3xl text-white">
-                {data?.totalViews && data.totalViews > 0 ? Math.round((data.totalCopies / data.totalViews) * 100) : 0}%
-              </span>
-              <div className="flex items-center gap-1.5 text-xs text-amber-400 font-medium mt-1">
-                <span>Copy to view ratio</span>
               </div>
             </div>
           </div>
@@ -350,9 +352,10 @@ export const AdminStatsPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 p-1.5 bg-zinc-950/80 rounded-2xl border border-white/10 overflow-x-auto">
+        <div className="flex items-center gap-2 p-1.5 bg-zinc-950/80 rounded-2xl border border-white/10 overflow-x-auto no-scrollbar scrollbar-none">
           {[
             { id: 'overview', label: 'Overview & Top Charts', icon: BarChart3 },
+            { id: 'downloads', label: `Free Downloads (${data?.freeDownloads?.totalDownloads || 0})`, icon: Download },
             { id: 'wheel', label: `Wheel of Fortune (${wheelData.totalSpins || 0})`, icon: Gift },
             { id: 'tools', label: 'Tool Leaderboard', icon: Flame },
             { id: 'items', label: 'Top GTA V Items & Queries', icon: Search },
@@ -428,6 +431,69 @@ export const AdminStatsPage: React.FC = () => {
                   );
                 })}
               </div>
+              <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-display font-extrabold text-base text-white flex items-center gap-2">
+                      <Gift className="w-4 h-4 text-emerald-400" />
+                      <span>Free Scripts Download Rankings</span>
+                    </h3>
+                    <p className="text-xs text-zinc-400">Total downloads recorded for each free resource</p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('downloads')}
+                    className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1"
+                  >
+                    <span>View All Downloads</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {(data?.freeDownloads?.packageDownloads || []).length === 0 ? (
+                  <div className="p-8 rounded-2xl bg-zinc-900/40 border border-white/5 text-center">
+                    <Download className="w-6 h-6 text-zinc-600 mx-auto mb-2" />
+                    <p className="text-xs text-zinc-400 font-mono">No free script downloads recorded yet.</p>
+                    <p className="text-[11px] text-zinc-500 mt-1">When users click Download on free scripts, real-time counters appear here.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {(data?.freeDownloads?.packageDownloads || []).map((pkg, idx) => {
+                      const totalDls = Math.max(1, data?.freeDownloads?.totalDownloads || 1);
+                      const pct = Math.round((pkg.count / totalDls) * 100);
+                      return (
+                        <div key={idx} className="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-2">
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className={`w-5 h-5 rounded-lg flex items-center justify-center font-mono text-[11px] font-black shrink-0 ${
+                                idx === 0 ? 'bg-emerald-400 text-black' : idx === 1 ? 'bg-zinc-300 text-black' : 'bg-zinc-800 text-zinc-400'
+                              }`}>
+                                #{idx + 1}
+                              </span>
+                              <span className="font-bold text-white truncate">{pkg.name}</span>
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-[10px] font-mono text-emerald-400 font-bold">
+                                FREE
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-3 shrink-0 font-mono text-xs">
+                              <span className="text-emerald-400 font-bold">
+                                <strong className="text-white text-sm">{pkg.count}</strong> downloads ({pct}%)
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="w-full h-2 rounded-full bg-zinc-800 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500"
+                              style={{ width: `${Math.max(5, pct)}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="lg:col-span-4 flex flex-col gap-6">
@@ -486,6 +552,248 @@ export const AdminStatsPage: React.FC = () => {
                   <span className="text-emerald-400 font-bold">/api/track & /api/stats</span>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'downloads' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-mono text-zinc-400 uppercase font-bold">Total Free Downloads</span>
+                  <span className="font-display font-black text-2xl text-white block mt-1">
+                    {(data?.freeDownloads?.totalDownloads || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <Download className="w-5 h-5" />
+                </div>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-mono text-zinc-400 uppercase font-bold">Top Free Resource</span>
+                  <span className="font-display font-black text-sm text-white block mt-1 truncate max-w-[150px]">
+                    {data?.freeDownloads?.packageDownloads?.[0]?.name || 'None yet'}
+                  </span>
+                  {data?.freeDownloads?.packageDownloads?.[0] && (
+                    <span className="text-[11px] font-mono text-emerald-400">
+                      {data.freeDownloads.packageDownloads[0].count} downloads ({data.freeDownloads.packageDownloads[0].percentage}%)
+                    </span>
+                  )}
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                  <Flame className="w-5 h-5" />
+                </div>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-mono text-zinc-400 uppercase font-bold">Free Scripts Tracked</span>
+                  <span className="font-display font-black text-2xl text-white block mt-1">
+                    {data?.freeDownloads?.packageDownloads?.length || 0}
+                  </span>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                  <Gift className="w-5 h-5" />
+                </div>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-mono text-zinc-400 uppercase font-bold">Verified Downloaders</span>
+                  <span className="font-display font-black text-2xl text-white block mt-1">
+                    {(data?.discordUsers || []).filter(u => (u.downloadsCount || 0) > 0).length || (data?.freeDownloads?.recentDownloads?.length || 0)}
+                  </span>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/30 flex items-center justify-center text-violet-400">
+                  <Users className="w-5 h-5" />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-display font-bold text-lg text-white flex items-center gap-2">
+                    <Download className="w-5 h-5 text-emerald-400" />
+                    <span>Free Products Download Counter</span>
+                  </h3>
+                  <p className="text-xs text-zinc-400">Ranking and exact count of downloads for each free resource</p>
+                </div>
+
+                <div className="relative w-full sm:w-72">
+                  <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+                  <input
+                    type="text"
+                    value={downloadSearch}
+                    onChange={e => setDownloadSearch(e.target.value)}
+                    placeholder="Filter by script name..."
+                    className="w-full pl-9 pr-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white/30"
+                  />
+                </div>
+              </div>
+
+              {(() => {
+                const list = (data?.freeDownloads?.packageDownloads || []).filter(p =>
+                  !downloadSearch || p.name.toLowerCase().includes(downloadSearch.toLowerCase())
+                );
+
+                if (list.length === 0) {
+                  return (
+                    <div className="py-12 text-center text-zinc-500 font-mono text-xs">
+                      No free product download records found.
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-white/10 text-zinc-400 font-mono uppercase text-[11px]">
+                          <th className="py-3 pl-2">Rank & Product Name</th>
+                          <th className="py-3">Downloads Count</th>
+                          <th className="py-3">Popularity Share</th>
+                          <th className="py-3 text-right pr-2">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5 font-sans">
+                        {list.map((pkg, idx) => {
+                          const totalDls = Math.max(1, data?.freeDownloads?.totalDownloads || 1);
+                          const pct = Math.round((pkg.count / totalDls) * 100);
+
+                          return (
+                            <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
+                              <td className="py-4 pl-2">
+                                <div className="flex items-center gap-3">
+                                  <span className={`w-7 h-7 rounded-xl flex items-center justify-center font-mono text-xs font-black shrink-0 ${
+                                    idx === 0 ? 'bg-emerald-400 text-black shadow-glow-sm' : idx === 1 ? 'bg-zinc-300 text-black' : idx === 2 ? 'bg-amber-700 text-white' : 'bg-zinc-800 text-zinc-400'
+                                  }`}>
+                                    #{idx + 1}
+                                  </span>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-sm text-white">{pkg.name}</span>
+                                      <span className="px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-[10px] font-mono text-emerald-400 font-bold">
+                                        FREE
+                                      </span>
+                                    </div>
+                                    <span className="text-[11px] text-zinc-500 font-mono mt-0.5 block">FiveM Ready Resource</span>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-4 font-mono">
+                                <span className="font-black text-base text-white">{pkg.count.toLocaleString()}</span>
+                                <span className="text-xs text-zinc-400 ml-1.5">times downloaded</span>
+                              </td>
+                              <td className="py-4">
+                                <div className="space-y-1.5 w-48">
+                                  <div className="flex items-center justify-between text-[11px] font-mono">
+                                    <span className="text-emerald-400 font-bold">{pct}%</span>
+                                    <span className="text-zinc-500">{pkg.count}/{totalDls}</span>
+                                  </div>
+                                  <div className="w-full h-2 rounded-full bg-zinc-800 overflow-hidden">
+                                    <div
+                                      className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500"
+                                      style={{ width: `${Math.max(4, pct)}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-4 text-right pr-2">
+                                <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs font-mono font-bold text-emerald-400 inline-flex items-center gap-1.5">
+                                  <CheckCircle2 className="w-3.5 h-3.5" /> Active in Store
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-display font-bold text-base text-white flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-emerald-400" />
+                    <span>Recent Free Downloads Log</span>
+                  </h3>
+                  <p className="text-xs text-zinc-400">Live chronological feed of free resource downloads</p>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-400 font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live
+                </span>
+              </div>
+
+              {(() => {
+                const recentList = (data?.freeDownloads?.recentDownloads || []).filter(item => {
+                  if (!downloadSearch) return true;
+                  const q = downloadSearch.toLowerCase();
+                  return (
+                    (item.label || '').toLowerCase().includes(q) ||
+                    (item.meta?.username || '').toLowerCase().includes(q) ||
+                    (item.country || '').toLowerCase().includes(q)
+                  );
+                });
+
+                if (recentList.length === 0) {
+                  return (
+                    <div className="py-8 text-center text-zinc-500 font-mono text-xs">
+                      No recent download stream events yet.
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-2.5">
+                    {recentList.map((ev, idx) => (
+                      <div key={ev.id || idx} className="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/5 flex items-center justify-between gap-4 flex-wrap hover:border-white/15 transition-all">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                            <Download className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-xs text-white">{ev.label || 'Free Resource'}</span>
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-emerald-950/80 border border-emerald-500/30 text-emerald-400">
+                                DOWNLOAD
+                              </span>
+                              {ev.meta?.username && (
+                                <span className="text-[11px] font-mono text-zinc-300">
+                                  by <strong className="text-white">@{ev.meta.username}</strong>
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-zinc-500 font-mono block mt-0.5">
+                              {ev.meta?.filename || ev.meta?.slug || 'Direct ZIP deliverable'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 text-xs font-mono text-zinc-500">
+                          <span className="flex items-center gap-1">
+                            <Globe className="w-3.5 h-3.5" />
+                            <span>{ev.country || 'CZ'}</span>
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Monitor className="w-3.5 h-3.5" />
+                            <span>{ev.device || 'Desktop'}</span>
+                          </span>
+                          <span className="text-zinc-400">
+                            {new Date(ev.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}

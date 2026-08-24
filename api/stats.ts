@@ -114,6 +114,9 @@ export default async function handler(req: any, res: any) {
       devicesRes,
       recentEventsRes,
       discordIndexRes,
+      totalFreeDownloadsRes,
+      freeDownloadsHashRes,
+      recentDownloadsRes,
       ...indivResults
     ] = await Promise.all([
       fetch(`${kvUrl}/get/analytics:total_events`, { headers }).then(r => r.json()).catch(() => ({ result: 0 })),
@@ -128,6 +131,9 @@ export default async function handler(req: any, res: any) {
       fetch(`${kvUrl}/hgetall/analytics:devices`, { headers }).then(r => r.json()).catch(() => ({ result: {} })),
       fetch(`${kvUrl}/lrange/analytics:recent_events/0/99`, { headers }).then(r => r.json()).catch(() => ({ result: [] })),
       fetch(`${kvUrl}/smembers/users:discord:index`, { headers }).then(r => r.json()).catch(() => ({ result: [] })),
+      fetch(`${kvUrl}/get/analytics:total_free_downloads`, { headers }).then(r => r.json()).catch(() => ({ result: 0 })),
+      fetch(`${kvUrl}/hgetall/analytics:free_downloads`, { headers }).then(r => r.json()).catch(() => ({ result: {} })),
+      fetch(`${kvUrl}/lrange/analytics:recent_downloads/0/49`, { headers }).then(r => r.json()).catch(() => ({ result: [] })),
       ...viewKeyFetches,
       ...copyKeyFetches
     ]);
@@ -148,6 +154,7 @@ export default async function handler(req: any, res: any) {
     const rawCountriesHash = parseHashResult(countriesRes?.result);
     const rawReferrersHash = parseHashResult(referrersRes?.result);
     const rawDevicesHash = parseHashResult(devicesRes?.result);
+    const rawFreeDownloadsHash = parseHashResult(freeDownloadsHashRes?.result);
 
     const indivViews = indivResults.slice(0, ALL_TOOLS.length);
     const indivCopies = indivResults.slice(ALL_TOOLS.length);
@@ -247,6 +254,16 @@ export default async function handler(req: any, res: any) {
 
     const recentEvents = (recentEventsRes?.result || []).map((entry: any) => safeParseJson(entry)).filter(Boolean);
 
+    const totalFreeDownloads = parseInt(totalFreeDownloadsRes?.result || '0', 10) || Object.values(rawFreeDownloadsHash).reduce((a, b) => a + b, 0);
+    const packageDownloads = Object.entries(rawFreeDownloadsHash)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: totalFreeDownloads > 0 ? Math.round((count / totalFreeDownloads) * 100) : 0
+      }))
+      .sort((a, b) => b.count - a.count);
+    const recentDownloads = (recentDownloadsRes?.result || []).map((entry: any) => safeParseJson(entry)).filter(Boolean);
+
     return res.status(200).json({
       totalEvents,
       totalViews,
@@ -265,7 +282,12 @@ export default async function handler(req: any, res: any) {
       },
       recentEvents: recentEvents || [],
       discordUsers: discordUsers || [],
-      totalDiscordUsers: discordUsers.length || 0
+      totalDiscordUsers: discordUsers.length || 0,
+      freeDownloads: {
+        totalDownloads: totalFreeDownloads,
+        packageDownloads,
+        recentDownloads
+      }
     });
 
   } catch (err: any) {

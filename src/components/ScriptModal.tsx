@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { extractYouTubeId } from '../utils/youtube';
 import { TEBEX_CONFIG } from '../config/tebex';
 import { triggerDirectScriptDownload } from '../utils/directDownload';
+import { trackEvent } from '../utils/analytics';
 
 export const ScriptModal: React.FC = () => {
   const { selectedPackage, setSelectedPackage } = useStore();
@@ -112,6 +113,13 @@ export const ScriptModal: React.FC = () => {
         downloadsCount: (user.downloadsCount || 0) + 1
       });
     }
+
+    trackEvent('free_download', 'download', selectedPackage.name, {
+      packageId: selectedPackage.id,
+      slug: selectedPackage.slug,
+      username: user?.username,
+      userId: user?.id
+    });
 
     setDownloadSuccess(true);
     await triggerDirectScriptDownload(selectedPackage);
