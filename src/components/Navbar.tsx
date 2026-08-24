@@ -17,7 +17,7 @@ export const Navbar: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [localSearch, setLocalSearch] = useState('');
-  const [activeNav, setActiveNav] = useState<string>(() => (currentRoute === '/devtools' ? 'devtools' : filters.category || 'all'));
+  const [activeNav, setActiveNav] = useState<string>(() => (currentRoute === '/devtools' ? 'devtools' : filters.category || 'paid'));
   const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number; opacity: number }>({ left: 0, width: 0, opacity: 0 });
 
   const navRef = useRef<HTMLElement>(null);
@@ -33,13 +33,13 @@ export const Navbar: React.FC = () => {
     if (currentRoute === '/devtools') {
       setActiveNav('devtools');
     } else {
-      setActiveNav(filters.category || 'all');
+      setActiveNav(filters.category || 'paid');
     }
   }, [currentRoute, filters.category]);
 
   const updateIndicator = () => {
     if (!navRef.current) return;
-    const targetSlug = activeNav || 'all';
+    const targetSlug = activeNav || 'paid';
     const activeBtn = navRef.current.querySelector(`[data-nav="${targetSlug}"]`) as HTMLElement | null;
     if (activeBtn) {
       setIndicatorStyle({

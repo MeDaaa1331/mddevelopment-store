@@ -125,7 +125,7 @@ export const CategoryFilter: React.FC = () => {
       <div className="flex items-center justify-between gap-2 border-b border-white/5 pb-3">
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
           {categories.map((cat) => {
-            const isActive = filters.category === cat.slug || (cat.slug === 'all' && filters.category === '');
+            const isActive = filters.category === cat.slug;
 
             let count = 0;
             if (cat.slug === 'all') count = packages.length;
