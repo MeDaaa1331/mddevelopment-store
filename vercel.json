@@ -1,4 +1,10 @@
 {
+  "crons": [
+    {
+      "path": "/api/wheel/cleanup-coupons",
+      "schedule": "0 * * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",

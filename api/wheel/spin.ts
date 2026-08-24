@@ -1,3 +1,5 @@
+import { runCouponsCleanup } from './cleanup-coupons';
+
 const WHEEL_PRIZES = [
   { id: 'none', label: 'No Luck', shortLabel: 'NO LUCK', discount: 0, weight: 25, color: '#18181b' },
   { id: 'disc5', label: '5% Discount', shortLabel: '5% OFF', discount: 5, weight: 20, color: '#0f172a' },
@@ -192,8 +194,8 @@ export default async function handler(req: any, res: any) {
               minimum: 0,
               username: '',
               note: prize.discount === 100
-                ? `100% Free Escrow Script for ${user.username || 'User'} (Valid 24h: ${new Date(expiresAt).toISOString()})`
-                : `Daily Wheel Reward for ${user.username || 'User'} (Valid 24h: ${new Date(expiresAt).toISOString()})`
+                ? `100% Free Escrow Script for ${user.username || 'User'} (Valid until: ${new Date(expiresAt).toISOString()})`
+                : `Daily Wheel Reward for ${user.username || 'User'} (Valid until: ${new Date(expiresAt).toISOString()})`
             })
           });
         } catch (err) {}
@@ -269,7 +271,8 @@ export default async function handler(req: any, res: any) {
             createdAt: now,
             expiresAt
           })],
-          ['EXPIRE', `coupons:spin:${couponCode}`, '90000']
+          ['SADD', 'coupons:spin:index', couponCode],
+          ['EXPIRE', `coupons:spin:${couponCode}`, '172800']
         );
       }
 
@@ -282,6 +285,8 @@ export default async function handler(req: any, res: any) {
         body: JSON.stringify(pipelineCommands)
       }).catch(() => {});
     }
+
+    runCouponsCleanup().catch(() => {});
 
     return res.status(200).json({
       success: true,

@@ -1,3 +1,5 @@
+import { runCouponsCleanup } from './cleanup-coupons';
+
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -47,13 +49,15 @@ export default async function handler(req: any, res: any) {
 
     if (kvUrl && kvToken) {
       const headers = { Authorization: `Bearer ${kvToken}` };
-      const [userRes, lastSpinRes] = await Promise.all([
+      const [userRes, lastSpinRes, lastCleanupRes] = await Promise.all([
         fetch(`${kvUrl}/get/users:discord:${userId}`, { headers }),
-        fetch(`${kvUrl}/get/users:discord:${userId}:last_spin`, { headers })
+        fetch(`${kvUrl}/get/users:discord:${userId}:last_spin`, { headers }),
+        fetch(`${kvUrl}/get/analytics:last_coupon_cleanup`, { headers })
       ]);
 
       const userData = await userRes.json().catch(() => null);
       const lastSpinData = await lastSpinRes.json().catch(() => null);
+      const lastCleanupData = await lastCleanupRes.json().catch(() => null);
 
       if (userData?.result) {
         try {
@@ -74,6 +78,11 @@ export default async function handler(req: any, res: any) {
         if (directSpin > lastSpin) {
           lastSpin = directSpin;
         }
+      }
+
+      const lastCleanupTime = parseInt(String(lastCleanupData?.result || '0'), 10) || 0;
+      if (Date.now() - lastCleanupTime > 3600000) {
+        runCouponsCleanup().catch(() => {});
       }
     }
 
