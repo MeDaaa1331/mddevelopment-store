@@ -172,10 +172,10 @@ end)`;
           </div>
           <div>
             <h3 className="font-display font-bold text-base text-white">
-              GTA V All Peds & Props Spawner Explorer ({GTA_PED_PROP_DATABASE.length} Models)
+              GTA V All Peds & Props Spawner Explorer ({GTA_PED_PROP_DATABASE.length.toLocaleString()} Models)
             </h3>
             <p className="text-xs text-zinc-400">
-              Complete searchable encyclopedia of all Grand Theft Auto V Ped characters and interactive world props with live photos, coordinates, and Lua generators.
+              Complete searchable encyclopedia of all Grand Theft Auto V Ped characters and world props with live photos, coordinates, and Lua generators.
             </p>
           </div>
         </div>
@@ -196,7 +196,7 @@ end)`;
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Search all 1,165+ models (cop, atm, vault, medic, michael...)"
+                placeholder="Search 22,740+ GTA models (cop, atm, barrier, door, bench, tree...)"
                 className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white/30"
               />
             </div>
@@ -215,7 +215,7 @@ end)`;
                       : 'text-zinc-400 hover:text-white bg-zinc-900/60 border border-white/5'
                   }`}
                 >
-                  {t === 'all' ? `All (${GTA_PED_PROP_DATABASE.length})` : t === 'ped' ? `Peds (1,109)` : `Props (56)`}
+                  {t === 'all' ? `All (${GTA_PED_PROP_DATABASE.length.toLocaleString()})` : t === 'ped' ? `Peds (1,109)` : `Props (21,631)`}
                 </button>
               ))}
             </div>
