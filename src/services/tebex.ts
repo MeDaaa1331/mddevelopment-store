@@ -120,6 +120,20 @@ export class TebexService {
 
         const screenshots = Array.from(screenshotsSet);
 
+        let freeDownloadUrl = rawPkg.download_url;
+        if (!freeDownloadUrl && desc) {
+          const matchedHref = desc.match(/href=["'](https?:\/\/[^"']+)["']/i);
+          const matchedUrl = desc.match(/(https?:\/\/(?:github\.com|drive\.google\.com|mediafire\.com|mega\.nz|dropbox\.com|forum\.cfx\.re)[^\s<"'>]+)/i);
+          if (matchedHref && matchedHref[1]) {
+            freeDownloadUrl = matchedHref[1];
+          } else if (matchedUrl && matchedUrl[1]) {
+            freeDownloadUrl = matchedUrl[1];
+          }
+        }
+        if (!freeDownloadUrl && isFree && rawPkg.id) {
+          freeDownloadUrl = `${TEBEX_CONFIG.storeDomain}/checkout/packages/add/${rawPkg.id}/single`;
+        }
+
         const pkg: TebexPackage = {
           id: rawPkg.id,
           name: rawPkg.name,
@@ -140,7 +154,7 @@ export class TebexService {
           youtube_id: youtubeId,
           is_open_source: isOpenSource,
           is_free: isFree,
-          download_url: isFree ? (rawPkg.download_url || 'https://github.com/MeDaaa1331/mddevelopment-store/archive/refs/heads/main.zip') : undefined,
+          download_url: isFree ? (freeDownloadUrl || `${TEBEX_CONFIG.storeDomain}/checkout/packages/add/${rawPkg.id}/single`) : undefined,
           features: [
             isFree ? 'Discord Member Exclusive direct free download' : 'Instant CFX.re Keymaster asset delivery',
             'Native ESX & QBCore framework support',

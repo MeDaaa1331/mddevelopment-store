@@ -99,7 +99,7 @@ export const ScriptModal: React.FC = () => {
 
   const handleFreeDownload = () => {
     if (!selectedPackage) return;
-    const downloadLink = selectedPackage.download_url || 'https://github.com/MeDaaa1331/mddevelopment-store/archive/refs/heads/main.zip';
+    const downloadLink = selectedPackage.download_url || `${TEBEX_CONFIG.storeDomain}/checkout/packages/add/${selectedPackage.id}/single`;
 
     recordHistory({
       title: `Free Download: ${selectedPackage.name}`,
@@ -114,14 +114,7 @@ export const ScriptModal: React.FC = () => {
     }
 
     setDownloadSuccess(true);
-
-    const a = document.createElement('a');
-    a.href = downloadLink;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    window.open(downloadLink, '_blank', 'noopener,noreferrer');
   };
 
   return (
