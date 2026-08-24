@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   User,
   Box,
@@ -38,8 +38,13 @@ export const PedPropExplorer: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState<'all' | 'ped' | 'prop'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [search, setSearch] = useState('');
+  const [displayLimit, setDisplayLimit] = useState(60);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    setDisplayLimit(60);
+  }, [typeFilter, selectedCategory, search]);
 
   const availableCategories = useMemo(() => {
     const list = Array.from(
@@ -70,6 +75,10 @@ export const PedPropExplorer: React.FC = () => {
       );
     });
   }, [typeFilter, selectedCategory, search]);
+
+  const visibleModels = useMemo(() => {
+    return filteredModels.slice(0, displayLimit);
+  }, [filteredModels, displayLimit]);
 
   const handleCopy = (key: string, code: string) => {
     navigator.clipboard.writeText(code);
@@ -162,9 +171,11 @@ end)`;
             <Layers className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-display font-bold text-base text-white">Ped & Prop Spawner / Model Explorer</h3>
+            <h3 className="font-display font-bold text-base text-white">
+              GTA V All Peds & Props Spawner Explorer ({GTA_PED_PROP_DATABASE.length} Models)
+            </h3>
             <p className="text-xs text-zinc-400">
-              Live visual database of GTA V Character Peds and Interactive World Props with instant renders, coordinates, and Lua generators.
+              Complete searchable encyclopedia of all Grand Theft Auto V Ped characters and interactive world props with live photos, coordinates, and Lua generators.
             </p>
           </div>
         </div>
@@ -185,7 +196,7 @@ end)`;
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Search peds & props (cop, atm, vault, medic, barrier...)"
+                placeholder="Search all 1,165+ models (cop, atm, vault, medic, michael...)"
                 className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white/30"
               />
             </div>
@@ -204,7 +215,7 @@ end)`;
                       : 'text-zinc-400 hover:text-white bg-zinc-900/60 border border-white/5'
                   }`}
                 >
-                  {t === 'all' ? 'All Models' : t === 'ped' ? 'NPC Peds' : 'World Props'}
+                  {t === 'all' ? `All (${GTA_PED_PROP_DATABASE.length})` : t === 'ped' ? `Peds (1,109)` : `Props (56)`}
                 </button>
               ))}
             </div>
@@ -224,10 +235,14 @@ end)`;
                 </button>
               ))}
             </div>
+
+            <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400 px-1 pt-1">
+              <span>Showing {visibleModels.length} of {filteredModels.length} models</span>
+            </div>
           </div>
 
           <div data-lenis-prevent className="space-y-2 max-h-[580px] overflow-y-auto pr-1">
-            {filteredModels.map(model => {
+            {visibleModels.map(model => {
               const active = selectedModelId === model.id;
               const imgUrl = getModelImageUrl(model);
 
@@ -277,6 +292,15 @@ end)`;
                 </div>
               );
             })}
+
+            {filteredModels.length > displayLimit && (
+              <button
+                onClick={() => setDisplayLimit(prev => prev + 60)}
+                className="w-full py-2.5 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-white/10 text-xs font-mono font-bold text-emerald-400 hover:text-emerald-300 transition-all cursor-pointer text-center shadow-sm mt-2"
+              >
+                Load More Models ({filteredModels.length - displayLimit} remaining)
+              </button>
+            )}
           </div>
         </div>
 
