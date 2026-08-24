@@ -93,6 +93,9 @@ export const PedPropExplorer: React.FC = () => {
     if (model.type === 'ped') {
       return `https://docs.fivem.net/peds/${model.id}.png`;
     }
+    if (model.type === 'prop') {
+      return `https://forge.plebmasters.de/objects/${model.id}.png`;
+    }
     return null;
   };
 
