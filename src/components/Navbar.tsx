@@ -52,8 +52,30 @@ export const Navbar: React.FC = () => {
 
   useEffect(() => {
     updateIndicator();
+    const raf = requestAnimationFrame(updateIndicator);
+    const t1 = setTimeout(updateIndicator, 50);
+    const t2 = setTimeout(updateIndicator, 150);
+    const t3 = setTimeout(updateIndicator, 350);
+
+    if (document.fonts?.ready) {
+      document.fonts.ready.then(updateIndicator);
+    }
+
+    let observer: ResizeObserver | null = null;
+    if (navRef.current && typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => updateIndicator());
+      observer.observe(navRef.current);
+    }
+
     window.addEventListener('resize', updateIndicator);
-    return () => window.removeEventListener('resize', updateIndicator);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      if (observer) observer.disconnect();
+      window.removeEventListener('resize', updateIndicator);
+    };
   }, [activeNav, filters.category, currentRoute]);
 
   const handleCategory = (slug: string) => {
