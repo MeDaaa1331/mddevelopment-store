@@ -1,4 +1,4 @@
-import { runCouponsCleanup } from './cleanup-coupons';
+import { runCouponsCleanup } from '../_lib/cleanupCoupons';
 
 const WHEEL_PRIZES = [
   { id: 'none', label: 'No Luck', shortLabel: 'NO LUCK', discount: 0, weight: 25, color: '#18181b' },

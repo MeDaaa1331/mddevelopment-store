@@ -113,28 +113,3 @@ export async function runCouponsCleanup(): Promise<{
     return { success: false, checkedCount: 0, deletedCount: 0, deletedCodes: [] };
   }
 }
-
-export default async function handler(req: any, res: any) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  try {
-    const result = await runCouponsCleanup();
-    return res.status(200).json({
-      ...result,
-      timestamp: Date.now(),
-      message: `Cleaned up ${result.deletedCount} expired coupons from Tebex dashboard.`
-    });
-  } catch (err: any) {
-    return res.status(500).json({
-      success: false,
-      error: 'Error during coupon cleanup',
-      details: err.message
-    });
-  }
-}

@@ -1,4 +1,4 @@
-import { runCouponsCleanup } from './cleanup-coupons';
+import { runCouponsCleanup } from '../_lib/cleanupCoupons';
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
