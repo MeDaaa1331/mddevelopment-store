@@ -54,7 +54,7 @@ async function cleanupExpiredCoupons(tebexSecret: string, kvUrl?: string, kvToke
     });
 
     const now = Date.now();
-    const headers = kvToken ? { Authorization: `Bearer ${kvToken}` } : {};
+    const headers: Record<string, string> = kvToken ? { Authorization: `Bearer ${kvToken}` } : {};
 
     for (const coupon of wheelCoupons) {
       const code = (coupon.code || '').toUpperCase();
