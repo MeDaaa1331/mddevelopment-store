@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
+import { AnnouncementBanner } from './components/AnnouncementBanner';
 import { CategoryFilter } from './components/CategoryFilter';
 import { ScriptGrid } from './components/ScriptGrid';
 import { FeaturesSection } from './components/FeaturesSection';
@@ -148,6 +149,7 @@ const AppContent: React.FC = () => {
           </div>
           <p className="text-xs text-zinc-400 max-w-sm">Instant delivery via CFX Keymaster upon Tebex checkout completion.</p>
         </div>
+        <AnnouncementBanner />
         <CategoryFilter />
         <ScriptGrid />
       </main>

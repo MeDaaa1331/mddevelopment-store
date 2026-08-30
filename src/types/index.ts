@@ -79,3 +79,18 @@ export interface FAQItem {
   answer: string;
   category?: 'general' | 'technical' | 'billing' | 'installation' | 'payments' | string;
 }
+
+export interface SiteAnnouncement {
+  id: string;
+  text: string;
+  badge?: string;
+  icon?: 'megaphone' | 'sparkles' | 'flame' | 'bell' | 'tag' | 'gift' | 'alert' | 'shield';
+  color?: 'emerald' | 'purple' | 'amber' | 'cyan' | 'rose' | 'blue' | 'zinc';
+  font?: 'sans' | 'display' | 'mono' | 'serif';
+  linkUrl?: string;
+  linkText?: string;
+  closable?: boolean;
+  enabled: boolean;
+  createdAt: number;
+  updatedAt: number;
+}

@@ -77,23 +77,63 @@ function parseHashResult(raw: any): Record<string, number> {
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
-  try {
-    const kvUrl = process.env.KV_REST_API_URL || process.env.REDIS_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-    const kvToken = process.env.KV_REST_API_TOKEN || process.env.REDIS_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  const kvUrl = process.env.KV_REST_API_URL || process.env.REDIS_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const kvToken = process.env.KV_REST_API_TOKEN || process.env.REDIS_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
-    if (!kvUrl || !kvToken) {
-      return res.status(200).json({ status: 'offline_fallback' });
+  if (!kvUrl || !kvToken) {
+    return res.status(200).json({ status: 'offline_fallback', announcement: null });
+  }
+
+  const headers = { Authorization: `Bearer ${kvToken}` };
+
+  if (req.method === 'POST') {
+    try {
+      const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+      const action = body.action || req.query?.action;
+
+      if (action === 'save_announcement') {
+        const announcementData = body.announcement || null;
+        if (!announcementData) {
+          return res.status(400).json({ error: 'Missing announcement payload' });
+        }
+        await fetch(`${kvUrl}/set/site:announcement`, {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify(announcementData)
+        });
+        return res.status(200).json({ success: true, announcement: announcementData });
+      }
+
+      if (action === 'delete_announcement') {
+        await fetch(`${kvUrl}/del/site:announcement`, { headers });
+        return res.status(200).json({ success: true, announcement: null });
+      }
+
+      return res.status(400).json({ error: 'Unknown action' });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
     }
+  }
 
-    const headers = { Authorization: `Bearer ${kvToken}` };
+  const queryType = req.query?.type || req.query?.action;
+  if (queryType === 'announcement') {
+    try {
+      const annRes = await fetch(`${kvUrl}/get/site:announcement`, { headers }).then(r => r.json()).catch(() => ({ result: null }));
+      const announcement = safeParseJson(annRes?.result);
+      return res.status(200).json({ announcement });
+    } catch (err) {
+      return res.status(200).json({ announcement: null });
+    }
+  }
 
+  try {
     const viewKeyFetches = ALL_TOOLS.map(t =>
       fetch(`${kvUrl}/get/analytics:tool_views:${t}`, { headers }).then(r => r.json()).catch(() => ({ result: 0 }))
     );
@@ -117,6 +157,7 @@ export default async function handler(req: any, res: any) {
       totalFreeDownloadsRes,
       freeDownloadsHashRes,
       recentDownloadsRes,
+      announcementRes,
       ...indivResults
     ] = await Promise.all([
       fetch(`${kvUrl}/get/analytics:total_events`, { headers }).then(r => r.json()).catch(() => ({ result: 0 })),
@@ -134,18 +175,14 @@ export default async function handler(req: any, res: any) {
       fetch(`${kvUrl}/get/analytics:total_free_downloads`, { headers }).then(r => r.json()).catch(() => ({ result: 0 })),
       fetch(`${kvUrl}/hgetall/analytics:free_downloads`, { headers }).then(r => r.json()).catch(() => ({ result: {} })),
       fetch(`${kvUrl}/lrange/analytics:recent_downloads/0/49`, { headers }).then(r => r.json()).catch(() => ({ result: [] })),
+      fetch(`${kvUrl}/get/site:announcement`, { headers }).then(r => r.json()).catch(() => ({ result: null })),
       ...viewKeyFetches,
       ...copyKeyFetches
     ]);
 
-    const discordUserIds: string[] = (discordIndexRes?.result || []).filter(Boolean);
-    const discordUserFetches = discordUserIds.map(id =>
-      fetch(`${kvUrl}/get/users:discord:${id}`, { headers })
-        .then(r => r.json())
-        .then(d => (d?.result ? safeParseJson(d.result) : null))
-        .catch(() => null)
-    );
-    const discordUsers = (await Promise.all(discordUserFetches)).filter(Boolean);
+    const numTools = ALL_TOOLS.length;
+    const viewResults = indivResults.slice(0, numTools);
+    const copyResults = indivResults.slice(numTools);
 
     const rawViewsHash = parseHashResult(toolsViewsHashRes?.result);
     const rawCopiesHash = parseHashResult(toolsCopiesHashRes?.result);
@@ -156,86 +193,75 @@ export default async function handler(req: any, res: any) {
     const rawDevicesHash = parseHashResult(devicesRes?.result);
     const rawFreeDownloadsHash = parseHashResult(freeDownloadsHashRes?.result);
 
-    const indivViews = indivResults.slice(0, ALL_TOOLS.length);
-    const indivCopies = indivResults.slice(ALL_TOOLS.length);
+    const discordUserIds: string[] = Array.isArray(discordIndexRes?.result) ? discordIndexRes.result : [];
+    let discordUsers: any[] = [];
+    if (discordUserIds.length > 0) {
+      try {
+        const userFetches = discordUserIds.slice(0, 100).map(id =>
+          fetch(`${kvUrl}/get/users:discord:${id}`, { headers }).then(r => r.json()).catch(() => ({ result: null }))
+        );
+        const userResults = await Promise.all(userFetches);
+        discordUsers = userResults
+          .map(r => safeParseJson(r?.result))
+          .filter(Boolean)
+          .sort((a, b) => (b.lastLogin || b.lastSpin || 0) - (a.lastLogin || a.lastSpin || 0));
+      } catch {}
+    }
 
-    let sumCopies = 0;
-    let sumViews = 0;
+    const toolStats: Record<string, { views: number; copies: number; name: string }> = {};
+    let totalViews = parseInt(totalViewsRes?.result || '0', 10);
+    let totalCopies = parseInt(totalCopiesRes?.result || '0', 10);
+    let totalEvents = parseInt(totalEventsRes?.result || '0', 10);
 
-    const toolStats: Record<string, { views: number; copies: number; copyRate: number }> = {};
-    const toolRankings = ALL_TOOLS.map((t, idx) => {
-      const vIndiv = parseInt(indivViews[idx]?.result || '0', 10) || 0;
-      const cIndiv = parseInt(indivCopies[idx]?.result || '0', 10) || 0;
-      const vHash = rawViewsHash[t] || 0;
-      const cHash = rawCopiesHash[t] || 0;
+    ALL_TOOLS.forEach((toolId, i) => {
+      const vIndiv = parseInt(viewResults[i]?.result || '0', 10);
+      const cIndiv = parseInt(copyResults[i]?.result || '0', 10);
+      const vHash = rawViewsHash[toolId] || 0;
+      const cHash = rawCopiesHash[toolId] || 0;
 
-      let rawViewCount = Math.max(vIndiv, vHash);
+      const views = Math.max(vIndiv, vHash);
       const copies = Math.max(cIndiv, cHash);
 
-      if (copies > 0 && rawViewCount > copies * 20 && rawViewCount > 80) {
-        rawViewCount = Math.max(copies * 3, Math.min(rawViewCount, copies * 4 + 10));
-      } else if (copies === 0 && rawViewCount > 100) {
-        rawViewCount = Math.min(rawViewCount, 25);
-      }
-
-      const views = rawViewCount;
-      sumViews += views;
-      sumCopies += copies;
-
-      const copyRate = views > 0 ? Math.min(100, Math.round((copies / views) * 100)) : 0;
-      toolStats[t] = { views, copies, copyRate };
-
-      return {
-        toolId: t,
-        toolName: TOOL_NAMES[t] || t,
+      toolStats[toolId] = {
+        name: TOOL_NAMES[toolId] || toolId,
         views,
-        copies,
-        copyRate
+        copies
       };
-    }).sort((a, b) => b.copies - a.copies || b.views - a.views);
+    });
 
-    const totalCopies = sumCopies;
-    const totalViews = sumViews;
-    const totalEvents = totalViews + totalCopies + Object.values(rawSearchesHash).reduce((a, b) => a + b, 0);
+    const sumViews = Object.values(toolStats).reduce((acc, curr) => acc + curr.views, 0);
+    const sumCopies = Object.values(toolStats).reduce((acc, curr) => acc + curr.copies, 0);
+    totalViews = Math.max(totalViews, sumViews);
+    totalCopies = Math.max(totalCopies, sumCopies);
+    totalEvents = Math.max(totalEvents, totalViews + totalCopies);
+
+    const toolRankings = Object.entries(toolStats)
+      .map(([toolId, stats]) => ({
+        toolId,
+        toolName: stats.name,
+        views: stats.views,
+        copies: stats.copies,
+        total: stats.views + stats.copies
+      }))
+      .sort((a, b) => b.copies !== a.copies ? b.copies - a.copies : b.views - a.views);
 
     const topSearches = Object.entries(rawSearchesHash)
       .map(([query, count]) => ({ query, count }))
       .sort((a, b) => b.count - a.count)
-      .slice(0, 15);
+      .slice(0, 30);
 
     const topItems = Object.entries(rawItemsHash)
-      .map(([fullKey, count]) => {
-        const parts = fullKey.split('::');
-        const toolId = parts[0] || 'tool';
-        const name = parts[1] || fullKey;
-        let type = 'Item';
-        if (toolId === 'weapons') type = 'Weapon';
-        else if (toolId === 'peds') type = 'Ped / Prop';
-        else if (toolId === 'blip') type = 'Blip';
-        else if (toolId === 'flags') type = 'Flag';
-        else if (toolId === 'audio') type = 'Sound';
-        else if (toolId === 'json') type = 'JSON';
-        else if (toolId === 'hash') type = 'Hash';
-        else if (toolId === 'translator') type = 'Locale';
-        else if (toolId === 'colors') type = 'Color';
-        else if (toolId === 'coords') type = 'Coord / Zone';
-        else if (toolId === 'webhook') type = 'Webhook';
-        else if (toolId === 'controls') type = 'Control';
-        else if (toolId === 'manifest') type = 'Manifest';
-        else if (toolId === 'anim') type = 'Animation';
-
-        return { name, type, count };
-      })
+      .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
-      .slice(0, 15);
+      .slice(0, 30);
 
-    const totalCountryCount = Math.max(1, Object.values(rawCountriesHash).reduce((a, b) => a + b, 0));
+    const totalCountryHits = Math.max(1, Object.values(rawCountriesHash).reduce((a, b) => a + b, 0));
     const topCountries = Object.entries(rawCountriesHash)
       .map(([code, count]) => ({
-        code,
-        name: COUNTRY_NAMES[code] || code,
+        code: code.toUpperCase(),
+        name: COUNTRY_NAMES[code.toUpperCase()] || code.toUpperCase(),
         count,
-        percentage: Math.round((count / totalCountryCount) * 100)
+        percentage: Math.round((count / totalCountryHits) * 100)
       }))
       .sort((a, b) => b.count - a.count);
 
@@ -264,6 +290,8 @@ export default async function handler(req: any, res: any) {
       .sort((a, b) => b.count - a.count);
     const recentDownloads = (recentDownloadsRes?.result || []).map((entry: any) => safeParseJson(entry)).filter(Boolean);
 
+    const announcement = safeParseJson(announcementRes?.result);
+
     return res.status(200).json({
       totalEvents,
       totalViews,
@@ -287,10 +315,11 @@ export default async function handler(req: any, res: any) {
         totalDownloads: totalFreeDownloads,
         packageDownloads,
         recentDownloads
-      }
+      },
+      announcement
     });
 
   } catch (err: any) {
-    return res.status(200).json({ status: 'offline_fallback' });
+    return res.status(200).json({ status: 'offline_fallback', announcement: null });
   }
 }

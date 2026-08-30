@@ -27,12 +27,75 @@ import {
   MessageSquare,
   Gift,
   Tag,
-  Check
+  Check,
+  Megaphone,
+  Type,
+  Palette,
+  Link2,
+  Bold,
+  Italic,
+  Underline,
+  Strikethrough,
+  Code,
+  Bell,
+  ArrowRight,
+  X,
+  EyeOff,
+  Radio
 } from 'lucide-react';
 import { getStoredAnalytics, resetAllAnalytics, AnalyticsSummary, DevToolEvent } from '../utils/analytics';
 import { useStore } from '../context/StoreContext';
+import { SiteAnnouncement } from '../types';
 
 const ADMIN_PIN = '8616';
+
+const ANNOUNCEMENT_THEMES = {
+  emerald: { label: 'Emerald Green', bg: 'bg-emerald-950/30', border: 'border-emerald-500/30', glow: 'shadow-[0_0_25px_rgba(16,185,129,0.15)]', badgeBg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40', iconColor: 'text-emerald-400', btnBg: 'bg-emerald-500 hover:bg-emerald-400 text-black', accentLine: 'from-emerald-500/60 via-emerald-400 to-emerald-500/60' },
+  purple: { label: 'Purple Plasma', bg: 'bg-purple-950/30', border: 'border-purple-500/30', glow: 'shadow-[0_0_25px_rgba(168,85,247,0.15)]', badgeBg: 'bg-purple-500/20 text-purple-300 border-purple-500/40', iconColor: 'text-purple-400', btnBg: 'bg-purple-500 hover:bg-purple-400 text-white', accentLine: 'from-purple-500/60 via-purple-400 to-purple-500/60' },
+  amber: { label: 'Amber Gold', bg: 'bg-amber-950/30', border: 'border-amber-500/30', glow: 'shadow-[0_0_25px_rgba(245,158,11,0.15)]', badgeBg: 'bg-amber-500/20 text-amber-300 border-amber-500/40', iconColor: 'text-amber-400', btnBg: 'bg-amber-500 hover:bg-amber-400 text-black', accentLine: 'from-amber-500/60 via-amber-400 to-amber-500/60' },
+  cyan: { label: 'Cyber Cyan', bg: 'bg-cyan-950/30', border: 'border-cyan-500/30', glow: 'shadow-[0_0_25px_rgba(6,182,212,0.15)]', badgeBg: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40', iconColor: 'text-cyan-400', btnBg: 'bg-cyan-500 hover:bg-cyan-400 text-black', accentLine: 'from-cyan-500/60 via-cyan-400 to-cyan-500/60' },
+  rose: { label: 'Rose Ruby', bg: 'bg-rose-950/30', border: 'border-rose-500/30', glow: 'shadow-[0_0_25px_rgba(244,63,94,0.15)]', badgeBg: 'bg-rose-500/20 text-rose-300 border-rose-500/40', iconColor: 'text-rose-400', btnBg: 'bg-rose-500 hover:bg-rose-400 text-white', accentLine: 'from-rose-500/60 via-rose-400 to-rose-500/60' },
+  blue: { label: 'Electric Blue', bg: 'bg-blue-950/30', border: 'border-blue-500/30', glow: 'shadow-[0_0_25px_rgba(59,130,246,0.15)]', badgeBg: 'bg-blue-500/20 text-blue-300 border-blue-500/40', iconColor: 'text-blue-400', btnBg: 'bg-blue-500 hover:bg-blue-400 text-white', accentLine: 'from-blue-500/60 via-blue-400 to-blue-500/60' },
+  zinc: { label: 'Silver Minimal', bg: 'bg-zinc-900/40', border: 'border-white/15', glow: 'shadow-[0_0_25px_rgba(255,255,255,0.05)]', badgeBg: 'bg-white/10 text-zinc-200 border-white/20', iconColor: 'text-zinc-300', btnBg: 'bg-white hover:bg-zinc-200 text-black', accentLine: 'from-zinc-500/40 via-white/50 to-zinc-500/40' }
+};
+
+const ANNOUNCEMENT_ICONS = [
+  { id: 'megaphone', label: 'Megaphone', icon: Megaphone },
+  { id: 'sparkles', label: 'Sparkles', icon: Sparkles },
+  { id: 'flame', label: 'Flame', icon: Flame },
+  { id: 'bell', label: 'Bell', icon: Bell },
+  { id: 'tag', label: 'Tag', icon: Tag },
+  { id: 'gift', label: 'Gift', icon: Gift },
+  { id: 'alert', label: 'Alert', icon: AlertTriangle },
+  { id: 'shield', label: 'Shield', icon: Shield }
+];
+
+const ANNOUNCEMENT_FONTS = [
+  { id: 'sans', label: 'Modern Sans (Standard)', fontClass: 'font-sans' },
+  { id: 'display', label: 'Bold Display (Futuristic)', fontClass: 'font-display font-bold' },
+  { id: 'mono', label: 'Developer Mono (Clean Code)', fontClass: 'font-mono' },
+  { id: 'serif', label: 'Editorial Serif (Elegant)', fontClass: 'font-serif' }
+];
+
+const PRESET_BADGES = [
+  '🔥 HOT DEAL',
+  '✨ NEW SCRIPT',
+  '⚡ UPDATE',
+  '📢 ANNOUNCEMENT',
+  '🎉 50% SALE',
+  '⚠️ NOTICE',
+  '🎁 FREE SCRIPT'
+];
+
+function formatPreviewHtml(raw: string): string {
+  if (!raw) return '<span class="text-zinc-500 italic">No message written yet...</span>';
+  return raw
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/__(.*?)__/g, '<u>$1</u>')
+    .replace(/~~(.*?)~~/g, '<del>$1</del>')
+    .replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-white/10 font-mono text-[11px] text-emerald-300">$1</code>');
+}
 
 export const AdminStatsPage: React.FC = () => {
   const { navigate } = useStore();
@@ -41,7 +104,7 @@ export const AdminStatsPage: React.FC = () => {
   const [pinError, setPinError] = useState(false);
   const [data, setData] = useState<AnalyticsSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'downloads' | 'tools' | 'items' | 'live' | 'geo' | 'discord' | 'wheel'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'announcement' | 'downloads' | 'tools' | 'items' | 'live' | 'geo' | 'discord' | 'wheel'>('overview');
   const [downloadSearch, setDownloadSearch] = useState('');
   const [discordSearch, setDiscordSearch] = useState('');
   const [wheelSearch, setWheelSearch] = useState('');
@@ -56,6 +119,24 @@ export const AdminStatsPage: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
+  const [announcementForm, setAnnouncementForm] = useState<SiteAnnouncement>({
+    id: '',
+    text: '',
+    badge: 'NEW UPDATE',
+    icon: 'megaphone',
+    color: 'emerald',
+    font: 'sans',
+    linkUrl: '',
+    linkText: 'Check it out',
+    closable: true,
+    enabled: true,
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  });
+  const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false);
+  const [announcementSaveSuccess, setAnnouncementSaveSuccess] = useState(false);
+  const [showDeleteAnnouncementConfirm, setShowDeleteAnnouncementConfirm] = useState(false);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('md_admin_auth');
@@ -67,6 +148,20 @@ export const AdminStatsPage: React.FC = () => {
     try {
       const stats = await getStoredAnalytics();
       setData(stats);
+
+      if ((stats as any)?.announcement) {
+        setAnnouncementForm((stats as any).announcement);
+      } else {
+        try {
+          const annRes = await fetch('/api/stats?type=announcement');
+          if (annRes.ok) {
+            const aData = await annRes.json();
+            if (aData?.announcement) {
+              setAnnouncementForm(aData.announcement);
+            }
+          }
+        } catch {}
+      }
 
       try {
         const wheelRes = await fetch('/api/wheel/history');
@@ -80,6 +175,86 @@ export const AdminStatsPage: React.FC = () => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
+  };
+
+  const handleSaveAnnouncement = async () => {
+    setIsSavingAnnouncement(true);
+    setAnnouncementSaveSuccess(false);
+    try {
+      const payload: SiteAnnouncement = {
+        ...announcementForm,
+        id: announcementForm.id || ('ann-' + Date.now().toString(36)),
+        updatedAt: Date.now(),
+        createdAt: announcementForm.createdAt || Date.now()
+      };
+      const res = await fetch('/api/stats?action=save_announcement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_announcement', announcement: payload })
+      });
+      if (res.ok) {
+        setAnnouncementForm(payload);
+        setAnnouncementSaveSuccess(true);
+        window.dispatchEvent(new CustomEvent('md_announcement_updated', { detail: payload }));
+        setTimeout(() => setAnnouncementSaveSuccess(false), 3000);
+      }
+    } catch (err) {
+    } finally {
+      setIsSavingAnnouncement(false);
+    }
+  };
+
+  const handleDeleteAnnouncement = async () => {
+    setIsSavingAnnouncement(true);
+    try {
+      const res = await fetch('/api/stats?action=delete_announcement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_announcement' })
+      });
+      if (res.ok) {
+        const cleared: SiteAnnouncement = {
+          id: '',
+          text: '',
+          badge: '',
+          icon: 'megaphone',
+          color: 'emerald',
+          font: 'sans',
+          linkUrl: '',
+          linkText: '',
+          closable: true,
+          enabled: false,
+          createdAt: 0,
+          updatedAt: 0
+        };
+        setAnnouncementForm(cleared);
+        setShowDeleteAnnouncementConfirm(false);
+        setAnnouncementSaveSuccess(true);
+        window.dispatchEvent(new CustomEvent('md_announcement_updated', { detail: null }));
+        setTimeout(() => setAnnouncementSaveSuccess(false), 3000);
+      }
+    } catch (err) {
+    } finally {
+      setIsSavingAnnouncement(false);
+    }
+  };
+
+  const insertFormat = (before: string, after: string = '') => {
+    const textarea = document.getElementById('announcement-textarea') as HTMLTextAreaElement | null;
+    if (!textarea) {
+      setAnnouncementForm(prev => ({ ...prev, text: prev.text + before + (after ? 'text' + after : '') }));
+      return;
+    }
+    const start = textarea.selectionStart || 0;
+    const end = textarea.selectionEnd || 0;
+    const selected = announcementForm.text.substring(start, end);
+    const replacement = selected ? `${before}${selected}${after}` : `${before}text${after}`;
+    const newText = announcementForm.text.substring(0, start) + replacement + announcementForm.text.substring(end);
+    setAnnouncementForm(prev => ({ ...prev, text: newText }));
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + before.length, start + before.length + (selected ? selected.length : 4));
+    }, 50);
   };
 
   const [indicatorStyle, setIndicatorStyle] = useState<{
@@ -278,6 +453,38 @@ export const AdminStatsPage: React.FC = () => {
         </div>
       )}
 
+      {showDeleteAnnouncementConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-sm p-6 rounded-3xl bg-zinc-950 border border-red-500/30 text-center space-y-4 shadow-2xl">
+            <div className="w-12 h-12 rounded-2xl bg-red-950/50 border border-red-500/30 flex items-center justify-center text-red-400 mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-display font-bold text-base text-white">Delete Announcement?</h3>
+              <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                This will immediately remove the announcement banner from the store homepage and reset its text.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <button
+                onClick={() => setShowDeleteAnnouncementConfirm(false)}
+                className="py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-xs font-semibold text-zinc-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAnnouncement}
+                disabled={isSavingAnnouncement}
+                className="py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all shadow-glow-sm flex items-center justify-center gap-1.5"
+              >
+                {isSavingAnnouncement ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : null}
+                <span>Yes, Delete</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="sticky top-0 z-40 bg-zinc-950/80 backdrop-blur-xl border-b border-white/10 px-6 py-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -428,6 +635,7 @@ export const AdminStatsPage: React.FC = () => {
 
           {[
             { id: 'overview', label: 'Overview & Top Charts', icon: BarChart3 },
+            { id: 'announcement', label: `Announcement Banner ${announcementForm.enabled && announcementForm.text ? '🟢' : ''}`, icon: Megaphone },
             { id: 'downloads', label: `Free Downloads (${data?.freeDownloads?.totalDownloads || 0})`, icon: Download },
             { id: 'wheel', label: `Wheel of Fortune (${wheelData.totalSpins || 0})`, icon: Gift },
             { id: 'tools', label: 'Tool Leaderboard', icon: Flame },
@@ -616,6 +824,40 @@ export const AdminStatsPage: React.FC = () => {
               </div>
 
               <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Megaphone className="w-4 h-4 text-emerald-400" />
+                    <h4 className="font-display font-extrabold text-sm text-white">Homepage Announcement</h4>
+                  </div>
+                  {announcementForm.enabled && announcementForm.text ? (
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  ) : null}
+                </div>
+                <div className="p-3 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="text-zinc-400">Status:</span>
+                    <span className={announcementForm.enabled && announcementForm.text ? 'text-emerald-400 font-bold' : 'text-zinc-500'}>
+                      {announcementForm.enabled && announcementForm.text ? 'Active on Store' : 'Inactive / None'}
+                    </span>
+                  </div>
+                  {announcementForm.text ? (
+                    <p className="text-[11px] text-zinc-300 line-clamp-2 italic font-mono bg-black/40 p-2 rounded-xl border border-white/5">
+                      {announcementForm.text.replace(/<[^>]*>/g, '')}
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-zinc-500 italic">No announcement banner active.</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setActiveTab('announcement')}
+                  className="w-full py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-xs font-bold text-zinc-300 hover:text-white transition-all text-center flex items-center justify-center gap-1.5"
+                >
+                  <Megaphone className="w-3.5 h-3.5" />
+                  <span>Manage Announcement</span>
+                </button>
+              </div>
+
+              <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-3">
                 <div className="flex items-center gap-2">
                   <Database className="w-4 h-4 text-emerald-400" />
                   <h4 className="font-display font-extrabold text-sm text-white">Upstash Redis Status</h4>
@@ -626,6 +868,437 @@ export const AdminStatsPage: React.FC = () => {
                 <div className="p-2.5 rounded-xl bg-black/60 border border-white/5 font-mono text-[11px] text-zinc-300 flex items-center justify-between">
                   <span>Target:</span>
                   <span className="text-emerald-400 font-bold">/api/track & /api/stats</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'announcement' && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 shadow-glow-sm">
+                  <Megaphone className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h3 className="font-display font-extrabold text-lg text-white">Homepage Announcement Banner</h3>
+                    {announcementForm.enabled && announcementForm.text ? (
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[11px] font-mono font-bold flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        Active on Store
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-0.5 rounded-full bg-zinc-800 border border-white/10 text-zinc-400 text-[11px] font-mono font-bold">
+                        Inactive / Hidden
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    Configure the top banner strip displayed between the official title and scripts marketplace.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                {announcementSaveSuccess && (
+                  <span className="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-mono font-bold flex items-center gap-1.5 animate-fadeIn">
+                    <Check className="w-3.5 h-3.5" />
+                    Changes Saved & Synced
+                  </span>
+                )}
+
+                <button
+                  onClick={() => setShowDeleteAnnouncementConfirm(true)}
+                  disabled={isSavingAnnouncement || (!announcementForm.text && !announcementForm.id)}
+                  className="px-4 py-2.5 rounded-xl bg-red-950/40 hover:bg-red-900/50 border border-red-500/30 text-xs font-bold text-red-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Clear Banner</span>
+                </button>
+
+                <button
+                  onClick={handleSaveAnnouncement}
+                  disabled={isSavingAnnouncement}
+                  className="px-5 py-2.5 rounded-xl bg-white text-black hover:bg-zinc-200 font-extrabold text-xs transition-all shadow-glow-white flex items-center gap-2 disabled:opacity-60"
+                >
+                  {isSavingAnnouncement ? (
+                    <RefreshCw className="w-4 h-4 text-black animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4 text-black" />
+                  )}
+                  <span>Publish & Save</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-display font-bold text-sm text-white flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-emerald-400" />
+                    <span>Real-time Live Preview</span>
+                  </h4>
+                  <p className="text-xs text-zinc-400">This is exactly how visitors will see the announcement on the main store page</p>
+                </div>
+                {!announcementForm.enabled && (
+                  <span className="text-[11px] font-mono text-amber-400 bg-amber-950/40 border border-amber-500/30 px-2.5 py-1 rounded-lg">
+                    Banner is currently disabled (hidden on homepage)
+                  </span>
+                )}
+              </div>
+
+              <div className="p-4 sm:p-6 rounded-2xl bg-[#050507] border border-white/10 relative overflow-hidden">
+                {(() => {
+                  const themeKey = (announcementForm.color || 'emerald') as keyof typeof ANNOUNCEMENT_THEMES;
+                  const theme = ANNOUNCEMENT_THEMES[themeKey] || ANNOUNCEMENT_THEMES.emerald;
+                  const iconObj = ANNOUNCEMENT_ICONS.find(i => i.id === announcementForm.icon) || ANNOUNCEMENT_ICONS[0];
+                  const IconComp = iconObj.icon;
+                  const fontObj = ANNOUNCEMENT_FONTS.find(f => f.id === announcementForm.font) || ANNOUNCEMENT_FONTS[0];
+
+                  return (
+                    <div className={`relative overflow-hidden rounded-2xl border backdrop-blur-xl transition-all duration-300 ${theme.bg} ${theme.border} ${theme.glow}`}>
+                      <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r ${theme.accentLine}`} />
+                      <div className="px-4 py-3.5 sm:px-6 sm:py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className={`w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 shadow-inner ${theme.iconColor}`}>
+                            <IconComp className="w-4 h-4 animate-bounce" style={{ animationDuration: '2.5s' }} />
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2 min-w-0 flex-1">
+                            {announcementForm.badge && (
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-black uppercase tracking-wider border shrink-0 ${theme.badgeBg}`}>
+                                {announcementForm.badge}
+                              </span>
+                            )}
+
+                            <div
+                              className={`text-xs sm:text-sm text-zinc-100 leading-relaxed ${fontObj.fontClass}`}
+                              dangerouslySetInnerHTML={{ __html: formatPreviewHtml(announcementForm.text) }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                          {announcementForm.linkUrl && (
+                            <div className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 shadow-sm ${theme.btnBg}`}>
+                              <span>{announcementForm.linkText || 'View More'}</span>
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </div>
+                          )}
+
+                          {announcementForm.closable && (
+                            <div className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-zinc-400">
+                              <X className="w-4 h-4" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="lg:col-span-8 space-y-6">
+                <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-display font-bold text-sm text-white flex items-center gap-2">
+                        <Type className="w-4 h-4 text-emerald-400" />
+                        <span>Announcement Content & Formatting</span>
+                      </h4>
+                      <p className="text-xs text-zinc-400">Write your announcement text with rich styling, colors, and formatting tags</p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={announcementForm.enabled}
+                          onChange={e => setAnnouncementForm(prev => ({ ...prev, enabled: e.target.checked }))}
+                          className="sr-only peer"
+                        />
+                        <div className="w-10 h-6 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 relative" />
+                        <span className="text-xs font-bold text-zinc-300">
+                          {announcementForm.enabled ? 'Enabled' : 'Disabled'}
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-1.5 p-2 rounded-xl bg-zinc-900/90 border border-white/10 text-xs">
+                      <span className="text-[10px] font-mono uppercase font-bold text-zinc-500 mr-1 select-none">Format:</span>
+                      <button
+                        type="button"
+                        onClick={() => insertFormat('**', '**')}
+                        className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-bold transition-all"
+                        title="Bold"
+                      >
+                        <Bold className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormat('*', '*')}
+                        className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white italic transition-all"
+                        title="Italic"
+                      >
+                        <Italic className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormat('<u>', '</u>')}
+                        className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white underline transition-all"
+                        title="Underline"
+                      >
+                        <Underline className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormat('~~', '~~')}
+                        className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white line-through transition-all"
+                        title="Strikethrough"
+                      >
+                        <Strikethrough className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormat('`', '`')}
+                        className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-emerald-300 font-mono transition-all"
+                        title="Code tag"
+                      >
+                        <Code className="w-3.5 h-3.5" />
+                      </button>
+
+                      <div className="w-[1px] h-4 bg-white/15 mx-1" />
+
+                      <span className="text-[10px] font-mono uppercase font-bold text-zinc-500 mr-1 select-none">Colors:</span>
+                      <button
+                        type="button"
+                        onClick={() => insertFormat('<span style="color:#34d399">', '</span>')}
+                        className="w-5 h-5 rounded-md bg-emerald-400 hover:scale-110 transition-transform shadow-sm"
+                        title="Green Text"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => insertFormat('<span style="color:#fbbf24">', '</span>')}
+                        className="w-5 h-5 rounded-md bg-amber-400 hover:scale-110 transition-transform shadow-sm"
+                        title="Gold Text"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => insertFormat('<span style="color:#22d3ee">', '</span>')}
+                        className="w-5 h-5 rounded-md bg-cyan-400 hover:scale-110 transition-transform shadow-sm"
+                        title="Cyan Text"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => insertFormat('<span style="color:#c084fc">', '</span>')}
+                        className="w-5 h-5 rounded-md bg-purple-400 hover:scale-110 transition-transform shadow-sm"
+                        title="Purple Text"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => insertFormat('<span style="color:#fb7185">', '</span>')}
+                        className="w-5 h-5 rounded-md bg-rose-400 hover:scale-110 transition-transform shadow-sm"
+                        title="Rose Text"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => insertFormat('<span style="color:#ffffff">', '</span>')}
+                        className="w-5 h-5 rounded-md bg-white hover:scale-110 transition-transform shadow-sm"
+                        title="White Text"
+                      />
+                    </div>
+
+                    <textarea
+                      id="announcement-textarea"
+                      rows={4}
+                      value={announcementForm.text}
+                      onChange={e => setAnnouncementForm(prev => ({ ...prev, text: e.target.value }))}
+                      placeholder="e.g. Special weekend offer: Use coupon **WEEKEND25** for 25% off all FiveM scripts!"
+                      className="w-full p-4 rounded-2xl bg-zinc-900 border border-white/10 text-white placeholder-zinc-500 font-mono text-xs leading-relaxed focus:outline-none focus:border-white/30 resize-y"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-mono font-bold text-zinc-400 uppercase">
+                        Badge Label (Optional)
+                      </label>
+                      {announcementForm.badge && (
+                        <button
+                          type="button"
+                          onClick={() => setAnnouncementForm(prev => ({ ...prev, badge: '' }))}
+                          className="text-[11px] text-zinc-500 hover:text-zinc-300 font-mono"
+                        >
+                          Clear badge
+                        </button>
+                      )}
+                    </div>
+
+                    <input
+                      type="text"
+                      value={announcementForm.badge || ''}
+                      onChange={e => setAnnouncementForm(prev => ({ ...prev, badge: e.target.value }))}
+                      placeholder="e.g. 🔥 HOT DEAL, ✨ NEW SCRIPT, 📢 UPDATE"
+                      className="w-full px-4 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white placeholder-zinc-500 font-mono focus:outline-none focus:border-white/30"
+                    />
+
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      <span className="text-[10px] font-mono text-zinc-500 mr-1">Quick presets:</span>
+                      {PRESET_BADGES.map(badge => (
+                        <button
+                          key={badge}
+                          type="button"
+                          onClick={() => setAnnouncementForm(prev => ({ ...prev, badge }))}
+                          className="px-2 py-0.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-white/5 text-[10px] font-mono font-bold text-zinc-300 hover:text-white transition-colors"
+                        >
+                          {badge}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-4">
+                  <h4 className="font-display font-bold text-sm text-white flex items-center gap-2">
+                    <Link2 className="w-4 h-4 text-emerald-400" />
+                    <span>Action Button & Redirection (Optional)</span>
+                  </h4>
+                  <p className="text-xs text-zinc-400">Add a clickable button inside the announcement banner</p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-mono font-bold text-zinc-400 uppercase">Button Label</label>
+                      <input
+                        type="text"
+                        value={announcementForm.linkText || ''}
+                        onChange={e => setAnnouncementForm(prev => ({ ...prev, linkText: e.target.value }))}
+                        placeholder="e.g. Check it out, View Deals, Join Discord"
+                        className="w-full px-4 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white/30"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-mono font-bold text-zinc-400 uppercase">Target URL / Anchor</label>
+                      <input
+                        type="text"
+                        value={announcementForm.linkUrl || ''}
+                        onChange={e => setAnnouncementForm(prev => ({ ...prev, linkUrl: e.target.value }))}
+                        placeholder="e.g. https://discord.gg/... or #scripts-store or #deals"
+                        className="w-full px-4 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white placeholder-zinc-500 font-mono focus:outline-none focus:border-white/30"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex items-center gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={announcementForm.closable ?? true}
+                        onChange={e => setAnnouncementForm(prev => ({ ...prev, closable: e.target.checked }))}
+                        className="w-4 h-4 rounded bg-zinc-900 border-white/20 text-emerald-500 focus:ring-0 focus:ring-offset-0"
+                      />
+                      <span className="text-xs text-zinc-300 font-medium">
+                        Allow users to dismiss the banner with a close button (X)
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-4 space-y-6">
+                <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-4">
+                  <h4 className="font-display font-bold text-sm text-white flex items-center gap-2">
+                    <Palette className="w-4 h-4 text-emerald-400" />
+                    <span>Theme & Accent Glow</span>
+                  </h4>
+                  <p className="text-xs text-zinc-400">Choose the banner background and glow colors</p>
+
+                  <div className="space-y-2">
+                    {Object.entries(ANNOUNCEMENT_THEMES).map(([key, theme]) => {
+                      const active = (announcementForm.color || 'emerald') === key;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setAnnouncementForm(prev => ({ ...prev, color: key as any }))}
+                          className={`w-full p-3 rounded-2xl border text-left transition-all flex items-center justify-between ${
+                            active
+                              ? 'bg-zinc-900 border-white/30 shadow-sm'
+                              : 'bg-zinc-900/40 border-white/5 hover:border-white/15'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className={`w-3.5 h-3.5 rounded-full ${theme.btnBg}`} />
+                            <span className="text-xs font-bold text-white">{theme.label}</span>
+                          </div>
+                          {active && <Check className="w-4 h-4 text-emerald-400" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-4">
+                  <h4 className="font-display font-bold text-sm text-white flex items-center gap-2">
+                    <Megaphone className="w-4 h-4 text-emerald-400" />
+                    <span>Banner Icon</span>
+                  </h4>
+                  <div className="grid grid-cols-4 gap-2">
+                    {ANNOUNCEMENT_ICONS.map(item => {
+                      const IconComp = item.icon;
+                      const active = (announcementForm.icon || 'megaphone') === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setAnnouncementForm(prev => ({ ...prev, icon: item.id as any }))}
+                          className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all ${
+                            active
+                              ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 shadow-glow-sm'
+                              : 'bg-zinc-900/60 border-white/5 text-zinc-400 hover:text-white hover:border-white/20'
+                          }`}
+                        >
+                          <IconComp className="w-4 h-4" />
+                          <span className="text-[10px] font-mono font-bold truncate max-w-full">{item.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-4">
+                  <h4 className="font-display font-bold text-sm text-white flex items-center gap-2">
+                    <Type className="w-4 h-4 text-emerald-400" />
+                    <span>Typography Style</span>
+                  </h4>
+                  <div className="space-y-2">
+                    {ANNOUNCEMENT_FONTS.map(font => {
+                      const active = (announcementForm.font || 'sans') === font.id;
+                      return (
+                        <button
+                          key={font.id}
+                          type="button"
+                          onClick={() => setAnnouncementForm(prev => ({ ...prev, font: font.id as any }))}
+                          className={`w-full p-3 rounded-2xl border text-left transition-all flex items-center justify-between ${
+                            active
+                              ? 'bg-zinc-900 border-white/30'
+                              : 'bg-zinc-900/40 border-white/5 hover:border-white/15'
+                          }`}
+                        >
+                          <span className={`text-xs font-semibold text-white ${font.fontClass}`}>
+                            {font.label}
+                          </span>
+                          {active && <Check className="w-4 h-4 text-emerald-400" />}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
