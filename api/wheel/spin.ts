@@ -1,5 +1,3 @@
-import { runCouponsCleanup } from '../_lib/cleanupCoupons';
-
 const WHEEL_PRIZES = [
   { id: 'none', label: 'No Luck', shortLabel: 'NO LUCK', discount: 0, weight: 25, color: '#18181b' },
   { id: 'disc5', label: '5% Discount', shortLabel: '5% OFF', discount: 5, weight: 20, color: '#0f172a' },
@@ -33,6 +31,91 @@ async function getEscrowPackageIds(tebexSecret: string): Promise<number[]> {
   } catch (err) {
     return [];
   }
+}
+
+async function cleanupExpiredCoupons(tebexSecret: string, kvUrl?: string, kvToken?: string) {
+  try {
+    const tebexRes = await fetch('https://plugin.tebex.io/coupons', {
+      headers: {
+        'X-Tebex-Secret': tebexSecret.trim(),
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!tebexRes.ok) return;
+
+    const data = await tebexRes.json();
+    const list = Array.isArray(data) ? data : (data?.data || []);
+
+    const wheelCoupons = list.filter((c: any) => {
+      const code = (c.code || '').toUpperCase();
+      const note = (c.note || '').toLowerCase();
+      return code.startsWith('SPIN') || note.includes('wheel reward') || note.includes('100% free escrow');
+    });
+
+    const now = Date.now();
+    const headers = kvToken ? { Authorization: `Bearer ${kvToken}` } : {};
+
+    for (const coupon of wheelCoupons) {
+      const code = (coupon.code || '').toUpperCase();
+      let expiresAt: number | null = null;
+
+      if (kvUrl && kvToken) {
+        try {
+          const rRes = await fetch(`${kvUrl}/get/coupons:spin:${encodeURIComponent(code)}`, { headers });
+          const rData = await rRes.json().catch(() => null);
+          if (rData?.result) {
+            const parsed = typeof rData.result === 'string' ? JSON.parse(rData.result) : rData.result;
+            if (parsed?.expiresAt) {
+              expiresAt = Number(parsed.expiresAt);
+            }
+          }
+        } catch {}
+      }
+
+      if (!expiresAt && coupon.note) {
+        const match = coupon.note.match(/Valid (?:until|24h):\s*([^\)]+)/i);
+        if (match && match[1]) {
+          const parsedDate = new Date(match[1].trim()).getTime();
+          if (!isNaN(parsedDate)) {
+            expiresAt = parsedDate;
+          }
+        }
+      }
+
+      if (!expiresAt && (coupon.created_at || coupon.start_date)) {
+        const parsedStart = new Date(coupon.created_at || coupon.start_date).getTime();
+        if (!isNaN(parsedStart)) {
+          expiresAt = parsedStart + 86400000;
+        }
+      }
+
+      if (expiresAt && now > expiresAt) {
+        try {
+          const delRes = await fetch(`https://plugin.tebex.io/coupons/${coupon.id}`, {
+            method: 'DELETE',
+            headers: {
+              'X-Tebex-Secret': tebexSecret.trim(),
+              'Accept': 'application/json'
+            }
+          });
+
+          if (delRes.ok || delRes.status === 204 || delRes.status === 404) {
+            if (kvUrl && kvToken) {
+              await fetch(`${kvUrl}/pipeline`, {
+                method: 'POST',
+                headers: { ...headers, 'Content-Type': 'application/json' },
+                body: JSON.stringify([
+                  ['DEL', `coupons:spin:${code}`],
+                  ['SREM', 'coupons:spin:index', code]
+                ])
+              }).catch(() => {});
+            }
+          }
+        } catch {}
+      }
+    }
+  } catch {}
 }
 
 export default async function handler(req: any, res: any) {
@@ -150,56 +233,54 @@ export default async function handler(req: any, res: any) {
     const isWin = prize.discount > 0;
     let couponCode = '';
     const expiresAt = now + 86400000;
+    const tebexSecret = process.env.TEBEX_SECRET_KEY;
 
-    if (isWin) {
+    if (isWin && tebexSecret) {
       const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
       couponCode = `SPIN${prize.discount}-${randomSuffix}`;
 
-      const tebexSecret = process.env.TEBEX_SECRET_KEY;
-      if (tebexSecret) {
-        try {
-          const startDate = new Date(now).toISOString().split('T')[0];
+      try {
+        const startDate = new Date(now).toISOString().split('T')[0];
 
-          let effectiveOn = 'cart';
-          let packagesPayload: number[] = [];
+        let effectiveOn = 'cart';
+        let packagesPayload: number[] = [];
 
-          if (prize.discount === 100) {
-            const escrowPackageIds = await getEscrowPackageIds(tebexSecret);
-            if (escrowPackageIds.length > 0) {
-              effectiveOn = 'package';
-              packagesPayload = escrowPackageIds;
-            }
+        if (prize.discount === 100) {
+          const escrowPackageIds = await getEscrowPackageIds(tebexSecret);
+          if (escrowPackageIds.length > 0) {
+            effectiveOn = 'package';
+            packagesPayload = escrowPackageIds;
           }
+        }
 
-          await fetch('https://plugin.tebex.io/coupons', {
-            method: 'POST',
-            headers: {
-              'X-Tebex-Secret': tebexSecret.trim(),
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-              code: couponCode,
-              effective_on: effectiveOn,
-              packages: packagesPayload,
-              categories: [],
-              discount_type: 'percentage',
-              discount_percentage: prize.discount,
-              discount_amount: 0,
-              redeem_unlimited: false,
-              expire_never: true,
-              expire_limit: 1,
-              start_date: startDate,
-              basket_type: 'single',
-              minimum: 0,
-              username: '',
-              note: prize.discount === 100
-                ? `100% Free Escrow Script for ${user.username || 'User'} (Valid until: ${new Date(expiresAt).toISOString()})`
-                : `Daily Wheel Reward for ${user.username || 'User'} (Valid until: ${new Date(expiresAt).toISOString()})`
-            })
-          });
-        } catch (err) {}
-      }
+        await fetch('https://plugin.tebex.io/coupons', {
+          method: 'POST',
+          headers: {
+            'X-Tebex-Secret': tebexSecret.trim(),
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            code: couponCode,
+            effective_on: effectiveOn,
+            packages: packagesPayload,
+            categories: [],
+            discount_type: 'percentage',
+            discount_percentage: prize.discount,
+            discount_amount: 0,
+            redeem_unlimited: false,
+            expire_never: true,
+            expire_limit: 1,
+            start_date: startDate,
+            basket_type: 'single',
+            minimum: 0,
+            username: '',
+            note: prize.discount === 100
+              ? `100% Free Escrow Script for ${user.username || 'User'} (Valid until: ${new Date(expiresAt).toISOString()})`
+              : `Daily Wheel Reward for ${user.username || 'User'} (Valid until: ${new Date(expiresAt).toISOString()})`
+          })
+        });
+      } catch (err) {}
     }
 
     const rewardEntry = isWin ? {
@@ -286,7 +367,9 @@ export default async function handler(req: any, res: any) {
       }).catch(() => {});
     }
 
-    runCouponsCleanup().catch(() => {});
+    if (tebexSecret) {
+      cleanupExpiredCoupons(tebexSecret, kvUrl, kvToken).catch(() => {});
+    }
 
     return res.status(200).json({
       success: true,
