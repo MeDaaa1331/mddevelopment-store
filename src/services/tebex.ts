@@ -63,8 +63,9 @@ export class TebexService {
 
       const allPackages: TebexPackage[] = [];
       const seenPackageIds = new Set<number>();
+      let autoOrder = 0;
 
-      const parsePackage = (rawPkg: any, categoryName?: string, categoryId?: number) => {
+      const parsePackage = (rawPkg: any, categoryName?: string, categoryId?: number, packageOrder?: number) => {
         if (!rawPkg || !rawPkg.id || seenPackageIds.has(rawPkg.id)) return;
         seenPackageIds.add(rawPkg.id);
 
@@ -134,6 +135,8 @@ export class TebexService {
           freeDownloadUrl = `${TEBEX_CONFIG.storeDomain}/checkout/packages/add/${rawPkg.id}/single`;
         }
 
+        const assignedOrder = typeof rawPkg.order === 'number' ? rawPkg.order : (typeof packageOrder === 'number' ? packageOrder : autoOrder++);
+
         const pkg: TebexPackage = {
           id: rawPkg.id,
           name: rawPkg.name,
@@ -148,7 +151,7 @@ export class TebexService {
           category_name: categoryName || rawPkg.category?.name || (isFree ? 'Free' : 'Scripts'),
           category_type: categoryType,
           slug: rawPkg.slug || `package-${rawPkg.id}`,
-          order: rawPkg.order || 0,
+          order: assignedOrder,
           frameworks: ['ESX', 'QB'],
           resmon: '0.00ms',
           youtube_id: youtubeId,
@@ -175,10 +178,16 @@ export class TebexService {
         if (catRes.ok) {
           const catJson = await catRes.json();
           const rawCategories = Array.isArray(catJson.data) ? catJson.data : (Array.isArray(catJson) ? catJson : []);
+          rawCategories.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
 
           const extractFromCategory = (cat: any) => {
-            (cat.packages || []).forEach((p: any) => parsePackage(p, cat.name, cat.id));
-            (cat.subcategories || []).forEach(extractFromCategory);
+            const pkgs = Array.isArray(cat.packages) ? cat.packages.slice() : [];
+            pkgs.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+            pkgs.forEach((p: any, idx: number) => parsePackage(p, cat.name, cat.id, p.order ?? idx));
+
+            const subCats = Array.isArray(cat.subcategories) ? cat.subcategories.slice() : [];
+            subCats.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+            subCats.forEach(extractFromCategory);
           };
 
           rawCategories.forEach(extractFromCategory);
@@ -195,7 +204,8 @@ export class TebexService {
           if (pkgRes.ok) {
             const pkgJson = await pkgRes.json();
             const rawPackages = Array.isArray(pkgJson.data) ? pkgJson.data : (Array.isArray(pkgJson) ? pkgJson : []);
-            rawPackages.forEach((p: any) => parsePackage(p));
+            rawPackages.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+            rawPackages.forEach((p: any, idx: number) => parsePackage(p, undefined, undefined, p.order ?? idx));
           }
         } catch (pkgErr) {
           console.warn('[Tebex] Direct packages fetch notice:', pkgErr);

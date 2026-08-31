@@ -132,6 +132,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const setOnlyDiscounted = (onlyDiscounted: boolean) => setFilters(prev => ({ ...prev, onlyDiscounted }));
   const resetFilters = () => setFilters(initialFilters);
 
+  const packageOrderMap = React.useMemo(() => {
+    const map = new Map<number, number>();
+    packages.forEach((p, idx) => map.set(p.id, idx));
+    return map;
+  }, [packages]);
+
   const filteredPackages = packages.filter(pkg => {
 
     if (filters.search) {
@@ -183,18 +189,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }).sort((a, b) => {
     switch (filters.sortBy) {
       case 'newest':
-        return (b.id) - (a.id);
+        return b.id - a.id;
       case 'price-asc':
         return a.price - b.price;
       case 'price-desc':
         return b.price - a.price;
       case 'featured':
       default:
-        if (a.is_featured && !b.is_featured) return -1;
-        if (!a.is_featured && b.is_featured) return 1;
-        if (a.is_bestseller && !b.is_bestseller) return -1;
-        if (!a.is_bestseller && b.is_bestseller) return 1;
-        return (b.id) - (a.id);
+        if (typeof a.order === 'number' && typeof b.order === 'number' && a.order !== b.order) {
+          return a.order - b.order;
+        }
+        return (packageOrderMap.get(a.id) ?? 0) - (packageOrderMap.get(b.id) ?? 0);
     }
   });
 
