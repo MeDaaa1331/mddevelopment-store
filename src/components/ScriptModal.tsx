@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Check, ShoppingCart, ShieldCheck, Download, Play, Image as ImageIcon, ChevronLeft, ChevronRight, Gift, MessageSquare, RefreshCw, Sparkles, ExternalLink, Zap } from 'lucide-react';
+import { X, Check, ShoppingCart, ShieldCheck, Download, Play, Image as ImageIcon, ChevronLeft, ChevronRight, Gift, MessageSquare, RefreshCw, Sparkles, ExternalLink, Zap, Maximize2, ZoomIn } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -7,6 +7,7 @@ import { extractYouTubeId } from '../utils/youtube';
 import { TEBEX_CONFIG } from '../config/tebex';
 import { triggerDirectScriptDownload } from '../utils/directDownload';
 import { trackEvent } from '../utils/analytics';
+import { ImageLightbox } from './ImageLightbox';
 
 export const ScriptModal: React.FC = () => {
   const { selectedPackage, setSelectedPackage } = useStore();
@@ -15,6 +16,7 @@ export const ScriptModal: React.FC = () => {
   const [isClosing, setIsClosing] = useState(false);
   const [mediaTab, setMediaTab] = useState<'image' | 'video'>('image');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   const [inGuild, setInGuild] = useState<boolean | null>(null);
   const [isCheckingGuild, setIsCheckingGuild] = useState<boolean>(false);
@@ -193,7 +195,14 @@ export const ScriptModal: React.FC = () => {
                 </div>
               )}
 
-              <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-zinc-950 border border-white/10 shadow-lg group/media">
+              <div 
+                onClick={() => {
+                  if (mediaTab === 'image') setIsLightboxOpen(true);
+                }}
+                className={`relative aspect-video w-full rounded-2xl overflow-hidden bg-zinc-950 border border-white/10 shadow-lg group/media ${
+                  mediaTab === 'image' ? 'cursor-zoom-in' : ''
+                }`}
+              >
                 {youtubeId && mediaTab === 'video' ? (
                   <iframe
                     className="w-full h-full border-0"
@@ -208,8 +217,28 @@ export const ScriptModal: React.FC = () => {
                       key={activeImageIndex}
                       src={screenshots[activeImageIndex] || selectedPackage.image}
                       alt={`${selectedPackage.name} - ${activeImageIndex + 1}`}
-                      className="w-full h-full object-cover animate-fadeIn"
+                      className="w-full h-full object-cover animate-fadeIn transition-transform duration-500 group-hover/media:scale-[1.02]"
                     />
+
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/media:opacity-100 transition-opacity duration-200 pointer-events-none flex items-center justify-center">
+                      <div className="px-3.5 py-1.5 rounded-full bg-black/80 border border-white/25 text-white text-xs font-mono font-semibold backdrop-blur-md shadow-2xl flex items-center gap-2 transform translate-y-2 group-hover/media:translate-y-0 transition-transform duration-200">
+                        <ZoomIn className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Click to expand</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsLightboxOpen(true);
+                      }}
+                      className="absolute top-3 right-3 p-2 rounded-xl bg-black/75 hover:bg-black text-white/80 hover:text-white border border-white/15 backdrop-blur-md transition-all opacity-80 hover:opacity-100 hover:scale-105 active:scale-95 shadow-xl cursor-pointer flex items-center gap-1.5 z-10"
+                      title="Expand to Full Size"
+                      aria-label="Expand image"
+                    >
+                      <Maximize2 className="w-3.5 h-3.5" />
+                      <span className="text-[10px] font-mono font-bold hidden sm:inline">Expand</span>
+                    </button>
 
                     {screenshots.length > 1 && (
                       <>
@@ -218,7 +247,7 @@ export const ScriptModal: React.FC = () => {
                             e.stopPropagation();
                             setActiveImageIndex(prev => (prev === 0 ? screenshots.length - 1 : prev - 1));
                           }}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-xl bg-black/75 hover:bg-black text-white/80 hover:text-white border border-white/15 backdrop-blur-md transition-all opacity-80 hover:opacity-100 hover:scale-105 active:scale-95 shadow-xl cursor-pointer"
+                          className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-xl bg-black/75 hover:bg-black text-white/80 hover:text-white border border-white/15 backdrop-blur-md transition-all opacity-80 hover:opacity-100 hover:scale-105 active:scale-95 shadow-xl cursor-pointer z-10"
                           aria-label="Previous screenshot"
                         >
                           <ChevronLeft className="w-4 h-4" />
@@ -228,13 +257,13 @@ export const ScriptModal: React.FC = () => {
                             e.stopPropagation();
                             setActiveImageIndex(prev => (prev === screenshots.length - 1 ? 0 : prev + 1));
                           }}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl bg-black/75 hover:bg-black text-white/80 hover:text-white border border-white/15 backdrop-blur-md transition-all opacity-80 hover:opacity-100 hover:scale-105 active:scale-95 shadow-xl cursor-pointer"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl bg-black/75 hover:bg-black text-white/80 hover:text-white border border-white/15 backdrop-blur-md transition-all opacity-80 hover:opacity-100 hover:scale-105 active:scale-95 shadow-xl cursor-pointer z-10"
                           aria-label="Next screenshot"
                         >
                           <ChevronRight className="w-4 h-4" />
                         </button>
 
-                        <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-black/80 border border-white/15 text-[10px] font-mono font-bold text-white backdrop-blur-md shadow-md flex items-center gap-1">
+                        <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-black/80 border border-white/15 text-[10px] font-mono font-bold text-white backdrop-blur-md shadow-md flex items-center gap-1 z-10">
                           <span>{activeImageIndex + 1}</span>
                           <span className="text-zinc-500">/</span>
                           <span>{screenshots.length}</span>
@@ -243,12 +272,12 @@ export const ScriptModal: React.FC = () => {
                     )}
 
                     {isFree ? (
-                      <span className="absolute top-3 left-3 px-3 py-1.5 text-xs font-black bg-emerald-600 text-white rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.7)] flex items-center gap-1.5 border border-emerald-400/30">
+                      <span className="absolute top-3 left-3 px-3 py-1.5 text-xs font-black bg-emerald-600 text-white rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.7)] flex items-center gap-1.5 border border-emerald-400/30 z-10">
                         <Gift className="w-3.5 h-3.5" />
                         DISCORD EXCLUSIVE
                       </span>
                     ) : selectedPackage.discount && selectedPackage.discount > 0 ? (
-                      <span className="absolute top-3 left-3 px-3 py-1.5 text-xs font-black bg-red-600 text-white rounded-xl shadow-[0_0_20px_rgba(220,38,38,0.7)] flex items-center gap-1.5 border border-red-400/30">
+                      <span className="absolute top-3 left-3 px-3 py-1.5 text-xs font-black bg-red-600 text-white rounded-xl shadow-[0_0_20px_rgba(220,38,38,0.7)] flex items-center gap-1.5 border border-red-400/30 z-10">
                         <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
                         −{selectedPackage.discount}% SPECIAL DEAL
                       </span>
@@ -417,6 +446,15 @@ export const ScriptModal: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <ImageLightbox
+        isOpen={isLightboxOpen}
+        images={screenshots}
+        initialIndex={activeImageIndex}
+        title={selectedPackage.name}
+        onClose={() => setIsLightboxOpen(false)}
+        onIndexChange={(idx) => setActiveImageIndex(idx)}
+      />
     </div>
   );
 };
