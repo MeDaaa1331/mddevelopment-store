@@ -92,23 +92,32 @@ export const ScriptCard: React.FC<ScriptCardProps> = memo(({ pkg }) => {
             </button>
           )}
         </div>
-
-        <div className="absolute bottom-3 left-3 flex items-center gap-1.5 pointer-events-none">
-          <span className="px-2 py-0.5 text-[9px] font-mono font-bold tracking-wider uppercase bg-black/85 text-zinc-200 rounded-md border border-white/15 backdrop-blur-md">
-            ESX
-          </span>
-          <span className="px-2 py-0.5 text-[9px] font-mono font-bold tracking-wider uppercase bg-black/85 text-zinc-200 rounded-md border border-white/15 backdrop-blur-md">
-            QB-CORE
-          </span>
-        </div>
       </div>
 
       <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between gap-4">
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-mono font-bold text-zinc-400 uppercase tracking-widest">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="text-[11px] font-mono font-bold text-zinc-400 uppercase tracking-widest truncate">
               {pkg.category_name || (isFree ? 'Free Resource' : (pkg.is_open_source ? 'Open Source' : 'Paid Resources'))}
             </span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/[0.04] border border-white/10 text-[10px] font-mono font-bold text-zinc-300"
+                data-tooltip="ESX Legacy Compatible"
+                data-tooltip-pos="top"
+              >
+                <img src="/frameworks/esx.png" alt="ESX" className="w-3.5 h-3.5 rounded-[3px] object-cover" />
+                <span>ESX</span>
+              </span>
+              <span
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/[0.04] border border-white/10 text-[10px] font-mono font-bold text-zinc-300"
+                data-tooltip="QBCore Compatible"
+                data-tooltip-pos="top"
+              >
+                <img src="/frameworks/qbcore.png" alt="QBCore" className="w-3.5 h-3.5 rounded-[3px] object-cover" />
+                <span>QB-CORE</span>
+              </span>
+            </div>
           </div>
 
           <h3 className="font-display font-bold text-lg sm:text-xl text-white group-hover:text-zinc-100 transition-colors line-clamp-1 tracking-tight">

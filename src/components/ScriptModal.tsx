@@ -319,13 +319,15 @@ export const ScriptModal: React.FC = () => {
                   {selectedPackage.name}
                 </h2>
 
-                <div className="flex items-center gap-1.5 flex-wrap mt-3">
+                <div className="flex items-center gap-2 flex-wrap mt-3">
                   <span className="text-xs text-zinc-500 font-mono">Frameworks:</span>
-                  <span className="px-2.5 py-0.5 text-xs font-bold bg-zinc-900 text-white rounded-md border border-white/15">
-                    ESX
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold bg-zinc-900 text-zinc-200 rounded-lg border border-white/15">
+                    <img src="/frameworks/esx.png" alt="ESX" className="w-4 h-4 rounded-[3px] object-cover" />
+                    ESX Legacy
                   </span>
-                  <span className="px-2.5 py-0.5 text-xs font-bold bg-zinc-900 text-white rounded-md border border-white/15">
-                    QB
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold bg-zinc-900 text-zinc-200 rounded-lg border border-white/15">
+                    <img src="/frameworks/qbcore.png" alt="QBCore" className="w-4 h-4 rounded-[3px] object-cover" />
+                    QBCore
                   </span>
                 </div>
 
