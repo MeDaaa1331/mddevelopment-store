@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Check, ShoppingCart, ShieldCheck, Download, Play, Image as ImageIcon, ChevronLeft, ChevronRight, Gift, MessageSquare, RefreshCw, Sparkles, ExternalLink, Zap, Maximize2, ZoomIn } from 'lucide-react';
+import { X, Check, ShoppingCart, ShieldCheck, Download, Play, Image as ImageIcon, ChevronLeft, ChevronRight, Gift, MessageSquare, RefreshCw, Sparkles, ExternalLink, Zap, ZoomIn } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -172,10 +172,10 @@ export const ScriptModal: React.FC = () => {
                 <div className="flex items-center gap-1.5 p-1 bg-zinc-950/90 border border-white/10 rounded-xl w-fit">
                   <button
                     onClick={() => setMediaTab('image')}
-                    className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                       mediaTab === 'image'
                         ? 'bg-white text-black font-bold shadow-sm'
-                        : 'text-zinc-400 hover:text-white'
+                        : 'text-zinc-400 hover:text-white hover:bg-white/5'
                     }`}
                   >
                     <ImageIcon className="w-3.5 h-3.5" />
@@ -183,13 +183,13 @@ export const ScriptModal: React.FC = () => {
                   </button>
                   <button
                     onClick={() => setMediaTab('video')}
-                    className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 flex items-center gap-1.5 cursor-pointer shadow-lg active:scale-95 ${
                       mediaTab === 'video'
-                        ? 'bg-red-600 text-white font-bold shadow-[0_0_15px_rgba(220,38,38,0.6)]'
-                        : 'text-zinc-400 hover:text-white'
+                        ? 'bg-red-600 text-white shadow-[0_0_22px_rgba(220,38,38,0.85)] border border-red-400 ring-2 ring-white/30 scale-[1.02]'
+                        : 'bg-red-600 hover:bg-red-500 text-white shadow-[0_0_16px_rgba(220,38,38,0.6)] border border-red-500/50 hover:scale-[1.02]'
                     }`}
                   >
-                    <Play className="w-3.5 h-3.5 fill-current" />
+                    <Play className="w-3.5 h-3.5 fill-white text-white" />
                     <span>Video Showcase</span>
                   </button>
                 </div>
@@ -223,22 +223,9 @@ export const ScriptModal: React.FC = () => {
                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/media:opacity-100 transition-opacity duration-200 pointer-events-none flex items-center justify-center">
                       <div className="px-3.5 py-1.5 rounded-full bg-black/80 border border-white/25 text-white text-xs font-mono font-semibold backdrop-blur-md shadow-2xl flex items-center gap-2 transform translate-y-2 group-hover/media:translate-y-0 transition-transform duration-200">
                         <ZoomIn className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Click to expand HD</span>
+                        <span>Click to expand</span>
                       </div>
                     </div>
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsLightboxOpen(true);
-                      }}
-                      className="absolute top-3 right-3 px-2.5 py-1.5 rounded-xl bg-black/80 hover:bg-black text-white border border-white/20 backdrop-blur-md transition-all hover:scale-105 active:scale-95 shadow-xl cursor-pointer flex items-center gap-1.5 z-10"
-                      title="View in Full Screen & Native Quality"
-                      aria-label="Expand image"
-                    >
-                      <Maximize2 className="w-3.5 h-3.5 text-emerald-400" />
-                      <span className="text-[10px] font-mono font-bold">HD Fullscreen</span>
-                    </button>
 
                     {screenshots.length > 1 && (
                       <>

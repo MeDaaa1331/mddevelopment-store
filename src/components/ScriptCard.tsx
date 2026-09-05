@@ -1,9 +1,8 @@
 import React, { memo } from 'react';
-import { ShoppingCart, Eye, Check, Code2, Sparkles, Flame, Play, Gift, Download } from 'lucide-react';
+import { ShoppingCart, Eye, Check, Code2, Sparkles, Flame, Gift, Download } from 'lucide-react';
 import { TebexPackage } from '../types';
 import { useCart } from '../context/CartContext';
 import { useStore } from '../context/StoreContext';
-import { extractYouTubeId } from '../utils/youtube';
 
 interface ScriptCardProps {
   pkg: TebexPackage;
@@ -12,7 +11,6 @@ interface ScriptCardProps {
 export const ScriptCard: React.FC<ScriptCardProps> = memo(({ pkg }) => {
   const { addToCart } = useCart();
   const { setSelectedPackage } = useStore();
-  const youtubeId = pkg.youtube_id || extractYouTubeId(pkg.description);
   const isFree = pkg.price === 0 || pkg.category_type === 'free' || pkg.is_free;
 
   const handleCardClick = () => {
@@ -48,8 +46,8 @@ export const ScriptCard: React.FC<ScriptCardProps> = memo(({ pkg }) => {
 
         <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b10] via-transparent to-black/30 pointer-events-none" />
 
-        <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 flex-wrap pointer-events-none">
+        <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 pointer-events-none">
+          <div className="flex items-center gap-1.5 flex-wrap">
             {isFree ? (
               <span className="px-2.5 py-1 text-[10px] font-mono font-black bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 rounded-lg shadow-[0_0_15px_rgba(16,185,129,0.3)] flex items-center gap-1">
                 <Gift className="w-3 h-3 text-emerald-400" />
@@ -74,21 +72,6 @@ export const ScriptCard: React.FC<ScriptCardProps> = memo(({ pkg }) => {
               </span>
             )}
           </div>
-
-          {youtubeId && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedPackage(pkg);
-              }}
-              className="px-2.5 py-1 text-[10px] font-mono font-bold bg-zinc-950/90 hover:bg-red-600 text-zinc-200 hover:text-white border border-white/20 hover:border-red-500/50 rounded-lg backdrop-blur-md flex items-center gap-1 shadow-lg transition-all active:scale-95 group/video"
-              data-tooltip="Watch Video Preview"
-              data-tooltip-pos="bottom"
-            >
-              <Play className="w-3 h-3 fill-red-500 text-red-500 group-hover/video:fill-white group-hover/video:text-white transition-colors" />
-              <span>Preview</span>
-            </button>
-          )}
         </div>
       </div>
 
