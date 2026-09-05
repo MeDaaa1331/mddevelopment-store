@@ -182,10 +182,10 @@ export const Navbar: React.FC = () => {
                 {cat.slug === 'devtools' && (
                   <span className={`px-1.5 py-0.2 text-[8px] font-mono font-black rounded-md tracking-wider transition-colors ${
                     activeNav === 'devtools'
-                      ? 'bg-black text-white'
-                      : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shadow-glow-sm'
+                      ? 'bg-black text-cyan-400'
+                      : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-[0_0_10px_rgba(6,182,212,0.25)]'
                   }`}>
-                    NEW
+                    HOT
                   </span>
                 )}
               </button>
@@ -351,7 +351,7 @@ export const Navbar: React.FC = () => {
                     <span>{cat.label}</span>
                   </div>
                   {cat.slug === 'deals' && <span className="px-1.5 py-0.5 text-[10px] font-bold bg-white text-black rounded-full">SALE</span>}
-                  {cat.slug === 'devtools' && <span className="px-1.5 py-0.5 text-[9px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-md">NEW</span>}
+                  {cat.slug === 'devtools' && <span className="px-1.5 py-0.5 text-[9px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-md">HOT</span>}
                 </button>
               ))}
               <button onClick={() => scrollTo('faq-section')} className="w-full text-left px-3 py-2 text-sm font-medium text-zinc-300 hover:text-white rounded-lg hover:bg-white/5">FAQ</button>
