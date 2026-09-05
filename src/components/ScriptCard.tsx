@@ -37,15 +37,13 @@ export const ScriptCard: React.FC<ScriptCardProps> = memo(({ pkg }) => {
       onClick={handleCardClick}
       className="group relative cursor-pointer flex flex-col rounded-3xl bg-[#0b0b10]/90 border border-white/10 hover:border-white/30 backdrop-blur-2xl transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden"
     >
-      <div className="relative aspect-[16/10] w-full overflow-hidden bg-zinc-950">
+      <div className="relative aspect-[16/9] w-full overflow-hidden bg-zinc-950">
         <img
           src={pkg.image}
           alt={pkg.name}
-          width="400"
-          height="250"
-          className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+          className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 [image-rendering:-webkit-optimize-contrast] contrast-[1.02] transform-gpu backface-hidden"
           loading="lazy"
-          decoding="async"
+          decoding="auto"
         />
 
         <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b10] via-transparent to-black/30 pointer-events-none" />

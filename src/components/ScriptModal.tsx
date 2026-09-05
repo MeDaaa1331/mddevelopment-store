@@ -139,7 +139,7 @@ export const ScriptModal: React.FC = () => {
 
       <div
         data-lenis-prevent
-        className={`relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl bg-[#0d0d12] border border-white/15 shadow-2xl z-10 flex flex-col my-auto text-zinc-100 ${isClosing ? 'animate-scaleDown' : 'animate-scaleUp'}`}
+        className={`relative w-full max-w-5xl lg:max-w-6xl xl:max-w-7xl max-h-[90vh] overflow-y-auto rounded-3xl bg-[#0d0d12] border border-white/15 shadow-2xl z-10 flex flex-col my-auto text-zinc-100 ${isClosing ? 'animate-scaleDown' : 'animate-scaleUp'}`}
       >
         <div className="sticky top-0 z-20 flex items-center justify-between px-6 py-4 bg-[#0d0d12]/95 border-b border-white/10 backdrop-blur-md">
           <div className="flex items-center gap-2">
@@ -217,13 +217,13 @@ export const ScriptModal: React.FC = () => {
                       key={activeImageIndex}
                       src={screenshots[activeImageIndex] || selectedPackage.image}
                       alt={`${selectedPackage.name} - ${activeImageIndex + 1}`}
-                      className="w-full h-full object-cover animate-fadeIn transition-transform duration-500 group-hover/media:scale-[1.02]"
+                      className="w-full h-full object-cover animate-fadeIn transition-transform duration-500 group-hover/media:scale-[1.02] [image-rendering:-webkit-optimize-contrast] contrast-[1.02] transform-gpu backface-hidden"
                     />
 
                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/media:opacity-100 transition-opacity duration-200 pointer-events-none flex items-center justify-center">
                       <div className="px-3.5 py-1.5 rounded-full bg-black/80 border border-white/25 text-white text-xs font-mono font-semibold backdrop-blur-md shadow-2xl flex items-center gap-2 transform translate-y-2 group-hover/media:translate-y-0 transition-transform duration-200">
                         <ZoomIn className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Click to expand</span>
+                        <span>Click to expand HD</span>
                       </div>
                     </div>
 
@@ -232,12 +232,12 @@ export const ScriptModal: React.FC = () => {
                         e.stopPropagation();
                         setIsLightboxOpen(true);
                       }}
-                      className="absolute top-3 right-3 p-2 rounded-xl bg-black/75 hover:bg-black text-white/80 hover:text-white border border-white/15 backdrop-blur-md transition-all opacity-80 hover:opacity-100 hover:scale-105 active:scale-95 shadow-xl cursor-pointer flex items-center gap-1.5 z-10"
-                      title="Expand to Full Size"
+                      className="absolute top-3 right-3 px-2.5 py-1.5 rounded-xl bg-black/80 hover:bg-black text-white border border-white/20 backdrop-blur-md transition-all hover:scale-105 active:scale-95 shadow-xl cursor-pointer flex items-center gap-1.5 z-10"
+                      title="View in Full Screen & Native Quality"
                       aria-label="Expand image"
                     >
-                      <Maximize2 className="w-3.5 h-3.5" />
-                      <span className="text-[10px] font-mono font-bold hidden sm:inline">Expand</span>
+                      <Maximize2 className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-[10px] font-mono font-bold">HD Fullscreen</span>
                     </button>
 
                     {screenshots.length > 1 && (
@@ -304,7 +304,7 @@ export const ScriptModal: React.FC = () => {
                         }`}
                         title={`View screenshot ${idx + 1}`}
                       >
-                        <img src={imgUrl} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
+                        <img src={imgUrl} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover [image-rendering:-webkit-optimize-contrast]" />
                       </button>
                     );
                   })}

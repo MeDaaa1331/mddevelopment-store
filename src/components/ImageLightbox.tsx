@@ -190,6 +190,9 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               {currentIndex + 1} / {images.length}
             </span>
           )}
+          <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono font-bold shrink-0 hidden sm:inline-block">
+            Original HD Quality
+          </span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -204,10 +207,18 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               <ZoomOut className="w-4 h-4" />
             </button>
             <button
-              onClick={resetTransform}
-              className="px-2 py-1 rounded-lg text-[11px] font-mono font-bold text-zinc-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
-              title="Reset Zoom (0)"
-              aria-label="Reset zoom"
+              onClick={() => {
+                if (scale === 1) {
+                  setScale(1.5);
+                } else if (scale === 1.5) {
+                  setScale(2);
+                } else {
+                  resetTransform();
+                }
+              }}
+              className="px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold text-zinc-200 hover:text-white bg-white/5 hover:bg-white/10 transition-all cursor-pointer"
+              title="Click to toggle Zoom"
+              aria-label="Toggle zoom"
             >
               {Math.round(scale * 100)}%
             </button>
@@ -295,7 +306,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             ref={imageRef}
             src={currentImage}
             alt={`${title || 'Screenshot'} - ${currentIndex + 1}`}
-            className="max-h-[75vh] sm:max-h-[80vh] max-w-[95vw] sm:max-w-[90vw] object-contain rounded-xl sm:rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.9)] border border-white/10 pointer-events-auto"
+            className="max-h-[82vh] sm:max-h-[86vh] max-w-[96vw] sm:max-w-[94vw] object-contain rounded-xl sm:rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.9)] border border-white/10 pointer-events-auto [image-rendering:-webkit-optimize-contrast] contrast-[1.02] transform-gpu backface-hidden"
             draggable={false}
           />
         </div>

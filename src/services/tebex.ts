@@ -101,7 +101,7 @@ export class TebexService {
         const desc = rawPkg.description || '<p>High performance FiveM resource for ESX & QBCore.</p>';
         const youtubeId = extractYouTubeId(desc) || rawPkg.youtube_id || undefined;
 
-        const primaryImage = rawPkg.image || (rawPkg.media && rawPkg.media[0]?.url) || 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=600&q=75&fm=webp';
+        const primaryImage = rawPkg.image || (rawPkg.media && rawPkg.media[0]?.url) || 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1920&q=95&fm=webp';
         const screenshotsSet = new Set<string>();
         if (primaryImage) screenshotsSet.add(primaryImage);
 
