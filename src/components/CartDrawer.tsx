@@ -150,15 +150,24 @@ export const CartDrawer: React.FC = () => {
             <div className="p-5 border-t border-white/10 bg-zinc-950/60 backdrop-blur-md space-y-4 shrink-0">
 
               {appliedCoupon ? (
-                <div className="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 flex items-center justify-between text-xs animate-fadeIn">
-                  <div className="flex items-center gap-2 text-emerald-400">
-                    <Tag className="w-3.5 h-3.5" />
-                    <span className="font-mono font-bold">{appliedCoupon.code}</span>
-                    <span className="text-emerald-300 font-mono font-bold">−{appliedCoupon.discountPercentage}%</span>
+                <div className="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 space-y-1 animate-fadeIn">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 text-emerald-400">
+                      <Tag className="w-3.5 h-3.5" />
+                      <span className="font-mono font-bold">{appliedCoupon.code}</span>
+                      <span className="text-emerald-300 font-mono font-bold">
+                        {appliedCoupon.discountPercentage === 100 ? '100% FREE Script' : `−${appliedCoupon.discountPercentage}%`}
+                      </span>
+                    </div>
+                    <button onClick={removeCoupon} className="text-zinc-400 hover:text-white underline text-[11px] transition-colors">
+                      Remove
+                    </button>
                   </div>
-                  <button onClick={removeCoupon} className="text-zinc-400 hover:text-white underline text-[11px] transition-colors">
-                    Remove
-                  </button>
+                  {appliedCoupon.discountPercentage === 100 && (
+                    <p className="text-[10px] text-emerald-400/80 leading-tight">
+                      Valid for 1 standalone script from PAID category. Packs and bundles are excluded.
+                    </p>
+                  )}
                 </div>
               ) : (
                 <form onSubmit={handleApplyCoupon} className="space-y-1.5">
@@ -198,7 +207,7 @@ export const CartDrawer: React.FC = () => {
                 </div>
                 {appliedCoupon && appliedCoupon.discountPercentage > 0 && (
                   <div className="flex justify-between text-emerald-400 font-semibold">
-                    <span>Discount ({appliedCoupon.discountPercentage}%)</span>
+                    <span>{appliedCoupon.discountPercentage === 100 ? 'Free Script Discount' : `Discount (${appliedCoupon.discountPercentage}%)`}</span>
                     <span className="font-mono">−€{discountAmount.toFixed(2)}</span>
                   </div>
                 )}

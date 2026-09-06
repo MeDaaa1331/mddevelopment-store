@@ -93,8 +93,8 @@ export class TebexService {
         const isOpenSource = !isFree && (/open[\s-_]?source|unlocked/i.test(pkgName) || /open[\s-_]?source/i.test(categoryName || ''));
         const isDeal = !isFree && Boolean(
           (discountPercent && discountPercent > 0) || 
-          /deal|sale|bundle|discount/i.test(categoryName || '') || 
-          /deal|bundle|all[\s-_]?in[\s-_]?one/i.test(pkgName)
+          /deal|sale|bundle|pack|discount/i.test(categoryName || '') || 
+          /deal|bundle|pack|all[\s-_]?in[\s-_]?one/i.test(pkgName)
         );
 
         const categoryType = isFree ? 'free' : (isOpenSource ? 'opensource' : (isDeal ? 'deals' : 'paid'));

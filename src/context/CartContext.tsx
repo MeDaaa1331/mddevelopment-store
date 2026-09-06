@@ -179,11 +179,38 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (apiData.valid) {
           const exactCode = apiData.code || clean;
           const pct = Number(apiData.discountPercentage) || 15;
-          setAppliedCoupon({ code: exactCode, discountPercentage: pct, description: '' });
+          const is100Coupon = pct === 100 ||
+                              exactCode.toUpperCase().startsWith('SPIN100') ||
+                              apiData.effectiveCategorySlug === 'paid';
+
+          if (is100Coupon) {
+            const eligiblePaidItems = items.filter(i => {
+              const name = (i.package.name || '').toLowerCase();
+              const isPackOrDeal = /pack|bundle|all[\s-_]?in[\s-_]?one|subscription|deal/i.test(name) || i.package.category_type === 'deals';
+              return i.package.category_type === 'paid' && !isPackOrDeal && !i.package.is_open_source;
+            });
+
+            if (items.length > 0 && eligiblePaidItems.length === 0) {
+              return {
+                success: false,
+                message: 'This 100% coupon is valid ONLY for standalone scripts in the PAID category. It cannot be applied to packs or deals.'
+              };
+            }
+          }
+
+          setAppliedCoupon({
+            code: exactCode,
+            discountPercentage: pct,
+            description: '',
+            effectiveType: apiData.effectiveType,
+            effectiveCategory: is100Coupon ? 'paid' : apiData.effectiveCategorySlug,
+            effectiveCategories: apiData.effectiveCategories,
+            effectivePackages: apiData.effectivePackages
+          });
           try {
             confetti({ particleCount: 40, spread: 60, origin: { y: 0.8 }, colors: ['#10b981', '#ffffff', '#34d399'] });
           } catch {}
-          return { success: true, message: `Coupon ${exactCode} applied! ${pct}% discount.` };
+          return { success: true, message: apiData.message || `Coupon ${exactCode} applied! ${pct}% discount.` };
         }
       } else if (apiRes.status === 404 || apiRes.status === 400) {
         const apiErr = await apiRes.json().catch(() => null);
@@ -211,6 +238,22 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     if (!discountPct || discountPct <= 0) {
       discountPct = TEBEX_CONFIG.defaultCouponDiscount || 15;
+    }
+
+    const is100Coupon = discountPct === 100 || exactCode.toUpperCase().startsWith('SPIN100');
+    if (is100Coupon) {
+      const eligiblePaidItems = items.filter(i => {
+        const name = (i.package.name || '').toLowerCase();
+        const isPackOrDeal = /pack|bundle|all[\s-_]?in[\s-_]?one|subscription|deal/i.test(name) || i.package.category_type === 'deals';
+        return i.package.category_type === 'paid' && !isPackOrDeal && !i.package.is_open_source;
+      });
+
+      if (items.length > 0 && eligiblePaidItems.length === 0) {
+        return {
+          success: false,
+          message: 'This 100% coupon is valid ONLY for standalone scripts in the PAID category. It cannot be applied to packs or deals.'
+        };
+      }
     }
 
     const token = getTebexToken();
@@ -248,13 +291,21 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    setAppliedCoupon({ code: exactCode, discountPercentage: discountPct, description: '' });
+    setAppliedCoupon({
+      code: exactCode,
+      discountPercentage: discountPct,
+      description: '',
+      effectiveType: is100Coupon ? 'category' : 'cart',
+      effectiveCategory: is100Coupon ? 'paid' : undefined
+    });
 
     try {
       confetti({ particleCount: 40, spread: 60, origin: { y: 0.8 }, colors: ['#10b981', '#ffffff', '#34d399'] });
     } catch {}
 
-    const msg = `Coupon ${exactCode} applied! ${discountPct}% discount.`;
+    const msg = is100Coupon
+      ? `Coupon ${exactCode} applied! 100% discount on standalone PAID scripts.`
+      : `Coupon ${exactCode} applied! ${discountPct}% discount.`;
     return { success: true, message: msg };
   };
 
@@ -262,7 +313,38 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const totalCount = items.reduce((s, i) => s + i.quantity, 0);
   const subtotal = items.reduce((s, i) => s + i.selectedPrice * i.quantity, 0);
-  const discountAmount = appliedCoupon ? (subtotal * appliedCoupon.discountPercentage) / 100 : 0;
+
+  const is100PctCoupon = Boolean(
+    appliedCoupon && (
+      appliedCoupon.discountPercentage === 100 ||
+      appliedCoupon.code.toUpperCase().startsWith('SPIN100') ||
+      appliedCoupon.effectiveCategory === 'paid'
+    )
+  );
+
+  let discountAmount = 0;
+  if (appliedCoupon) {
+    if (is100PctCoupon) {
+      // 100% discount strictly applies to standalone scripts from the PAID category only.
+      // Deals, Packs, Open-Source and Free scripts are NEVER discounted by 100% wheelspin.
+      const eligibleItems = items.filter(i => {
+        const name = (i.package.name || '').toLowerCase();
+        const isPackOrDeal = /pack|bundle|all[\s-_]?in[\s-_]?one|subscription|deal/i.test(name) || i.package.category_type === 'deals';
+        return i.package.category_type === 'paid' && !isPackOrDeal && !i.package.is_open_source;
+      });
+
+      if (eligibleItems.length > 0) {
+        // Discount 1 unit of the highest-priced eligible PAID standalone script
+        const highestPaidItem = eligibleItems.reduce((prev, curr) => (curr.selectedPrice > prev.selectedPrice ? curr : prev), eligibleItems[0]);
+        discountAmount = highestPaidItem.selectedPrice;
+      } else {
+        discountAmount = 0;
+      }
+    } else {
+      discountAmount = (subtotal * appliedCoupon.discountPercentage) / 100;
+    }
+  }
+
   const totalPrice = Math.max(0, subtotal - discountAmount);
 
   const checkout = async () => {

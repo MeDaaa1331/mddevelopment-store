@@ -63,6 +63,10 @@ export interface Coupon {
   minimumSpend?: number;
   expiryDate?: string;
   description?: string;
+  effectiveType?: 'cart' | 'category' | 'package';
+  effectiveCategory?: string;
+  effectiveCategories?: number[];
+  effectivePackages?: number[];
 }
 
 export interface FilterState {

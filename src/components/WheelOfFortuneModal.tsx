@@ -25,7 +25,7 @@ const PRIZES: WheelPrize[] = [
   { id: 'disc15', label: '15% Discount', shortLabel: '15% OFF', discount: 15, color: '#16221c', textColor: '#a7f3d0', probability: 15 },
   { id: 'disc30', label: '30% Discount', shortLabel: '30% OFF', discount: 30, color: '#22182b', textColor: '#e9d5ff', probability: 15 },
   { id: 'disc50', label: '50% Discount', shortLabel: '50% OFF', discount: 50, color: '#281d0d', textColor: '#fde68a', probability: 9 },
-  { id: 'disc100', label: '100% FREE Script', shortLabel: '100% FREE', discount: 100, color: '#311019', textColor: '#fecdd3', probability: 1, isJackpot: true }
+  { id: 'disc100', label: '100% FREE Standalone Script', shortLabel: '100% FREE', discount: 100, color: '#311019', textColor: '#fecdd3', probability: 1, isJackpot: true }
 ];
 
 interface WheelOfFortuneModalProps {
@@ -310,7 +310,11 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
                   {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                 </button>
               </div>
-              <p className="text-[11px] text-zinc-400">Valid for 24 hours on all FiveM scripts in store.</p>
+              <p className="text-[11px] text-zinc-400">
+                {wonReward.discount === 100
+                  ? 'Valid for 24 hours on any standalone script in the PAID category (Packs & deals excluded).'
+                  : 'Valid for 24 hours on FiveM scripts in store.'}
+              </p>
               <button
                 onClick={() => handleApplyCoupon(wonReward.code)}
                 className="w-full py-2.5 rounded-lg bg-white text-black font-semibold text-xs transition-all hover:bg-zinc-200 flex items-center justify-center gap-2 active:scale-95"

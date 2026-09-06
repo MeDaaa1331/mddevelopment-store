@@ -116,6 +116,28 @@ export default async function handler(req: any, res: any) {
 
     const finalExpiresAt = redisCoupon?.expiresAt || found.expire?.date || found.expires_at || (Date.now() + 86400000);
 
+    const isSpin100 = rawCode.toUpperCase().startsWith('SPIN100') ||
+                      discountPercentage === 100 ||
+                      (found.note && found.note.toLowerCase().includes('100% free')) ||
+                      redisCoupon?.effectiveCategory === 'paid';
+
+    const effectiveType: 'cart' | 'category' | 'package' = found.effective?.type || (isSpin100 ? 'category' : 'cart');
+    const effectiveCategories: number[] = Array.isArray(found.effective?.categories) && found.effective.categories.length > 0
+      ? found.effective.categories
+      : (isSpin100 ? [3002267] : []);
+    const effectivePackages: number[] = Array.isArray(found.effective?.packages) ? found.effective.packages : [];
+    
+    let effectiveCategorySlug: string | undefined = undefined;
+    if (effectiveCategories.includes(3002267) || isSpin100) {
+      effectiveCategorySlug = 'paid';
+    } else if (redisCoupon?.effectiveCategory) {
+      effectiveCategorySlug = redisCoupon.effectiveCategory;
+    }
+
+    const message = isSpin100
+      ? `Coupon ${found.code} applied! 100% discount on standalone PAID scripts.`
+      : `Coupon ${found.code} applied! ${discountPercentage}% discount.`;
+
     return res.status(200).json({
       valid: true,
       code: found.code,
@@ -123,7 +145,11 @@ export default async function handler(req: any, res: any) {
       discountType: found.discount?.type || found.discount_type || 'percentage',
       discountValue: Number(found.discount?.value ?? found.discount_value ?? 0),
       expiresAt: finalExpiresAt,
-      message: `Coupon ${found.code} applied! ${discountPercentage}% discount.`
+      effectiveType,
+      effectiveCategories,
+      effectivePackages,
+      effectiveCategorySlug,
+      message
     });
 
   } catch (err: any) {

@@ -8,7 +8,7 @@ const WHEEL_PRIZES = [
   { id: 'disc100', label: '100% FREE Standalone Script', shortLabel: '100% FREE', discount: 100, weight: 1, color: '#311019', isJackpot: true }
 ];
 
-async function getEscrowPackageIds(tebexSecret: string): Promise<number[]> {
+async function getPaidCategoryAndPackages(tebexSecret: string): Promise<{ categoryId: number; packageIds: number[] }> {
   try {
     const res = await fetch('https://plugin.tebex.io/packages', {
       headers: {
@@ -16,20 +16,38 @@ async function getEscrowPackageIds(tebexSecret: string): Promise<number[]> {
         'Accept': 'application/json'
       }
     });
-    if (!res.ok) return [];
+    if (!res.ok) return { categoryId: 3002267, packageIds: [] };
     const data = await res.json();
-    const list = Array.isArray(data) ? data : (data.packages || data.data || []);
+    const list: any[] = Array.isArray(data) ? data : (data.packages || data.data || []);
 
-    return list
-      .filter((pkg: any) => {
-        const name = (pkg.name || '').toLowerCase();
-        const isExcluded = /all[\s-_]?in[\s-_]?one|subscription|open[\s-_]?source/i.test(name);
-        return !isExcluded;
-      })
-      .map((pkg: any) => Number(pkg.id))
-      .filter((id: number) => !isNaN(id) && id > 0);
+    let paidCategoryId = 3002267;
+    const paidPackages: number[] = [];
+
+    for (const pkg of list) {
+      const catName = (pkg.category?.name || '').trim().toLowerCase();
+      const catId = Number(pkg.category?.id);
+      const pkgName = (pkg.name || '').toLowerCase();
+
+      const isPaidCategory = catName === 'paid' || catName === 'paid resources' || catName.startsWith('paid') || catId === 3002267;
+      if (isPaidCategory && catId) {
+        paidCategoryId = catId;
+      }
+
+      // Standalone scripts in PAID category only (strictly exclude packs, bundles, deals, subscriptions, and opensource)
+      const isPackOrDeal = /pack|bundle|all[\s-_]?in[\s-_]?one|subscription|deal/i.test(pkgName);
+      const isOpenSource = /open[\s-_]?source/i.test(pkgName) || /open[\s-_]?source/i.test(catName);
+
+      if (isPaidCategory && !isPackOrDeal && !isOpenSource) {
+        const id = Number(pkg.id);
+        if (!isNaN(id) && id > 0) {
+          paidPackages.push(id);
+        }
+      }
+    }
+
+    return { categoryId: paidCategoryId, packageIds: paidPackages };
   } catch (err) {
-    return [];
+    return { categoryId: 3002267, packageIds: [] };
   }
 }
 
@@ -244,13 +262,13 @@ export default async function handler(req: any, res: any) {
 
         let effectiveOn = 'cart';
         let packagesPayload: number[] = [];
+        let categoriesPayload: number[] = [];
 
         if (prize.discount === 100) {
-          const escrowPackageIds = await getEscrowPackageIds(tebexSecret);
-          if (escrowPackageIds.length > 0) {
-            effectiveOn = 'package';
-            packagesPayload = escrowPackageIds;
-          }
+          const { categoryId } = await getPaidCategoryAndPackages(tebexSecret);
+          effectiveOn = 'category';
+          categoriesPayload = [categoryId || 3002267];
+          packagesPayload = [];
         }
 
         await fetch('https://plugin.tebex.io/coupons', {
@@ -264,7 +282,7 @@ export default async function handler(req: any, res: any) {
             code: couponCode,
             effective_on: effectiveOn,
             packages: packagesPayload,
-            categories: [],
+            categories: categoriesPayload,
             discount_type: 'percentage',
             discount_percentage: prize.discount,
             discount_amount: 0,
@@ -276,7 +294,7 @@ export default async function handler(req: any, res: any) {
             minimum: 0,
             username: '',
             note: prize.discount === 100
-              ? `100% Free Escrow Script for ${user.username || 'User'} (Valid until: ${new Date(expiresAt).toISOString()})`
+              ? `100% Free Standalone Script (PAID Category only) for ${user.username || 'User'} (Valid until: ${new Date(expiresAt).toISOString()})`
               : `Daily Wheel Reward for ${user.username || 'User'} (Valid until: ${new Date(expiresAt).toISOString()})`
           })
         });
@@ -350,7 +368,10 @@ export default async function handler(req: any, res: any) {
             userId,
             username: user.username,
             createdAt: now,
-            expiresAt
+            expiresAt,
+            effectiveType: prize.discount === 100 ? 'category' : 'cart',
+            effectiveCategory: prize.discount === 100 ? 'paid' : undefined,
+            effectiveCategories: prize.discount === 100 ? [3002267] : []
           })],
           ['SADD', 'coupons:spin:index', couponCode],
           ['EXPIRE', `coupons:spin:${couponCode}`, '172800']
