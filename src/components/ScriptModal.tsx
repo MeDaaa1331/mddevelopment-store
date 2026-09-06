@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { X, Check, ShoppingCart, ShieldCheck, Download, Play, Image as ImageIcon, ChevronLeft, ChevronRight, Gift, MessageSquare, RefreshCw, Sparkles, ExternalLink, Zap, ZoomIn } from 'lucide-react';
+import { X, Check, ShoppingCart, ShieldCheck, Download, Play, Image as ImageIcon, ChevronLeft, ChevronRight, Gift, MessageSquare, RefreshCw, Sparkles, ExternalLink, Zap, ZoomIn, BookOpen } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
+import { DOCS_ARTICLES } from '../data/docsData';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { extractYouTubeId } from '../utils/youtube';
@@ -10,7 +11,7 @@ import { trackEvent } from '../utils/analytics';
 import { ImageLightbox } from './ImageLightbox';
 
 export const ScriptModal: React.FC = () => {
-  const { selectedPackage, setSelectedPackage } = useStore();
+  const { selectedPackage, setSelectedPackage, navigate } = useStore();
   const { addToCart } = useCart();
   const { user, isLoggedIn, loginWithDiscord, recordHistory, syncUserData } = useAuth();
   const [isClosing, setIsClosing] = useState(false);
@@ -28,6 +29,13 @@ export const ScriptModal: React.FC = () => {
   const screenshots = selectedPackage?.screenshots && selectedPackage.screenshots.length > 0
     ? selectedPackage.screenshots
     : (selectedPackage?.image ? [selectedPackage.image] : []);
+
+  const matchedDoc = selectedPackage
+    ? DOCS_ARTICLES.find(a => 
+        (selectedPackage.slug && (a.id === selectedPackage.slug || selectedPackage.slug.includes(a.id) || a.id.includes(selectedPackage.slug))) ||
+        (selectedPackage.name && (a.title.toLowerCase().includes(selectedPackage.name.toLowerCase().split('|')[0].trim().toLowerCase()) || selectedPackage.name.toLowerCase().includes(a.id)))
+      ) || DOCS_ARTICLES[0]
+    : DOCS_ARTICLES[0];
 
   const checkDiscordMembership = async (userId: string) => {
     setIsCheckingGuild(true);
@@ -168,19 +176,19 @@ export const ScriptModal: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
             <div className="lg:col-span-7 flex flex-col gap-3">
-              {youtubeId && (
-                <div className="flex items-center gap-1.5 p-1 bg-zinc-950/90 border border-white/10 rounded-xl w-fit">
-                  <button
-                    onClick={() => setMediaTab('image')}
-                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                      mediaTab === 'image'
-                        ? 'bg-white text-black font-bold shadow-sm'
-                        : 'text-zinc-400 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    <ImageIcon className="w-3.5 h-3.5" />
-                    <span>Screenshots ({screenshots.length})</span>
-                  </button>
+              <div className="flex flex-wrap items-center gap-1.5 p-1 bg-zinc-950/90 border border-white/10 rounded-xl w-fit">
+                <button
+                  onClick={() => setMediaTab('image')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    mediaTab === 'image'
+                      ? 'bg-white text-black font-bold shadow-sm'
+                      : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  <span>Screenshots ({screenshots.length})</span>
+                </button>
+                {youtubeId && (
                   <button
                     onClick={() => setMediaTab('video')}
                     className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 flex items-center gap-1.5 cursor-pointer shadow-lg active:scale-95 ${
@@ -192,8 +200,18 @@ export const ScriptModal: React.FC = () => {
                     <Play className="w-3.5 h-3.5 fill-white text-white" />
                     <span>Video Showcase</span>
                   </button>
-                </div>
-              )}
+                )}
+                <button
+                  onClick={() => {
+                    setSelectedPackage(null);
+                    navigate(`/docs?article=${matchedDoc.id}`);
+                  }}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg text-cyan-300 hover:text-white hover:bg-cyan-500/10 border border-cyan-500/20 hover:border-cyan-500/40 transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Documentation</span>
+                </button>
+              </div>
 
               <div 
                 onClick={() => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Search, MessageSquare, Menu, X, Flame, Code2, Crown, Wrench, Gift } from 'lucide-react';
+import { ShoppingCart, Search, MessageSquare, Menu, X, Flame, Code2, Crown, Wrench, Gift, BookOpen } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
@@ -17,7 +17,11 @@ export const Navbar: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [localSearch, setLocalSearch] = useState('');
-  const [activeNav, setActiveNav] = useState<string>(() => (currentRoute === '/devtools' ? 'devtools' : filters.category || 'paid'));
+  const [activeNav, setActiveNav] = useState<string>(() => {
+    if (currentRoute === '/devtools') return 'devtools';
+    if (currentRoute === '/docs') return 'docs';
+    return filters.category || 'paid';
+  });
   const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number; opacity: number }>({ left: 0, width: 0, opacity: 0 });
 
   const navRef = useRef<HTMLElement>(null);
@@ -32,6 +36,8 @@ export const Navbar: React.FC = () => {
   useEffect(() => {
     if (currentRoute === '/devtools') {
       setActiveNav('devtools');
+    } else if (currentRoute === '/docs') {
+      setActiveNav('docs');
     } else {
       setActiveNav(filters.category || 'paid');
     }
@@ -83,8 +89,10 @@ export const Navbar: React.FC = () => {
     setMobileOpen(false);
     if (slug === 'devtools') {
       navigate('/devtools');
+    } else if (slug === 'docs') {
+      navigate('/docs');
     } else {
-      if (currentRoute === '/devtools') {
+      if (currentRoute === '/devtools' || currentRoute === '/docs') {
         navigate('/');
         setCategory(slug);
         setTimeout(() => smoothScrollTo('#scripts-store', { offset: -30, duration: 1.4 }), 100);
@@ -95,15 +103,10 @@ export const Navbar: React.FC = () => {
     }
   };
 
-  const handleFAQClick = () => {
-    setActiveNav('faq');
+  const handleDocsClick = () => {
+    setActiveNav('docs');
     setMobileOpen(false);
-    if (currentRoute === '/devtools') {
-      navigate('/');
-      setTimeout(() => smoothScrollTo('#faq-section', { offset: -40, duration: 1.4 }), 100);
-    } else {
-      smoothScrollTo('#faq-section', { offset: -40, duration: 1.4 });
-    }
+    navigate('/docs');
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -191,13 +194,14 @@ export const Navbar: React.FC = () => {
               </button>
             ))}
             <button
-              data-nav="faq"
-              onClick={handleFAQClick}
-              className={`relative z-10 px-4 py-1.5 text-xs font-semibold rounded-full transition-colors duration-200 select-none whitespace-nowrap ${
-                activeNav === 'faq' ? 'text-black font-bold' : 'text-zinc-400 hover:text-white'
+              data-nav="docs"
+              onClick={handleDocsClick}
+              className={`relative z-10 px-3.5 py-1.5 text-xs font-semibold rounded-full transition-colors duration-200 flex items-center gap-1.5 select-none whitespace-nowrap ${
+                activeNav === 'docs' ? 'text-black font-bold' : 'text-zinc-400 hover:text-white'
               }`}
             >
-              FAQ
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>Docs</span>
             </button>
           </nav>
 
@@ -354,7 +358,18 @@ export const Navbar: React.FC = () => {
                   {cat.slug === 'devtools' && <span className="px-1.5 py-0.5 text-[9px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-md">HOT</span>}
                 </button>
               ))}
-              <button onClick={() => scrollTo('faq-section')} className="w-full text-left px-3 py-2 text-sm font-medium text-zinc-300 hover:text-white rounded-lg hover:bg-white/5">FAQ</button>
+              <button 
+                onClick={handleDocsClick} 
+                className={`w-full text-left px-3 py-2 text-sm font-medium rounded-lg flex items-center justify-between transition-colors ${
+                  currentRoute === '/docs' ? 'bg-white text-black font-bold' : 'text-zinc-300 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-cyan-400" />
+                  <span>Documentation</span>
+                </div>
+                <span className="text-[10px] font-mono text-zinc-500">Guides & API →</span>
+              </button>
             </div>
 
             <div className="pt-2.5 border-t border-white/10 flex flex-col gap-2">

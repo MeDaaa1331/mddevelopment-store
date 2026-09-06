@@ -14,7 +14,11 @@ export const Footer: React.FC = () => {
       navigate('/devtools');
       return;
     }
-    if (currentRoute === '/devtools') {
+    if (id === 'docs-section') {
+      navigate('/docs');
+      return;
+    }
+    if (currentRoute === '/devtools' || currentRoute === '/docs') {
       navigate('/');
       if (catSlug) setCategory(catSlug);
       setTimeout(() => smoothScrollTo(`#${id}`, { offset: -30, duration: 1.4 }), 100);
@@ -134,6 +138,12 @@ export const Footer: React.FC = () => {
               <li>
                 <button onClick={() => scrollTo('features-section')} className="hover:text-white transition-colors duration-200">
                   Performance & Resmon
+                </button>
+              </li>
+              <li>
+                <button onClick={() => navigate('/docs')} className="hover:text-white transition-colors duration-200 text-cyan-400 font-semibold flex items-center gap-1 cursor-pointer">
+                  <span>Documentation</span>
+                  <span className="px-1 py-0.2 text-[9px] bg-cyan-500/20 text-cyan-300 font-bold rounded border border-cyan-500/30">DOCS</span>
                 </button>
               </li>
               <li>

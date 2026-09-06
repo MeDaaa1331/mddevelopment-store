@@ -50,6 +50,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const path = window.location.pathname.toLowerCase();
       if (path.startsWith('/admin')) return '/admin';
       if (path.startsWith('/devtools')) return '/devtools';
+      if (path.startsWith('/docs')) return '/docs';
       return '/';
     }
     return '/';
@@ -57,14 +58,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const navigate = (path: string) => {
     const lower = path.toLowerCase();
-    const target = lower.startsWith('/admin')
-      ? '/admin'
-      : lower.startsWith('/devtools')
-      ? '/devtools'
-      : '/';
+    let target = '/';
+    if (lower.startsWith('/admin')) {
+      target = '/admin';
+    } else if (lower.startsWith('/devtools')) {
+      target = '/devtools';
+    } else if (lower.startsWith('/docs')) {
+      target = '/docs';
+    }
 
-    if (window.location.pathname !== target) {
-      window.history.pushState({}, '', target);
+    const fullTarget = lower.startsWith('/docs') && path.includes('?') ? path : target;
+
+    if (window.location.pathname + window.location.search !== fullTarget) {
+      window.history.pushState({}, '', fullTarget);
     }
     setCurrentRoute(target);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -77,6 +83,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setCurrentRoute('/admin');
       } else if (path.startsWith('/devtools')) {
         setCurrentRoute('/devtools');
+      } else if (path.startsWith('/docs')) {
+        setCurrentRoute('/docs');
       } else {
         setCurrentRoute('/');
       }
@@ -95,6 +103,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (ogUrl) ogUrl.setAttribute('content', 'https://www.mddevelopment.store/');
       } else if (currentRoute === '/admin') {
         document.title = 'Admin Analytics Dashboard | MD Development';
+      } else if (currentRoute === '/docs') {
+        document.title = 'Documentation Hub | MD Development';
       }
     }
   }, [currentRoute]);

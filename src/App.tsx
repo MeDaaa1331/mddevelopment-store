@@ -17,6 +17,7 @@ import { AuthProvider } from './context/AuthContext';
 import { useSmoothScroll } from './hooks/useSmoothScroll';
 
 const DevToolsPage = lazy(() => import('./components/DevToolsPage').then(m => ({ default: m.DevToolsPage })));
+const DocsPage = lazy(() => import('./components/Docs/DocsPage').then(m => ({ default: m.DocsPage })));
 const AdminStatsPage = lazy(() => import('./components/AdminStatsPage').then(m => ({ default: m.AdminStatsPage })));
 const ScriptModal = lazy(() => import('./components/ScriptModal').then(m => ({ default: m.ScriptModal })));
 const CartDrawer = lazy(() => import('./components/CartDrawer').then(m => ({ default: m.CartDrawer })));
@@ -132,6 +133,19 @@ const AppContent: React.FC = () => {
         <Suspense fallback={<PageLoadingFallback />}>
           <DevToolsPage />
         </Suspense>
+        <AppModals />
+      </div>
+    );
+  }
+
+  if (currentRoute === '/docs') {
+    return (
+      <div className="min-h-screen bg-[#050507] text-zinc-100 flex flex-col font-sans selection:bg-white selection:text-black">
+        <Navbar />
+        <Suspense fallback={<PageLoadingFallback />}>
+          <DocsPage />
+        </Suspense>
+        <Footer />
         <AppModals />
       </div>
     );
