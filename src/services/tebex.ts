@@ -89,15 +89,33 @@ export class TebexService {
 
         const pkgPrice = Number(rawPkg.total_price ?? rawPkg.price ?? 0);
         const pkgName = rawPkg.name || 'Script Package';
-        const isFree = pkgPrice === 0 || /free/i.test(categoryName || '') || /free/i.test(pkgName) || rawPkg.category_type === 'free';
-        const isOpenSource = !isFree && (/open[\s-_]?source|unlocked/i.test(pkgName) || /open[\s-_]?source/i.test(categoryName || ''));
-        const isDeal = !isFree && Boolean(
-          (discountPercent && discountPercent > 0) || 
-          /deal|sale|bundle|pack|discount/i.test(categoryName || '') || 
-          /deal|bundle|pack|all[\s-_]?in[\s-_]?one/i.test(pkgName)
-        );
+        const rawCatName = (categoryName || rawPkg.category?.name || '').trim();
+        const rawCatId = categoryId || rawPkg.category?.id;
 
-        const categoryType = isFree ? 'free' : (isOpenSource ? 'opensource' : (isDeal ? 'deals' : 'paid'));
+        // Categorize strictly by Tebex dashboard category:
+        // 3002267 -> PAID RESOURCES ('paid')
+        // 3221253 -> DEALS ('deals')
+        // 3236012 -> OPEN SOURCE ('opensource')
+        // 3428382 -> FREE ('free')
+        let categoryType: 'paid' | 'deals' | 'opensource' | 'free';
+
+        if (rawCatId === 3002267 || /^paid/i.test(rawCatName)) {
+          categoryType = 'paid';
+        } else if (rawCatId === 3221253 || /deal/i.test(rawCatName)) {
+          categoryType = 'deals';
+        } else if (rawCatId === 3236012 || /open[\s-_]?source/i.test(rawCatName)) {
+          categoryType = 'opensource';
+        } else if (rawCatId === 3428382 || /free/i.test(rawCatName) || pkgPrice === 0) {
+          categoryType = 'free';
+        } else {
+          const isFreeFallback = pkgPrice === 0 || /free/i.test(pkgName);
+          const isOpenSourceFallback = /open[\s-_]?source|unlocked/i.test(pkgName);
+          const isDealFallback = /deal|sale|bundle|pack|all[\s-_]?in[\s-_]?one|subscription/i.test(pkgName);
+          categoryType = isFreeFallback ? 'free' : (isOpenSourceFallback ? 'opensource' : (isDealFallback ? 'deals' : 'paid'));
+        }
+
+        const isFree = categoryType === 'free' || pkgPrice === 0;
+        const isOpenSource = categoryType === 'opensource' || /open[\s-_]?source|unlocked/i.test(pkgName);
         const desc = rawPkg.description || '<p>High performance FiveM resource for ESX & QBCore.</p>';
         const youtubeId = extractYouTubeId(desc) || rawPkg.youtube_id || undefined;
 
@@ -229,7 +247,7 @@ export class TebexService {
           slug: 'paid',
           description: 'Premium scripts for ESX and QBCore.',
           order: 2,
-          packages: finalPackages.filter(p => !p.is_open_source && p.category_type !== 'opensource' && p.category_type !== 'free')
+          packages: finalPackages.filter(p => p.category_type === 'paid')
         },
         {
           id: 2,
@@ -237,14 +255,7 @@ export class TebexService {
           slug: 'deals',
           description: 'Discounted scripts, bundles and special offers.',
           order: 3,
-          packages: finalPackages.filter(p => 
-            (p.category_type === 'deals' || 
-            (p.discount && p.discount > 0) || 
-            Boolean(p.original_price && p.original_price > p.price) ||
-            /deal|sale|bundle|discount/i.test(p.category_name || '') ||
-            /deal|bundle|all[\s-_]?in[\s-_]?one/i.test(p.name)) &&
-            p.category_type !== 'free'
-          )
+          packages: finalPackages.filter(p => p.category_type === 'deals')
         },
         {
           id: 3,
@@ -252,7 +263,7 @@ export class TebexService {
           slug: 'opensource',
           description: '100% unlocked source code for developers.',
           order: 4,
-          packages: finalPackages.filter(p => (p.is_open_source || p.category_type === 'opensource') && p.category_type !== 'free')
+          packages: finalPackages.filter(p => p.category_type === 'opensource')
         },
         {
           id: 4,
@@ -260,7 +271,7 @@ export class TebexService {
           slug: 'free',
           description: 'Free community FiveM resources (Discord Member Exclusive).',
           order: 5,
-          packages: finalPackages.filter(p => p.price === 0 || p.category_type === 'free' || p.is_free || /free/i.test(p.category_name || '') || /free/i.test(p.name))
+          packages: finalPackages.filter(p => p.category_type === 'free')
         }
       ];
 

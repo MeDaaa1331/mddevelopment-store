@@ -400,7 +400,7 @@ export const SAMPLE_CATEGORIES: TebexCategory[] = [
     slug: "paid",
     description: "Premium standalone & framework scripts for ESX and QBCore.",
     order: 2,
-    packages: SAMPLE_PACKAGES.filter(p => !p.is_open_source && p.category_type !== 'opensource' && p.category_type !== 'free')
+    packages: SAMPLE_PACKAGES.filter(p => p.category_type === 'paid')
   },
   {
     id: 2,
@@ -408,7 +408,7 @@ export const SAMPLE_CATEGORIES: TebexCategory[] = [
     slug: "deals",
     description: "Special limited-time discounts, sales, and mega bundles.",
     order: 3,
-    packages: SAMPLE_PACKAGES.filter(p => (p.discount && p.discount > 0) || p.category_type === 'deals')
+    packages: SAMPLE_PACKAGES.filter(p => p.category_type === 'deals')
   },
   {
     id: 3,
@@ -416,7 +416,7 @@ export const SAMPLE_CATEGORIES: TebexCategory[] = [
     slug: "opensource",
     description: "100% unlocked source code packages for advanced developers and server teams.",
     order: 4,
-    packages: SAMPLE_PACKAGES.filter(p => (p.is_open_source || p.category_type === 'opensource') && p.category_type !== 'free')
+    packages: SAMPLE_PACKAGES.filter(p => p.category_type === 'opensource')
   },
   {
     id: 4,
@@ -424,7 +424,7 @@ export const SAMPLE_CATEGORIES: TebexCategory[] = [
     slug: "free",
     description: "Free community FiveM resources (Discord Member Exclusive).",
     order: 5,
-    packages: SAMPLE_PACKAGES.filter(p => p.price === 0 || p.category_type === 'free' || p.is_free)
+    packages: SAMPLE_PACKAGES.filter(p => p.category_type === 'free')
   }
 ];
 

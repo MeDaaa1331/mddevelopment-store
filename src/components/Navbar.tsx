@@ -20,7 +20,7 @@ export const Navbar: React.FC = () => {
   const [activeNav, setActiveNav] = useState<string>(() => {
     if (currentRoute === '/devtools') return 'devtools';
     if (currentRoute === '/docs') return 'docs';
-    return filters.category || 'paid';
+    return filters.category || 'all';
   });
   const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number; opacity: number }>({ left: 0, width: 0, opacity: 0 });
 
@@ -39,13 +39,13 @@ export const Navbar: React.FC = () => {
     } else if (currentRoute === '/docs') {
       setActiveNav('docs');
     } else {
-      setActiveNav(filters.category || 'paid');
+      setActiveNav(filters.category || 'all');
     }
   }, [currentRoute, filters.category]);
 
   const updateIndicator = () => {
     if (!navRef.current) return;
-    const targetSlug = activeNav || 'paid';
+    const targetSlug = activeNav || 'all';
     const activeBtn = navRef.current.querySelector(`[data-nav="${targetSlug}"]`) as HTMLElement | null;
     if (activeBtn) {
       setIndicatorStyle({

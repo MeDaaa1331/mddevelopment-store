@@ -129,23 +129,10 @@ export const CategoryFilter: React.FC = () => {
 
             let count = 0;
             if (cat.slug === 'all') count = packages.length;
-            else if (cat.slug === 'paid') count = packages.filter(p => !p.is_open_source && p.category_type !== 'opensource' && p.category_type !== 'free' && p.price > 0).length;
-            else if (cat.slug === 'deals') {
-              count = packages.filter(p => 
-                (p.category_type === 'deals' || 
-                (p.discount && p.discount > 0) || 
-                Boolean(p.original_price && p.original_price > p.price) ||
-                /deal|sale|bundle|discount/i.test(p.category_name || '') ||
-                /deal|bundle|all[\s-_]?in[\s-_]?one/i.test(p.name)) &&
-                p.category_type !== 'free'
-              ).length;
-            }
-            else if (cat.slug === 'opensource') {
-              count = packages.filter(p => (p.is_open_source || p.category_type === 'opensource') && p.category_type !== 'free').length;
-            }
-            else if (cat.slug === 'free') {
-              count = packages.filter(p => p.price === 0 || p.category_type === 'free' || p.is_free || /free/i.test(p.category_name || '') || /free/i.test(p.name)).length;
-            }
+            else if (cat.slug === 'paid') count = packages.filter(p => p.category_type === 'paid').length;
+            else if (cat.slug === 'deals') count = packages.filter(p => p.category_type === 'deals').length;
+            else if (cat.slug === 'opensource') count = packages.filter(p => p.category_type === 'opensource').length;
+            else if (cat.slug === 'free') count = packages.filter(p => p.category_type === 'free').length;
             else if (cat.packages) {
               count = cat.packages.length;
             }
