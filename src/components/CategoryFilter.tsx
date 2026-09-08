@@ -174,7 +174,7 @@ export const CategoryFilter: React.FC = () => {
           <span>
             <strong className="text-white font-mono">{filteredPackages.length}</strong> scripts
           </span>
-          {(filters.search || filters.category !== 'all' || filters.onlyDiscounted) && (
+          {(filters.search || filters.category !== 'paid' || filters.onlyDiscounted) && (
             <button
               onClick={resetFilters}
               className="text-xs text-zinc-400 hover:text-white underline underline-offset-4 ml-1 transition-colors"

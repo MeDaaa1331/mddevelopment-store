@@ -20,7 +20,7 @@ export const Navbar: React.FC = () => {
   const [activeNav, setActiveNav] = useState<string>(() => {
     if (currentRoute === '/devtools') return 'devtools';
     if (currentRoute === '/docs') return 'docs';
-    return filters.category || 'all';
+    return filters.category || 'paid';
   });
   const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number; opacity: number }>({ left: 0, width: 0, opacity: 0 });
 
@@ -39,13 +39,13 @@ export const Navbar: React.FC = () => {
     } else if (currentRoute === '/docs') {
       setActiveNav('docs');
     } else {
-      setActiveNav(filters.category || 'all');
+      setActiveNav(filters.category || 'paid');
     }
   }, [currentRoute, filters.category]);
 
   const updateIndicator = () => {
     if (!navRef.current) return;
-    const targetSlug = activeNav || 'all';
+    const targetSlug = activeNav || 'paid';
     const activeBtn = navRef.current.querySelector(`[data-nav="${targetSlug}"]`) as HTMLElement | null;
     if (activeBtn) {
       setIndicatorStyle({
@@ -147,7 +147,7 @@ export const Navbar: React.FC = () => {
       <div className="max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="flex items-center justify-between gap-3 lg:gap-6">
 
-          <a href="/" onClick={e => { e.preventDefault(); navigate('/'); smoothScrollTo(0, { duration: 1.4 }); }} className="flex items-center gap-3.5 group cursor-pointer select-none shrink-0">
+          <a href="/" onClick={e => { e.preventDefault(); navigate('/'); setCategory('paid'); smoothScrollTo(0, { duration: 1.4 }); }} className="flex items-center gap-3.5 group cursor-pointer select-none shrink-0">
             <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-black border border-white/15 p-1 flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:border-white/40 shadow-glow-sm">
               <img src="/logo.png" alt="MD Development" className="w-full h-full object-contain" />
             </div>

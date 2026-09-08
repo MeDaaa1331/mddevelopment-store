@@ -30,7 +30,7 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 const initialFilters: FilterState = {
   search: '',
-  category: 'all',
+  category: 'paid',
   framework: 'all',
   sortBy: 'featured',
   onlyDiscounted: false,
