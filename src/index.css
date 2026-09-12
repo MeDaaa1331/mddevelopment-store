@@ -455,3 +455,12 @@ code,
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
 }
+
+@keyframes progress5s {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}

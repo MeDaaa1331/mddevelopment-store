@@ -35,7 +35,7 @@ interface WheelOfFortuneModalProps {
 }
 
 export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen, onClose }) => {
-  const { user, isLoggedIn, loginWithDiscord, syncUserData, refreshPoints } = useAuth();
+  const { user, isLoggedIn, loginWithDiscord, syncUserData, refreshPoints, showPointToast } = useAuth();
   const { applyCoupon, setIsCartOpen } = useCart();
 
   const [inGuild, setInGuild] = useState<boolean>(true);
@@ -164,12 +164,14 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
             });
             refreshPoints();
           }
+          showPointToast(20, `Wheel of Fortune: Won ${data.prize?.label || 'Reward'} (+20 MD Points)!`);
         } else {
           setIsNoLuck(true);
           if (user) {
             syncUserData({ lastSpin: Date.now() });
             refreshPoints();
           }
+          showPointToast(20, 'Daily Wheel of Fortune Spin (+20 MD Points)!');
         }
       }, 5200);
 

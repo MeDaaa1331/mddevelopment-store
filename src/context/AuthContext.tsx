@@ -5,6 +5,12 @@ const USER_STORAGE_KEY = 'md_discord_user_v1';
 const FAV_STORAGE_KEY = 'md_devtools_favorite_tools';
 const CART_STORAGE_KEY = 'md_cart_items_v2';
 
+export interface PointAwardNotification {
+  id: string;
+  points: number;
+  label: string;
+}
+
 export interface PointsStatus {
   points: number;
   totalPointsEarned: number;
@@ -25,6 +31,9 @@ interface AuthContextType {
   user: DiscordUser | null;
   isLoggedIn: boolean;
   pointsStatus: PointsStatus | null;
+  pointToast: PointAwardNotification | null;
+  showPointToast: (points: number, label: string) => void;
+  dismissPointToast: () => void;
   refreshPoints: () => Promise<void>;
   claimPointActivity: (
     activity: 'devtools_use' | 'download_free_script',
@@ -55,8 +64,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const [pointsStatus, setPointsStatus] = useState<PointsStatus | null>(null);
+  const [pointToast, setPointToast] = useState<PointAwardNotification | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [justLoggedIn, setJustLoggedIn] = useState(false);
+
+  const showPointToast = useCallback((points: number, label: string) => {
+    const id = 'pt-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6);
+    setPointToast({ id, points, label });
+    setTimeout(() => {
+      setPointToast(curr => (curr?.id === id ? null : curr));
+    }, 5000);
+  }, []);
+
+  const dismissPointToast = useCallback(() => {
+    setPointToast(null);
+  }, []);
 
   // Sync / Refresh Points from server
   const refreshPoints = useCallback(async () => {
@@ -66,20 +88,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!res.ok) return;
       const data = await res.json();
       if (data.success || data.points !== undefined) {
+        const devToolsRemaining = data.cooldowns?.devToolsRemainingMs ?? data.devTools?.remainingMs ?? 0;
+        const wheelRemaining = data.cooldowns?.wheelSpinRemainingMs ?? data.wheel?.remainingMs ?? 0;
+        const canUseDevTools = data.cooldowns?.canUseDevToolsForPoints ?? (devToolsRemaining === 0);
+        const canSpin = data.cooldowns?.canSpinWheel ?? (wheelRemaining === 0);
+
         setPointsStatus({
           points: data.points || 0,
           totalPointsEarned: data.totalPointsEarned || 0,
           inGuild: Boolean(data.inGuild),
           claimedActivities: data.claimedActivities || {},
           claimedFreeScripts: data.claimedFreeScripts || [],
-          cooldowns: data.cooldowns || {
-            devToolsRemainingMs: 0,
-            wheelSpinRemainingMs: 0,
-            canUseDevToolsForPoints: true,
-            canSpinWheel: false
+          cooldowns: {
+            devToolsRemainingMs: devToolsRemaining,
+            wheelSpinRemainingMs: wheelRemaining,
+            canUseDevToolsForPoints: canUseDevTools,
+            canSpinWheel: canSpin
           },
           redeemedCoupons: data.redeemedCoupons || [],
-          pointsHistory: data.pointsHistory || []
+          pointsHistory: data.history || data.pointsHistory || []
         });
 
         // Keep local user in sync
@@ -174,10 +201,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const data = await res.json();
       if (data.success) {
         await refreshPoints();
+        const pts = Number(data.pointsAwarded) || 20;
+        showPointToast(pts, data.message || `+${pts} MD Points earned!`);
         return {
           success: true,
           message: data.message,
-          pointsAwarded: data.pointsAwarded
+          pointsAwarded: pts
         };
       } else {
         return {
@@ -242,30 +271,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const recordHistory = (item: Omit<UserHistoryItem, 'id' | 'timestamp'>) => {
+    if (!user) return;
     const newItem: UserHistoryItem = {
       ...item,
       id: 'hist-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 6),
       timestamp: Date.now()
     };
 
-    if (!user) return;
-
-    const newHistory = [newItem, ...(user.history || [])].slice(0, 50);
-    const newDownloadsCount = item.type === 'download' || item.type === 'export'
-      ? (user.downloadsCount || 0) + 1
-      : (user.downloadsCount || 0);
-
-    const updated = {
-      ...user,
-      downloadsCount: newDownloadsCount,
-      history: newHistory,
-      lastActive: Date.now()
-    };
-
-    setUser(updated);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updated));
-    }
+    setUser(prev => {
+      if (!prev) return null;
+      const nextHistory = [newItem, ...(prev.history || [])].slice(0, 50);
+      const updated = {
+        ...prev,
+        history: nextHistory,
+        downloadsCount: item.type === 'download' || item.type === 'export' ? (prev.downloadsCount || 0) + 1 : prev.downloadsCount
+      };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updated));
+      }
+      return updated;
+    });
 
     fetch('/api/auth/discord/sync', {
       method: 'POST',
@@ -286,6 +311,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         isLoggedIn: Boolean(user),
         pointsStatus,
+        pointToast,
+        showPointToast,
+        dismissPointToast,
         refreshPoints,
         claimPointActivity,
         redeemCoupon,

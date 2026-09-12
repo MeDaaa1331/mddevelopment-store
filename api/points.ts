@@ -63,10 +63,21 @@ async function handleStatus(req: any, res: any, url: URL, body: any) {
 
     const headers: Record<string, string> = kvToken ? { Authorization: `Bearer ${kvToken}` } : {};
 
+    let lastSpinTime = 0;
+    let lastDevTime = 0;
+
     if (kvUrl && kvToken) {
       try {
-        const userRes = await fetch(`${kvUrl}/get/users:discord:${userId}`, { headers });
+        const [userRes, lastSpinRes, devtoolsDailyRes] = await Promise.all([
+          fetch(`${kvUrl}/get/users:discord:${userId}`, { headers }),
+          fetch(`${kvUrl}/get/users:discord:${userId}:last_spin`, { headers }),
+          fetch(`${kvUrl}/get/points:daily:${userId}:devtools_use`, { headers })
+        ]);
+
         const userData = await userRes.json().catch(() => null);
+        const lastSpinData = await lastSpinRes.json().catch(() => null);
+        const devtoolsDailyData = await devtoolsDailyRes.json().catch(() => null);
+
         if (userData?.result) {
           try {
             const parsed = typeof userData.result === 'string' ? JSON.parse(userData.result) : userData.result;
@@ -78,7 +89,22 @@ async function handleStatus(req: any, res: any, url: URL, body: any) {
             } catch {}
           }
         }
+
+        lastSpinTime = user.lastSpin || 0;
+        if (lastSpinData?.result) {
+          const directSpin = parseInt(String(lastSpinData.result), 10) || 0;
+          if (directSpin > lastSpinTime) lastSpinTime = directSpin;
+        }
+
+        lastDevTime = user.lastDevToolsUse || 0;
+        if (devtoolsDailyData?.result) {
+          const directDev = parseInt(String(devtoolsDailyData.result), 10) || 0;
+          if (directDev > lastDevTime) lastDevTime = directDev;
+        }
       } catch {}
+    } else {
+      lastSpinTime = user.lastSpin || 0;
+      lastDevTime = user.lastDevToolsUse || 0;
     }
 
     const guildId = process.env.DISCORD_GUILD_ID;
@@ -144,10 +170,14 @@ async function handleStatus(req: any, res: any, url: URL, body: any) {
 
     // Calculate DevTools cooldown
     const cooldown24h = 86400000;
-    const lastDev = user.lastDevToolsUse || 0;
-    const elapsedDev = now - lastDev;
-    const devToolsRemainingMs = lastDev > 0 ? Math.max(0, cooldown24h - elapsedDev) : 0;
+    const elapsedDev = lastDevTime > 0 ? (now - lastDevTime) : cooldown24h + 1;
+    const devToolsRemainingMs = (lastDevTime > 0 && elapsedDev < cooldown24h) ? Math.max(0, cooldown24h - elapsedDev) : 0;
     const canClaimDevTools = devToolsRemainingMs === 0;
+
+    // Calculate Wheel spin cooldown
+    const elapsedSpin = lastSpinTime > 0 ? (now - lastSpinTime) : cooldown24h + 1;
+    const wheelSpinRemainingMs = (lastSpinTime > 0 && elapsedSpin < cooldown24h) ? Math.max(0, cooldown24h - elapsedSpin) : 0;
+    const canSpinWheel = wheelSpinRemainingMs === 0;
 
     return res.status(200).json({
       success: true,
@@ -157,12 +187,19 @@ async function handleStatus(req: any, res: any, url: URL, body: any) {
       claimedFreeScripts: user.claimedFreeScripts || [],
       cooldowns: {
         devToolsRemainingMs,
-        wheelRemainingMs: 0
+        wheelSpinRemainingMs,
+        canUseDevToolsForPoints: canClaimDevTools,
+        canSpinWheel: canSpinWheel
       },
       devTools: {
         canClaim: canClaimDevTools,
         remainingMs: devToolsRemainingMs,
-        lastUsed: user.lastDevToolsUse || 0
+        lastUsed: lastDevTime
+      },
+      wheel: {
+        canSpin: canSpinWheel,
+        remainingMs: wheelSpinRemainingMs,
+        lastSpin: lastSpinTime
       },
       history: user.pointsHistory || [],
       redeemedCoupons: user.redeemedCoupons || [],

@@ -11,6 +11,7 @@ import { FAQSection } from './components/FAQSection';
 import { Footer } from './components/Footer';
 import { DiscordLoginPrompt } from './components/DiscordLoginPrompt';
 import { DiscordWelcomeToast } from './components/DiscordWelcomeToast';
+import { PointAwardToast } from './components/PointAwardToast';
 import { StoreProvider, useStore } from './context/StoreContext';
 import { CartProvider, useCart } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
@@ -38,6 +39,7 @@ const AppModals: React.FC = () => {
       <UserProfileModal />
       <DiscordLoginPrompt />
       <DiscordWelcomeToast />
+      <PointAwardToast />
       <WheelOfFortuneModal
         isOpen={isWheelOpen}
         onClose={() => setIsWheelOpen(false)}

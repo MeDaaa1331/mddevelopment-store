@@ -150,23 +150,24 @@ const TOOL_SEO_METADATA: Record<ToolTab, { title: string; description: string }>
 export const DevToolsPage: React.FC = () => {
   const { navigate } = useStore();
   const { user, syncUserData, claimPointActivity, pointsStatus } = useAuth();
-  const [pointAwardToast, setPointAwardToast] = useState<string | null>(null);
   const hasTriggeredPointsRef = useRef(false);
 
-  const handleToolInteraction = (e: React.SyntheticEvent) => {
-    const target = e.target as HTMLElement | null;
-    if (!target) return;
-    const isInteractive = target.closest('button, input, textarea, select, [role="button"], [contenteditable="true"], canvas, svg');
-    if (!isInteractive) return;
-
+  const handleToolInteraction = () => {
     if (!user || hasTriggeredPointsRef.current) return;
-    if (pointsStatus?.cooldowns && !pointsStatus.cooldowns.canUseDevToolsForPoints) return;
+
+    if (pointsStatus?.cooldowns) {
+      const remaining = pointsStatus.cooldowns.devToolsRemainingMs || 0;
+      if (remaining > 0 || pointsStatus.cooldowns.canUseDevToolsForPoints === false) {
+        return;
+      }
+    }
 
     hasTriggeredPointsRef.current = true;
     claimPointActivity('devtools_use', { toolId: activeTab }).then(res => {
-      if (res.success) {
-        setPointAwardToast(res.message || 'Earned +20 MD Points for using DevTools!');
-        setTimeout(() => setPointAwardToast(null), 5000);
+      if (res.cooldown || res.alreadyClaimed) {
+        hasTriggeredPointsRef.current = true;
+      } else if (!res.success) {
+        hasTriggeredPointsRef.current = false;
       }
     });
   };
@@ -516,15 +517,6 @@ export const DevToolsPage: React.FC = () => {
         </section>
 
       </div>
-
-      {pointAwardToast && (
-        <div className="fixed bottom-6 right-6 z-50 p-4 rounded-2xl bg-[#0e0e16]/95 border border-amber-400/40 text-amber-300 text-xs font-bold shadow-[0_10px_30px_rgba(245,158,11,0.3)] flex items-center gap-2.5 animate-slideUp backdrop-blur-xl">
-          <div className="w-7 h-7 rounded-lg bg-amber-400/20 flex items-center justify-center text-amber-400 shrink-0">
-            <Coins className="w-4 h-4" />
-          </div>
-          <span>{pointAwardToast}</span>
-        </div>
-      )}
 
       <Footer />
     </div>

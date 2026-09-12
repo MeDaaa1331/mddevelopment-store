@@ -82,6 +82,11 @@ export const UserProfileModal: React.FC = () => {
   const pointsHistory = pointsStatus?.pointsHistory ?? user.pointsHistory ?? [];
   const cooldowns = pointsStatus?.cooldowns;
 
+  const wheelRemainingMs = cooldowns?.wheelSpinRemainingMs ?? 0;
+  const devToolsRemainingMs = cooldowns?.devToolsRemainingMs ?? 0;
+  const canSpinWheel = cooldowns ? (cooldowns.canSpinWheel !== false && wheelRemainingMs === 0) : true;
+  const canUseDevTools = cooldowns ? (cooldowns.canUseDevToolsForPoints !== false && devToolsRemainingMs === 0) : true;
+
   const handleCopyId = () => {
     navigator.clipboard.writeText(user.id);
     setCopiedId(true);
@@ -545,7 +550,7 @@ export const UserProfileModal: React.FC = () => {
                         <span className="text-[11px] text-zinc-400 block">Spin the wheel once every 24 hours</span>
                       </div>
                     </div>
-                    {cooldowns?.canSpinWheel ? (
+                    {canSpinWheel ? (
                       <button
                         onClick={() => {
                           handleClose();
@@ -575,7 +580,7 @@ export const UserProfileModal: React.FC = () => {
                         <span className="text-[11px] text-zinc-400 block">Perform an action in any DevTool (once per 24 hours)</span>
                       </div>
                     </div>
-                    {cooldowns?.canUseDevToolsForPoints ? (
+                    {canUseDevTools ? (
                       <button
                         onClick={() => {
                           handleClose();
