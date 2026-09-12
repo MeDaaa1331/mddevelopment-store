@@ -1,3 +1,16 @@
+function parseBody(req: any): any {
+  if (!req.body) return {};
+  if (typeof req.body === 'object') return req.body;
+  if (typeof req.body === 'string') {
+    try {
+      return JSON.parse(req.body);
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -8,24 +21,27 @@ export default async function handler(req: any, res: any) {
   }
 
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const body = parseBody(req);
+  const queryAction = req.query?.action || url.searchParams.get('action') || body.action;
   const pathParts = url.pathname.split('/').filter(Boolean);
-  const pathAction = pathParts[pathParts.length - 1] || '';
-  const action = (req.query?.action || url.searchParams.get('action') || pathAction).toString().toLowerCase();
+  const lastPart = pathParts[pathParts.length - 1];
+  const pathAction = (lastPart && lastPart !== 'points' && lastPart !== 'api' && lastPart !== '[action]') ? lastPart : '';
+  const action = (queryAction || pathAction || '').toString().toLowerCase();
 
   if (action === 'status') {
-    return handleStatus(req, res);
+    return handleStatus(req, res, url, body);
   } else if (action === 'activity') {
-    return handleActivity(req, res);
+    return handleActivity(req, res, body);
   } else if (action === 'redeem') {
-    return handleRedeem(req, res);
+    return handleRedeem(req, res, body);
   }
 
-  return res.status(404).json({ error: `Unknown points action: ${action}` });
+  return res.status(404).json({ error: `Unknown points action: ${action || 'none'}` });
 }
 
-async function handleStatus(req: any, res: any) {
+async function handleStatus(req: any, res: any, url: URL, body: any) {
   try {
-    const userId = req.query.userId || req.body?.userId;
+    const userId = req.query?.userId || url.searchParams.get('userId') || body?.userId;
     if (!userId) {
       return res.status(400).json({ error: 'Missing userId' });
     }
@@ -71,7 +87,7 @@ async function handleStatus(req: any, res: any) {
 
     if (guildId && botToken) {
       try {
-        const guildRes = await fetch(`https://discord.com/api/guilds/${guildId.trim()}/members/${userId.trim()}`, {
+        const guildRes = await fetch(`https://discord.com/api/guilds/${guildId.trim()}/members/${userId.toString().trim()}`, {
           headers: { Authorization: `Bot ${botToken.trim()}` }
         });
         if (guildRes.ok) {
@@ -102,85 +118,69 @@ async function handleStatus(req: any, res: any) {
       userModified = true;
     }
 
-    // Auto-check & award: Join Official Discord (+50 points, strictly once)
+    // Auto-award: Join Discord Server (+50 points) if in guild and not claimed yet
     if (inGuild && !user.claimedActivities.discord_guild) {
-      let alreadyClaimedOnetime = false;
-      if (kvUrl && kvToken) {
-        try {
-          const oRes = await fetch(`${kvUrl}/get/points:onetime:${userId}:discord_guild`, { headers });
-          const oData = await oRes.json().catch(() => null);
-          if (oData?.result) alreadyClaimedOnetime = true;
-        } catch {}
-      }
-
-      if (!alreadyClaimedOnetime) {
-        user.claimedActivities.discord_guild = true;
-        user.points = (user.points || 0) + 50;
-        user.totalPointsEarned = (user.totalPointsEarned || 0) + 50;
-        if (!user.pointsHistory) user.pointsHistory = [];
-        user.pointsHistory.unshift({
-          id: 'pt-' + now.toString(36) + '-guild',
-          activity: 'discord_guild',
-          label: 'Joined Official Discord Server',
-          points: 50,
-          timestamp: now
-        });
-        userModified = true;
-
-        if (kvUrl && kvToken) {
-          fetch(`${kvUrl}/set/points:onetime:${userId}:discord_guild/true`, { headers }).catch(() => {});
-        }
-      } else {
-        user.claimedActivities.discord_guild = true;
-        userModified = true;
-      }
+      user.claimedActivities.discord_guild = true;
+      user.points = (user.points || 0) + 50;
+      user.totalPointsEarned = (user.totalPointsEarned || 0) + 50;
+      if (!user.pointsHistory) user.pointsHistory = [];
+      user.pointsHistory.unshift({
+        id: 'pt-' + now.toString(36) + '-guild',
+        activity: 'discord_guild',
+        label: 'Joined MD Development Discord Server',
+        points: 50,
+        timestamp: now
+      });
+      userModified = true;
     }
 
     if (userModified && kvUrl && kvToken) {
-      try {
-        await fetch(`${kvUrl}/set/users:discord:${userId}`, {
-          method: 'POST',
-          headers: { ...headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify(user)
-        });
-      } catch {}
+      await fetch(`${kvUrl}/set/users:discord:${userId}`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify(user)
+      }).catch(() => {});
     }
 
+    // Calculate DevTools cooldown
     const cooldown24h = 86400000;
-    const lastDevTools = user.lastDevToolsUse || 0;
-    const devToolsRemainingMs = lastDevTools > 0 ? Math.max(0, cooldown24h - (now - lastDevTools)) : 0;
-
-    const lastSpin = user.lastSpin || 0;
-    const wheelSpinRemainingMs = lastSpin > 0 ? Math.max(0, cooldown24h - (now - lastSpin)) : 0;
+    const lastDev = user.lastDevToolsUse || 0;
+    const elapsedDev = now - lastDev;
+    const devToolsRemainingMs = lastDev > 0 ? Math.max(0, cooldown24h - elapsedDev) : 0;
+    const canClaimDevTools = devToolsRemainingMs === 0;
 
     return res.status(200).json({
       success: true,
       points: user.points || 0,
       totalPointsEarned: user.totalPointsEarned || 0,
-      inGuild,
       claimedActivities: user.claimedActivities || {},
       claimedFreeScripts: user.claimedFreeScripts || [],
       cooldowns: {
         devToolsRemainingMs,
-        wheelSpinRemainingMs,
-        canUseDevToolsForPoints: devToolsRemainingMs === 0,
-        canSpinWheel: inGuild && wheelSpinRemainingMs === 0
+        wheelRemainingMs: 0
       },
+      devTools: {
+        canClaim: canClaimDevTools,
+        remainingMs: devToolsRemainingMs,
+        lastUsed: user.lastDevToolsUse || 0
+      },
+      history: user.pointsHistory || [],
       redeemedCoupons: user.redeemedCoupons || [],
-      pointsHistory: (user.pointsHistory || []).slice(0, 50)
+      inGuild
     });
+
   } catch (err: any) {
     return res.status(500).json({ error: err.message || 'Internal server error' });
   }
 }
 
-async function handleActivity(req: any, res: any) {
+async function handleActivity(req: any, res: any, body: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { userId, activity, toolId, scriptId, scriptName } = req.body || {};
+    const { userId, activity, toolId, scriptId, scriptName } = body || {};
     if (!userId || !activity) {
       return res.status(400).json({ error: 'Missing userId or activity' });
     }
@@ -364,7 +364,7 @@ async function handleActivity(req: any, res: any) {
   }
 }
 
-async function handleRedeem(req: any, res: any) {
+async function handleRedeem(req: any, res: any, body: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -377,7 +377,7 @@ async function handleRedeem(req: any, res: any) {
   };
 
   try {
-    const { userId, discountPercentage } = req.body || {};
+    const { userId, discountPercentage } = body || {};
     const discount = Number(discountPercentage);
 
     if (!userId) {

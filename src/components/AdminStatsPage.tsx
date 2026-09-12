@@ -164,7 +164,7 @@ export const AdminStatsPage: React.FC = () => {
       }
 
       try {
-        const wheelRes = await fetch('/api/wheel/history');
+        const wheelRes = await fetch('/api/wheel?action=history');
         if (wheelRes.ok) {
           const wData = await wheelRes.json();
           setWheelData(wData);

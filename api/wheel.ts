@@ -8,6 +8,36 @@ const WHEEL_PRIZES = [
   { id: 'disc100', label: '100% FREE Standalone Script', shortLabel: '100% FREE', discount: 100, weight: 1, color: '#311019', isJackpot: true }
 ];
 
+function parseBody(req: any): any {
+  if (!req.body) return {};
+  if (typeof req.body === 'object') return req.body;
+  if (typeof req.body === 'string') {
+    try {
+      return JSON.parse(req.body);
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
+function safeParseJson(raw: any) {
+  if (!raw) return null;
+  if (typeof raw === 'object') return raw;
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      try {
+        return JSON.parse(decodeURIComponent(raw));
+      } catch {
+        return null;
+      }
+    }
+  }
+  return null;
+}
+
 async function getPaidCategoryAndPackages(tebexSecret: string): Promise<{ categoryId: number; packageIds: number[] }> {
   try {
     const res = await fetch('https://plugin.tebex.io/packages', {
@@ -117,23 +147,6 @@ async function cleanupExpiredCoupons(tebexSecret: string, kvUrl?: string, kvToke
   } catch (err) {}
 }
 
-function safeParseJson(raw: any) {
-  if (!raw) return null;
-  if (typeof raw === 'object') return raw;
-  if (typeof raw === 'string') {
-    try {
-      return JSON.parse(raw);
-    } catch {
-      try {
-        return JSON.parse(decodeURIComponent(raw));
-      } catch {
-        return null;
-      }
-    }
-  }
-  return null;
-}
-
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -144,24 +157,27 @@ export default async function handler(req: any, res: any) {
   }
 
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const body = parseBody(req);
+  const queryAction = req.query?.action || url.searchParams.get('action') || body.action;
   const pathParts = url.pathname.split('/').filter(Boolean);
-  const pathAction = pathParts[pathParts.length - 1] || '';
-  const action = (req.query?.action || url.searchParams.get('action') || pathAction).toString().toLowerCase();
+  const lastPart = pathParts[pathParts.length - 1];
+  const pathAction = (lastPart && lastPart !== 'wheel' && lastPart !== 'api' && lastPart !== '[action]') ? lastPart : '';
+  const action = (queryAction || pathAction || '').toString().toLowerCase();
 
   if (action === 'status') {
-    return handleStatus(req, res);
+    return handleStatus(req, res, url, body);
   } else if (action === 'spin') {
-    return handleSpin(req, res);
+    return handleSpin(req, res, body);
   } else if (action === 'history') {
     return handleHistory(req, res);
   }
 
-  return res.status(404).json({ error: `Unknown wheel action: ${action}` });
+  return res.status(404).json({ error: `Unknown wheel action: ${action || 'none'}` });
 }
 
-async function handleStatus(req: any, res: any) {
+async function handleStatus(req: any, res: any, url: URL, body: any) {
   try {
-    const userId = req.query.userId || req.body?.userId;
+    const userId = req.query?.userId || url.searchParams.get('userId') || body?.userId;
 
     if (!userId) {
       return res.status(200).json({
@@ -179,7 +195,7 @@ async function handleStatus(req: any, res: any) {
     let inGuild = true;
     if (guildId && botToken) {
       try {
-        const guildRes = await fetch(`https://discord.com/api/guilds/${guildId.trim()}/members/${userId.trim()}`, {
+        const guildRes = await fetch(`https://discord.com/api/guilds/${guildId.trim()}/members/${userId.toString().trim()}`, {
           headers: { Authorization: `Bot ${botToken.trim()}` }
         });
         if (guildRes.status === 404) {
@@ -255,13 +271,13 @@ async function handleStatus(req: any, res: any) {
   }
 }
 
-async function handleSpin(req: any, res: any) {
+async function handleSpin(req: any, res: any, body: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { userId } = req.body || {};
+    const userId = body.userId || body.id;
     if (!userId) {
       return res.status(400).json({ error: 'Missing userId' });
     }
@@ -271,7 +287,7 @@ async function handleSpin(req: any, res: any) {
 
     if (guildId && botToken) {
       try {
-        const guildRes = await fetch(`https://discord.com/api/guilds/${guildId.trim()}/members/${userId.trim()}`, {
+        const guildRes = await fetch(`https://discord.com/api/guilds/${guildId.trim()}/members/${userId.toString().trim()}`, {
           headers: { Authorization: `Bot ${botToken.trim()}` }
         });
         if (guildRes.status === 404) {
@@ -288,7 +304,12 @@ async function handleSpin(req: any, res: any) {
     const kvToken = process.env.KV_REST_API_TOKEN || process.env.REDIS_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
     let lastSpinTime = 0;
-    let user: any = { id: userId };
+    let user: any = {
+      id: userId,
+      username: body.username || '',
+      global_name: body.global_name || '',
+      avatarUrl: body.avatarUrl || ''
+    };
 
     if (kvUrl && kvToken) {
       const headers = { Authorization: `Bearer ${kvToken}` };

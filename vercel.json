@@ -30,7 +30,15 @@
   ],
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/api/wheel/:action*",
+      "destination": "/api/wheel?action=:action*"
+    },
+    {
+      "source": "/api/points/:action*",
+      "destination": "/api/points?action=:action*"
+    },
+    {
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]

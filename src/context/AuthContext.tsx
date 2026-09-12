@@ -62,10 +62,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshPoints = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const res = await fetch(`/api/points/status?userId=${user.id}`);
+      const res = await fetch(`/api/points?action=status&userId=${user.id}`);
       if (!res.ok) return;
       const data = await res.json();
-      if (data.success) {
+      if (data.success || data.points !== undefined) {
         setPointsStatus({
           points: data.points || 0,
           totalPointsEarned: data.totalPointsEarned || 0,
@@ -159,7 +159,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const res = await fetch('/api/points/activity', {
+      const res = await fetch('/api/points?action=activity', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -198,7 +198,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const res = await fetch('/api/points/redeem', {
+      const res = await fetch('/api/points?action=redeem', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -65,7 +65,7 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
 
     setIsCheckingStatus(true);
     try {
-      const res = await fetch(`/api/wheel/status?userId=${user.id}`);
+      const res = await fetch(`/api/wheel?action=status&userId=${user.id}`);
       if (res.ok) {
         const data = await res.json();
         setInGuild(data.inGuild);
@@ -109,7 +109,7 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
     setIsNoLuck(false);
 
     try {
-      const res = await fetch('/api/wheel/spin', {
+      const res = await fetch('/api/wheel?action=spin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

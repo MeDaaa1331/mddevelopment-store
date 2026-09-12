@@ -40,7 +40,7 @@ export const ScriptModal: React.FC = () => {
   const checkDiscordMembership = async (userId: string) => {
     setIsCheckingGuild(true);
     try {
-      const res = await fetch(`/api/wheel/status?userId=${userId}`);
+      const res = await fetch(`/api/wheel?action=status&userId=${userId}`);
       if (res.ok) {
         const data = await res.json();
         setInGuild(data.inGuild !== false);
