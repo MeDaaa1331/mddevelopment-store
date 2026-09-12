@@ -33,7 +33,6 @@ async function getPaidCategoryAndPackages(tebexSecret: string): Promise<{ catego
         paidCategoryId = catId;
       }
 
-      // Standalone scripts in PAID category only (strictly exclude packs, bundles, deals, subscriptions, and opensource)
       const isPackOrDeal = /pack|bundle|all[\s-_]?in[\s-_]?one|subscription|deal/i.test(pkgName);
       const isOpenSource = /open[\s-_]?source/i.test(pkgName) || /open[\s-_]?source/i.test(catName);
 
@@ -61,7 +60,6 @@ async function cleanupExpiredCoupons(tebexSecret: string, kvUrl?: string, kvToke
     });
 
     if (!tebexRes.ok) return;
-
     const data = await tebexRes.json();
     const list = Array.isArray(data) ? data : (data?.data || []);
 
@@ -101,59 +99,171 @@ async function cleanupExpiredCoupons(tebexSecret: string, kvUrl?: string, kvToke
         }
       }
 
-      if (!expiresAt && (coupon.created_at || coupon.start_date)) {
-        const parsedStart = new Date(coupon.created_at || coupon.start_date).getTime();
-        if (!isNaN(parsedStart)) {
-          expiresAt = parsedStart + 86400000;
+      if (expiresAt && now > expiresAt) {
+        const couponId = coupon.id;
+        if (couponId) {
+          await fetch(`https://plugin.tebex.io/coupons/${couponId}`, {
+            method: 'DELETE',
+            headers: { 'X-Tebex-Secret': tebexSecret.trim() }
+          }).catch(() => {});
+        }
+
+        if (kvUrl && kvToken) {
+          fetch(`${kvUrl}/del/coupons:spin:${encodeURIComponent(code)}`, { headers }).catch(() => {});
+          fetch(`${kvUrl}/srem/coupons:spin:index/${encodeURIComponent(code)}`, { headers }).catch(() => {});
         }
       }
+    }
+  } catch (err) {}
+}
 
-      if (expiresAt && now > expiresAt) {
-        try {
-          const delRes = await fetch(`https://plugin.tebex.io/coupons/${coupon.id}`, {
-            method: 'DELETE',
-            headers: {
-              'X-Tebex-Secret': tebexSecret.trim(),
-              'Accept': 'application/json'
-            }
-          });
-
-          if (delRes.ok || delRes.status === 204 || delRes.status === 404) {
-            if (kvUrl && kvToken) {
-              await fetch(`${kvUrl}/pipeline`, {
-                method: 'POST',
-                headers: { ...headers, 'Content-Type': 'application/json' },
-                body: JSON.stringify([
-                  ['DEL', `coupons:spin:${code}`],
-                  ['SREM', 'coupons:spin:index', code]
-                ])
-              }).catch(() => {});
-            }
-          }
-        } catch {}
+function safeParseJson(raw: any) {
+  if (!raw) return null;
+  if (typeof raw === 'object') return raw;
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      try {
+        return JSON.parse(decodeURIComponent(raw));
+      } catch {
+        return null;
       }
     }
-  } catch {}
+  }
+  return null;
 }
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
+  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const pathParts = url.pathname.split('/').filter(Boolean);
+  const pathAction = pathParts[pathParts.length - 1] || '';
+  const action = (req.query?.action || url.searchParams.get('action') || pathAction).toString().toLowerCase();
+
+  if (action === 'status') {
+    return handleStatus(req, res);
+  } else if (action === 'spin') {
+    return handleSpin(req, res);
+  } else if (action === 'history') {
+    return handleHistory(req, res);
+  }
+
+  return res.status(404).json({ error: `Unknown wheel action: ${action}` });
+}
+
+async function handleStatus(req: any, res: any) {
+  try {
+    const userId = req.query.userId || req.body?.userId;
+
+    if (!userId) {
+      return res.status(200).json({
+        isLoggedIn: false,
+        inGuild: false,
+        canSpin: false,
+        remainingMs: 0,
+        rewards: []
+      });
+    }
+
+    const guildId = process.env.DISCORD_GUILD_ID;
+    const botToken = process.env.DISCORD_BOT_TOKEN;
+
+    let inGuild = true;
+    if (guildId && botToken) {
+      try {
+        const guildRes = await fetch(`https://discord.com/api/guilds/${guildId.trim()}/members/${userId.trim()}`, {
+          headers: { Authorization: `Bot ${botToken.trim()}` }
+        });
+        if (guildRes.status === 404) {
+          inGuild = false;
+        } else if (guildRes.ok) {
+          inGuild = true;
+        }
+      } catch (err) {
+        inGuild = true;
+      }
+    }
+
+    const kvUrl = process.env.KV_REST_API_URL || process.env.REDIS_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+    const kvToken = process.env.KV_REST_API_TOKEN || process.env.REDIS_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+
+    let lastSpin = 0;
+    let rewards: any[] = [];
+
+    if (kvUrl && kvToken) {
+      const headers = { Authorization: `Bearer ${kvToken}` };
+      const [userRes, lastSpinRes] = await Promise.all([
+        fetch(`${kvUrl}/get/users:discord:${userId}`, { headers }),
+        fetch(`${kvUrl}/get/users:discord:${userId}:last_spin`, { headers })
+      ]);
+
+      const userData = await userRes.json().catch(() => null);
+      const lastSpinData = await lastSpinRes.json().catch(() => null);
+
+      if (userData?.result) {
+        try {
+          const parsed = typeof userData.result === 'string' ? JSON.parse(userData.result) : userData.result;
+          lastSpin = parsed.lastSpin || 0;
+          rewards = parsed.rewards || [];
+        } catch {
+          try {
+            const parsed = JSON.parse(decodeURIComponent(userData.result));
+            lastSpin = parsed.lastSpin || 0;
+            rewards = parsed.rewards || [];
+          } catch {}
+        }
+      }
+
+      if (lastSpinData?.result) {
+        const directSpin = parseInt(String(lastSpinData.result), 10) || 0;
+        if (directSpin > lastSpin) {
+          lastSpin = directSpin;
+        }
+      }
+    }
+
+    const now = Date.now();
+    const cooldownMs = 86400000;
+    const elapsed = now - lastSpin;
+    const remainingMs = lastSpin > 0 ? Math.max(0, cooldownMs - elapsed) : 0;
+    const canSpin = inGuild && remainingMs === 0;
+
+    return res.status(200).json({
+      isLoggedIn: true,
+      inGuild,
+      canSpin,
+      remainingMs,
+      nextSpinTime: lastSpin + cooldownMs,
+      rewards
+    });
+  } catch (err: any) {
+    return res.status(200).json({
+      isLoggedIn: false,
+      inGuild: true,
+      canSpin: true,
+      remainingMs: 0,
+      rewards: []
+    });
+  }
+}
+
+async function handleSpin(req: any, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { userId, username, global_name, avatarUrl } = req.body;
-
+    const { userId } = req.body || {};
     if (!userId) {
-      return res.status(400).json({ error: 'Missing userId. Please sign in with Discord.' });
+      return res.status(400).json({ error: 'Missing userId' });
     }
 
     const guildId = process.env.DISCORD_GUILD_ID;
@@ -168,7 +278,7 @@ export default async function handler(req: any, res: any) {
           return res.status(200).json({
             success: false,
             inGuild: false,
-            error: 'You must join MD Development Discord server to spin.'
+            error: 'You must be a member of the official MD Development Discord server to spin the Wheel of Fortune.'
           });
         }
       } catch (err) {}
@@ -176,25 +286,16 @@ export default async function handler(req: any, res: any) {
 
     const kvUrl = process.env.KV_REST_API_URL || process.env.REDIS_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
     const kvToken = process.env.KV_REST_API_TOKEN || process.env.REDIS_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
-    const headers = kvToken ? { Authorization: `Bearer ${kvToken}`, 'Content-Type': 'application/json' } : {};
-
-    let user: any = {
-      id: userId,
-      username: username || 'User',
-      global_name: global_name || username || 'User',
-      avatarUrl: avatarUrl || '',
-      lastSpin: 0,
-      rewards: [],
-      history: []
-    };
 
     let lastSpinTime = 0;
+    let user: any = { id: userId };
 
     if (kvUrl && kvToken) {
+      const headers = { Authorization: `Bearer ${kvToken}` };
       try {
         const [userRes, lastSpinRes] = await Promise.all([
-          fetch(`${kvUrl}/get/users:discord:${userId}`, { headers: { Authorization: `Bearer ${kvToken}` } }),
-          fetch(`${kvUrl}/get/users:discord:${userId}:last_spin`, { headers: { Authorization: `Bearer ${kvToken}` } })
+          fetch(`${kvUrl}/get/users:discord:${userId}`, { headers }),
+          fetch(`${kvUrl}/get/users:discord:${userId}:last_spin`, { headers })
         ]);
 
         const userData = await userRes.json().catch(() => null);
@@ -251,7 +352,7 @@ export default async function handler(req: any, res: any) {
     const isWin = prize.discount > 0;
     let couponCode = '';
     const expiresAt = now + 86400000;
-    const tebexSecret = process.env.TEBEX_SECRET_KEY;
+    const tebexSecret = process.env.TEBEX_SECRET_KEY || process.env.VITE_TEBEX_SECRET_KEY;
 
     if (isWin && tebexSecret) {
       const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -259,7 +360,6 @@ export default async function handler(req: any, res: any) {
 
       try {
         const startDate = new Date(now).toISOString().split('T')[0];
-
         let effectiveOn = 'cart';
         let packagesPayload: number[] = [];
         let categoriesPayload: number[] = [];
@@ -298,10 +398,12 @@ export default async function handler(req: any, res: any) {
               : `Daily Wheel Reward for ${user.username || 'User'} (Valid until: ${new Date(expiresAt).toISOString()})`
           })
         });
-      } catch (err) {}
+      } catch (err) {
+        couponCode = '';
+      }
     }
 
-    const rewardEntry = isWin ? {
+    const rewardEntry = isWin && couponCode ? {
       id: 'rew-' + now.toString(36) + '-' + Math.random().toString(36).substring(2, 6),
       prizeId: prize.id,
       label: prize.label,
@@ -309,7 +411,10 @@ export default async function handler(req: any, res: any) {
       code: couponCode,
       createdAt: now,
       expiresAt,
-      isUsed: false
+      isJackpot: prize.isJackpot || false,
+      effectiveType: prize.discount === 100 ? 'category' : 'cart',
+      effectiveCategory: prize.discount === 100 ? 'paid' : undefined,
+      effectiveCategories: prize.discount === 100 ? [3002267] : []
     } : null;
 
     user.lastSpin = now;
@@ -320,16 +425,14 @@ export default async function handler(req: any, res: any) {
     // Award +20 MD Points for daily wheel spin
     user.points = (user.points || 0) + 20;
     user.totalPointsEarned = (user.totalPointsEarned || 0) + 20;
-    user.pointsHistory = [
-      {
-        id: 'pt-' + now.toString(36) + '-spin',
-        activity: 'wheel_spin',
-        label: 'Daily Wheel of Fortune Spin',
-        points: 20,
-        timestamp: now
-      },
-      ...(user.pointsHistory || [])
-    ];
+    if (!user.pointsHistory) user.pointsHistory = [];
+    user.pointsHistory.unshift({
+      id: 'pt-' + now.toString(36) + '-spin',
+      activity: 'wheel_spin',
+      label: 'Daily Wheel of Fortune Spin',
+      points: 20,
+      timestamp: now
+    });
 
     user.history = [{
       id: 'hist-spin-' + now.toString(36),
@@ -425,12 +528,52 @@ export default async function handler(req: any, res: any) {
       newPointsBalance: user.points,
       nextSpinTime: now + cooldownMs
     });
-
   } catch (err: any) {
-    return res.status(500).json({
-      success: false,
-      error: 'Server error processing wheel spin.',
-      details: err.message
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+}
+
+async function handleHistory(req: any, res: any) {
+  try {
+    const kvUrl = process.env.KV_REST_API_URL || process.env.REDIS_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+    const kvToken = process.env.KV_REST_API_TOKEN || process.env.REDIS_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+
+    if (!kvUrl || !kvToken) {
+      return res.status(200).json({ history: [], totalSpins: 0, prizeCounts: {} });
+    }
+
+    const headers = { Authorization: `Bearer ${kvToken}` };
+
+    const [historyRes, totalSpinsRes, ...prizeCountRes] = await Promise.all([
+      fetch(`${kvUrl}/lrange/analytics:spin_history/0/199`, { headers }).then(r => r.json()).catch(() => ({ result: [] })),
+      fetch(`${kvUrl}/get/analytics:spins:total`, { headers }).then(r => r.json()).catch(() => ({ result: 0 })),
+      fetch(`${kvUrl}/get/analytics:spins:prize_0`, { headers }).then(r => r.json()).catch(() => ({ result: 0 })),
+      fetch(`${kvUrl}/get/analytics:spins:prize_5`, { headers }).then(r => r.json()).catch(() => ({ result: 0 })),
+      fetch(`${kvUrl}/get/analytics:spins:prize_10`, { headers }).then(r => r.json()).catch(() => ({ result: 0 })),
+      fetch(`${kvUrl}/get/analytics:spins:prize_15`, { headers }).then(r => r.json()).catch(() => ({ result: 0 })),
+      fetch(`${kvUrl}/get/analytics:spins:prize_30`, { headers }).then(r => r.json()).catch(() => ({ result: 0 })),
+      fetch(`${kvUrl}/get/analytics:spins:prize_50`, { headers }).then(r => r.json()).catch(() => ({ result: 0 })),
+      fetch(`${kvUrl}/get/analytics:spins:prize_100`, { headers }).then(r => r.json()).catch(() => ({ result: 0 }))
+    ]);
+
+    const history = (historyRes?.result || []).map((entry: any) => safeParseJson(entry)).filter(Boolean);
+
+    const prizeCounts: Record<string, number> = {
+      '0': parseInt(prizeCountRes[0]?.result || '0', 10) || 0,
+      '5': parseInt(prizeCountRes[1]?.result || '0', 10) || 0,
+      '10': parseInt(prizeCountRes[2]?.result || '0', 10) || 0,
+      '15': parseInt(prizeCountRes[3]?.result || '0', 10) || 0,
+      '30': parseInt(prizeCountRes[4]?.result || '0', 10) || 0,
+      '50': parseInt(prizeCountRes[5]?.result || '0', 10) || 0,
+      '100': parseInt(prizeCountRes[6]?.result || '0', 10) || 0
+    };
+
+    return res.status(200).json({
+      history,
+      totalSpins: parseInt(totalSpinsRes?.result || '0', 10) || 0,
+      prizeCounts
     });
+  } catch (err: any) {
+    return res.status(200).json({ history: [], totalSpins: 0, prizeCounts: {} });
   }
 }

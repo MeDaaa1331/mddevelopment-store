@@ -429,6 +429,10 @@ export const resetAllAnalytics = async (): Promise<void> => {
   }
 
   try {
-    await fetch('/api/reset', { method: 'POST' });
+    await fetch('/api/stats?action=reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'reset' })
+    });
   } catch (err) {}
 };

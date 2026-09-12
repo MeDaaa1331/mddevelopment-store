@@ -116,6 +116,44 @@ export default async function handler(req: any, res: any) {
         return res.status(200).json({ success: true, announcement: null });
       }
 
+      if (action === 'reset') {
+        const keysToDelete = [
+          'analytics:total_events',
+          'analytics:total_views',
+          'analytics:total_copies',
+          'analytics:total_free_downloads',
+          'analytics:free_downloads',
+          'analytics:recent_downloads',
+          'analytics:recent_events',
+          'analytics:tools:views',
+          'analytics:tools:copies',
+          'analytics:searches',
+          'analytics:items',
+          'analytics:countries',
+          'analytics:referrers',
+          'analytics:devices',
+          ...ALL_TOOLS.map(t => `analytics:tool_views:${t}`),
+          ...ALL_TOOLS.map(t => `analytics:tool_copies:${t}`)
+        ];
+
+        const pipelineCommands = keysToDelete.map(k => ['DEL', k]);
+
+        await Promise.allSettled([
+          fetch(`${kvUrl}/pipeline`, {
+            method: 'POST',
+            headers: { ...headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify(pipelineCommands)
+          }),
+          ...keysToDelete.map(k =>
+            fetch(`${kvUrl}/del/${k}`, {
+              headers
+            }).catch(() => {})
+          )
+        ]);
+
+        return res.status(200).json({ success: true, message: 'All analytics data reset to zero' });
+      }
+
       return res.status(400).json({ error: 'Unknown action' });
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
