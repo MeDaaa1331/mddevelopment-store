@@ -36,6 +36,8 @@ export default async function handler(req: any, res: any) {
     return handleRedeem(req, res, body);
   } else if (action === 'admin_adjust') {
     return handleAdminAdjust(req, res, body);
+  } else if (action === 'buy_wheel_spin') {
+    return handleBuyWheelSpin(req, res, body);
   }
 
   return res.status(404).json({ error: `Unknown points action: ${action || 'none'}` });
@@ -665,3 +667,79 @@ async function handleAdminAdjust(req: any, res: any, body: any) {
     return res.status(500).json({ error: err.message || 'Internal server error' });
   }
 }
+
+async function handleBuyWheelSpin(req: any, res: any, body: any) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const userId = body?.userId || body?.id;
+    if (!userId) {
+      return res.status(400).json({ error: 'Missing userId' });
+    }
+
+    const kvUrl = process.env.KV_REST_API_URL || process.env.REDIS_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+    const kvToken = process.env.KV_REST_API_TOKEN || process.env.REDIS_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+    const headers: Record<string, string> = kvToken ? { Authorization: `Bearer ${kvToken}` } : {};
+
+    let user: any = { id: userId, points: 0, pointsHistory: [] };
+
+    if (kvUrl && kvToken) {
+      const userRes = await fetch(`${kvUrl}/get/users:discord:${userId}`, { headers });
+      const userData = await userRes.json().catch(() => null);
+      if (userData?.result) {
+        try {
+          const parsed = typeof userData.result === 'string' ? JSON.parse(userData.result) : userData.result;
+          user = { ...user, ...parsed };
+        } catch {
+          try {
+            const parsed = JSON.parse(decodeURIComponent(userData.result));
+            user = { ...user, ...parsed };
+          } catch {}
+        }
+      }
+    }
+
+    if ((user.points || 0) < 300) {
+      return res.status(400).json({
+        success: false,
+        error: `Nemáš dostatek MD Pointů. Máš ${user.points || 0} pts, k odemknutí zatočení je potřeba 300 pts.`
+      });
+    }
+
+    const now = Date.now();
+    user.points = Math.max(0, (user.points || 0) - 300);
+    user.lastSpin = 0;
+    if (!user.pointsHistory) user.pointsHistory = [];
+    user.pointsHistory.unshift({
+      id: 'pt-' + now.toString(36) + '-wheel-extra',
+      activity: 'wheel_extra_spin',
+      label: 'Extra Wheel Spin (Cooldown Skip for 300 MD Points)',
+      points: -300,
+      timestamp: now
+    });
+
+    if (kvUrl && kvToken) {
+      await Promise.allSettled([
+        fetch(`${kvUrl}/set/users:discord:${userId}`, {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify(user)
+        }),
+        fetch(`${kvUrl}/del/users:discord:${userId}:last_spin`, { headers })
+      ]);
+    }
+
+    return res.status(200).json({
+      success: true,
+      newPoints: user.points,
+      remainingMs: 0,
+      canSpin: true,
+      message: 'Cooldown kola štěstí byl úspěšně přeskočen za 300 MD Pointů! Můžeš točit.'
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+}
+

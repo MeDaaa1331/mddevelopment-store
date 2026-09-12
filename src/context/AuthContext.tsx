@@ -40,6 +40,7 @@ interface AuthContextType {
     payload?: { toolId?: string; scriptId?: string | number; scriptName?: string }
   ) => Promise<{ success: boolean; message?: string; pointsAwarded?: number; cooldown?: boolean; alreadyClaimed?: boolean }>;
   redeemCoupon: (discountPercentage: number) => Promise<{ success: boolean; coupon?: RedeemedCoupon; error?: string }>;
+  buyExtraWheelSpin: () => Promise<{ success: boolean; message?: string; error?: string }>;
   loginWithDiscord: () => void;
   logout: () => void;
   syncUserData: (updates: Partial<DiscordUser>) => Promise<void>;
@@ -248,6 +249,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const buyExtraWheelSpin = async (): Promise<{ success: boolean; message?: string; error?: string }> => {
+    if (!user?.id) {
+      return { success: false, error: 'Přihlas se nejdříve přes Discord.' };
+    }
+
+    try {
+      const res = await fetch('/api/points?action=buy_wheel_spin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        await refreshPoints();
+        showPointToast(-300, 'Zatočení kolem štěstí navíc zakoupeno (-300 MD Points)!');
+        return { success: true, message: data.message };
+      } else {
+        return { success: false, error: data.error || 'Nepodařilo se zakoupit zatočení.' };
+      }
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Chyba připojení při nákupu zatočení.' };
+    }
+  };
+
   const syncUserData = async (updates: Partial<DiscordUser>) => {
     if (!user) return;
     const updatedUser = { ...user, ...updates, lastActive: Date.now() };
@@ -317,6 +343,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         refreshPoints,
         claimPointActivity,
         redeemCoupon,
+        buyExtraWheelSpin,
         loginWithDiscord,
         logout,
         syncUserData,

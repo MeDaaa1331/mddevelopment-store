@@ -35,7 +35,7 @@ interface WheelOfFortuneModalProps {
 }
 
 export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen, onClose }) => {
-  const { user, isLoggedIn, loginWithDiscord, syncUserData, refreshPoints, showPointToast } = useAuth();
+  const { user, isLoggedIn, loginWithDiscord, syncUserData, refreshPoints, showPointToast, pointsStatus } = useAuth();
   const { applyCoupon, setIsCartOpen } = useCart();
 
   const [inGuild, setInGuild] = useState<boolean>(true);
@@ -43,11 +43,15 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
   const [remainingMs, setRemainingMs] = useState<number>(0);
   const [isCheckingStatus, setIsCheckingStatus] = useState<boolean>(false);
   const [isSpinning, setIsSpinning] = useState<boolean>(false);
+  const [isBuyingSpin, setIsBuyingSpin] = useState<boolean>(false);
+  const [buyError, setBuyError] = useState<string | null>(null);
   const [rotation, setRotation] = useState<number>(0);
   const [wonReward, setWonReward] = useState<SpinReward | null>(null);
   const [isNoLuck, setIsNoLuck] = useState<boolean>(false);
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
   const [isClosing, setIsClosing] = useState<boolean>(false);
+
+  const currentPoints = pointsStatus?.points ?? user?.points ?? 0;
 
   const handleClose = () => {
     setIsClosing(true);
@@ -101,12 +105,13 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
     return () => clearInterval(interval);
   }, [remainingMs]);
 
-  const handleSpin = async () => {
-    if (!user || isSpinning || !canSpin) return;
+  const handleSpin = async (usePoints = false) => {
+    if (!user || isSpinning || (!canSpin && !usePoints)) return;
 
     setIsSpinning(true);
     setWonReward(null);
     setIsNoLuck(false);
+    setBuyError(null);
 
     try {
       const res = await fetch('/api/wheel?action=spin', {
@@ -116,7 +121,8 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
           userId: user.id,
           username: user.username,
           global_name: user.global_name,
-          avatarUrl: user.avatarUrl
+          avatarUrl: user.avatarUrl,
+          usePoints
         })
       });
 
@@ -126,12 +132,19 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
         if (data.inGuild === false) {
           setInGuild(false);
         }
-        if (data.cooldown) {
+        if (data.cooldown && !usePoints) {
           setCanSpin(false);
           setRemainingMs(data.remainingMs || 86400000);
         }
+        if (data.error) {
+          setBuyError(data.error);
+        }
         setIsSpinning(false);
         return;
+      }
+
+      if (usePoints) {
+        showPointToast(-300, 'Zatočení navíc zakoupeno za 300 MD Pointů!');
       }
 
       const segmentAngle = 360 / PRIZES.length;
@@ -171,12 +184,32 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
             syncUserData({ lastSpin: Date.now() });
             refreshPoints();
           }
-          showPointToast(20, 'Daily Wheel of Fortune Spin (+20 MD Points)!');
+          showPointToast(20, 'Wheel of Fortune Spin (+20 MD Points)!');
         }
       }, 5200);
 
-    } catch (err) {
+    } catch (err: any) {
       setIsSpinning(false);
+      setBuyError(err.message || 'Error spinning wheel');
+    }
+  };
+
+  const handleBuyAndSpin = async () => {
+    if (!user || isSpinning || isBuyingSpin) return;
+    if (currentPoints < 300) {
+      setBuyError(`Nemáš dostatek MD Pointů. Máš ${currentPoints} pts, k odemknutí zatočení je potřeba 300 pts.`);
+      return;
+    }
+
+    setIsBuyingSpin(true);
+    setBuyError(null);
+    try {
+      await handleSpin(true);
+      refreshPoints();
+    } catch (err: any) {
+      setBuyError(err.message || 'Chyba při nákupu zatočení');
+    } finally {
+      setIsBuyingSpin(false);
     }
   };
 
@@ -389,21 +422,83 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
                 </div>
               </div>
             ) : remainingMs > 0 && !isSpinning ? (
-              <div className="p-3.5 rounded-xl bg-zinc-900 border border-white/10 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <Clock className="w-4 h-4 text-zinc-400 shrink-0" />
-                  <div>
-                    <span className="text-[11px] text-zinc-400 block">Next Free Spin In:</span>
-                    <span className="text-xs font-mono font-bold text-white">{formatCountdown(remainingMs)}</span>
+              <div className="space-y-3">
+                <div className="p-3.5 rounded-xl bg-zinc-900 border border-white/10 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <Clock className="w-4 h-4 text-zinc-400 shrink-0" />
+                    <div>
+                      <span className="text-[11px] text-zinc-400 block">Další bezplatné zatočení za:</span>
+                      <span className="text-xs font-mono font-bold text-white">{formatCountdown(remainingMs)}</span>
+                    </div>
                   </div>
+                  <span className="text-[10px] font-mono text-zinc-400 uppercase px-2 py-0.5 rounded bg-zinc-800 border border-white/5 font-semibold">
+                    1x za 24h
+                  </span>
                 </div>
-                <span className="text-[10px] font-mono text-zinc-400 uppercase px-2 py-0.5 rounded bg-zinc-800 border border-white/5 font-semibold">
-                  Once / 24h
-                </span>
+
+                {/* Buy Extra Spin for 300 MD Points */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-950/40 via-zinc-900/90 to-zinc-950 border border-amber-500/30 shadow-[0_0_25px_rgba(245,158,11,0.08)] space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
+                        <Coins className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-display font-bold text-xs text-white">
+                            Zatočení navíc za 300 MD Points
+                          </h4>
+                          <span className="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-[9px] font-mono font-bold text-amber-300 border border-amber-500/30">
+                            PŘESKOČIT COOLDOWN
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 mt-0.5">Nechce se ti čekat? Přeskoč cooldown a získej další šanci na slevu!</p>
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <span className="text-[10px] font-mono text-zinc-400 block">Zůstatek</span>
+                      <span className="text-xs font-mono font-bold text-amber-300">
+                        {currentPoints.toLocaleString()} pts
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleBuyAndSpin}
+                    disabled={isBuyingSpin || isSpinning || currentPoints < 300}
+                    className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-98 shadow-md ${
+                      currentPoints >= 300
+                        ? 'bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 hover:from-amber-300 hover:to-amber-200 text-black shadow-[0_0_20px_rgba(251,191,36,0.25)] cursor-pointer'
+                        : 'bg-zinc-800 text-zinc-500 border border-white/5 cursor-not-allowed opacity-60'
+                    }`}
+                  >
+                    {isBuyingSpin ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Odemknutí zatočení...</span>
+                      </>
+                    ) : currentPoints >= 300 ? (
+                      <>
+                        <Sparkles className="w-4 h-4 fill-black" />
+                        <span>Koupit zatočení a roztočit kolo (300 pts)</span>
+                      </>
+                    ) : (
+                      <>
+                        <Coins className="w-3.5 h-3.5" />
+                        <span>Nedostatek pointů (Máš {currentPoints}/300 pts)</span>
+                      </>
+                    )}
+                  </button>
+
+                  {buyError && (
+                    <p className="text-[11px] text-rose-400 font-mono text-center">{buyError}</p>
+                  )}
+                </div>
               </div>
             ) : (
               <button
-                onClick={handleSpin}
+                onClick={() => handleSpin(false)}
                 disabled={isSpinning || !canSpin}
                 className="w-full py-3 rounded-xl bg-white text-black hover:bg-zinc-200 font-semibold text-xs tracking-wide transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
               >

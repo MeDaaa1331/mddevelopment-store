@@ -38,7 +38,7 @@ const DISCOUNT_TIERS = [
 ];
 
 export const UserProfileModal: React.FC = () => {
-  const { user, isProfileModalOpen, setIsProfileModalOpen, logout, pointsStatus, refreshPoints, redeemCoupon } = useAuth();
+  const { user, isProfileModalOpen, setIsProfileModalOpen, logout, pointsStatus, refreshPoints, redeemCoupon, buyExtraWheelSpin } = useAuth();
   const { applyCoupon, setIsCartOpen } = useCart();
   const { setIsWheelOpen, navigate } = useStore();
 
@@ -47,6 +47,7 @@ export const UserProfileModal: React.FC = () => {
   const [copiedId, setCopiedId] = useState(false);
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
   const [isRedeeming, setIsRedeeming] = useState<number | null>(null);
+  const [isBuyingExtraSpin, setIsBuyingExtraSpin] = useState<boolean>(false);
   const [redeemSuccessMsg, setRedeemSuccessMsg] = useState<string | null>(null);
   const [redeemErrorMsg, setRedeemErrorMsg] = useState<string | null>(null);
 
@@ -120,6 +121,38 @@ export const UserProfileModal: React.FC = () => {
     } else {
       setRedeemErrorMsg(result.error || 'Failed to redeem discount coupon.');
       setTimeout(() => setRedeemErrorMsg(null), 6000);
+    }
+  };
+
+  const handleBuyExtraSpinFromProfile = async () => {
+    if (canSpinWheel) {
+      handleClose();
+      setIsWheelOpen(true);
+      return;
+    }
+
+    if (currentPoints < 300) {
+      setRedeemErrorMsg(`Nemáš dostatek MD Pointů. Máš ${currentPoints} pts, k odemknutí zatočení je potřeba 300 pts.`);
+      setTimeout(() => setRedeemErrorMsg(null), 5000);
+      return;
+    }
+
+    setIsBuyingExtraSpin(true);
+    setRedeemErrorMsg(null);
+    setRedeemSuccessMsg(null);
+
+    const res = await buyExtraWheelSpin();
+    setIsBuyingExtraSpin(false);
+
+    if (res.success) {
+      setRedeemSuccessMsg('Zatočení navíc zakoupeno za 300 MD Pointů! Otevírám kolo štěstí...');
+      setTimeout(() => {
+        handleClose();
+        setIsWheelOpen(true);
+      }, 700);
+    } else {
+      setRedeemErrorMsg(res.error || 'Nepodařilo se zakoupit zatočení.');
+      setTimeout(() => setRedeemErrorMsg(null), 5000);
     }
   };
 
@@ -422,6 +455,64 @@ export const UserProfileModal: React.FC = () => {
                 </div>
               </div>
 
+              {/* Special Reward: Extra Wheel Spin (Skip Cooldown) */}
+              <div className="p-4 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-transparent flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0">
+                    <Gift className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-display font-bold text-sm text-white">Extra Wheel of Fortune Spin</h4>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        SKIP COOLDOWN
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      Přeskoč 24hodinový cooldown a získej okamžité zatočení kolem štěstí navíc.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end shrink-0">
+                  <div className="text-right">
+                    <span className="font-mono text-sm font-black text-amber-300 block">
+                      300 <span className="text-[10px] font-normal text-amber-400/80">pts</span>
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleBuyExtraSpinFromProfile}
+                    disabled={isBuyingExtraSpin || (!canSpinWheel && currentPoints < 300)}
+                    className={`py-2 px-4 rounded-xl font-bold text-xs transition-all flex items-center gap-2 cursor-pointer ${
+                      canSpinWheel
+                        ? 'bg-amber-500 hover:bg-amber-400 text-black shadow-glow-sm hover:scale-[1.02] active:scale-[0.98]'
+                        : currentPoints >= 300
+                          ? 'bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black shadow-glow-sm hover:scale-[1.02] active:scale-[0.98]'
+                          : 'bg-zinc-800 text-zinc-500 border border-white/5 cursor-not-allowed'
+                    }`}
+                  >
+                    {isBuyingExtraSpin ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Aktivuji...</span>
+                      </>
+                    ) : canSpinWheel ? (
+                      <>
+                        <Gift className="w-3.5 h-3.5" />
+                        <span>Roztočit zdarma</span>
+                      </>
+                    ) : currentPoints >= 300 ? (
+                      <>
+                        <Coins className="w-3.5 h-3.5" />
+                        <span>Koupit za 300 pts</span>
+                      </>
+                    ) : (
+                      <span>Chybí {300 - currentPoints} pts</span>
+                    )}
+                  </button>
+                </div>
+              </div>
+
               {/* My Claimed Discount Codes */}
               <div>
                 <div className="flex items-center justify-between mb-3">
@@ -562,10 +653,29 @@ export const UserProfileModal: React.FC = () => {
                         <ArrowRight className="w-3 h-3" />
                       </button>
                     ) : (
-                      <span className="px-2 py-1 rounded-md bg-zinc-800 text-zinc-400 font-mono text-xs font-bold flex items-center gap-1 shrink-0">
-                        <Clock className="w-3 h-3" />
-                        <span>Daily Cooldown</span>
-                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="px-2 py-1 rounded-md bg-zinc-800/80 text-zinc-400 font-mono text-xs font-bold hidden sm:flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          <span>Cooldown</span>
+                        </span>
+                        <button
+                          onClick={handleBuyExtraSpinFromProfile}
+                          disabled={isBuyingExtraSpin || currentPoints < 300}
+                          className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shrink-0 transition-all ${
+                            currentPoints >= 300
+                              ? 'bg-amber-400 hover:bg-amber-300 text-black shadow-sm cursor-pointer hover:scale-[1.02] active:scale-[0.98]'
+                              : 'bg-zinc-800 text-zinc-400 border border-white/5 cursor-not-allowed opacity-80'
+                          }`}
+                          title="Přeskočit 24h cooldown za 300 MD Pointů"
+                        >
+                          {isBuyingExtraSpin ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Coins className="w-3 h-3 text-amber-900" />
+                          )}
+                          <span>Přeskočit cooldown (300 pts)</span>
+                        </button>
+                      </div>
                     )}
                   </div>
 

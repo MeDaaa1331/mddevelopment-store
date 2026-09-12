@@ -168,6 +168,8 @@ export default async function handler(req: any, res: any) {
     return handleStatus(req, res, url, body);
   } else if (action === 'spin') {
     return handleSpin(req, res, body);
+  } else if (action === 'buy_spin') {
+    return handleBuySpin(req, res, body);
   } else if (action === 'history') {
     return handleHistory(req, res);
   }
@@ -345,15 +347,35 @@ async function handleSpin(req: any, res: any, body: any) {
     const now = Date.now();
     const cooldownMs = 86400000;
     const elapsed = now - lastSpinTime;
+    const usePoints = Boolean(body.usePoints);
 
     if (lastSpinTime > 0 && elapsed < cooldownMs) {
-      return res.status(200).json({
-        success: false,
-        cooldown: true,
-        remainingMs: cooldownMs - elapsed,
-        nextSpinTime: lastSpinTime + cooldownMs,
-        error: 'Cooldown active. You can spin once every 24 hours.'
-      });
+      if (usePoints) {
+        if ((user.points || 0) < 300) {
+          return res.status(400).json({
+            success: false,
+            error: 'Nemáš dostatek MD Pointů. K zakoupení extra zatočení je potřeba 300 bodů.'
+          });
+        }
+        // Deduct 300 points for extra spin
+        user.points = Math.max(0, (user.points || 0) - 300);
+        if (!user.pointsHistory) user.pointsHistory = [];
+        user.pointsHistory.unshift({
+          id: 'pt-wheel-buy-' + now.toString(36),
+          activity: 'wheel_extra_spin',
+          label: 'Extra Wheel Spin (300 MD Points)',
+          points: -300,
+          timestamp: now
+        });
+      } else {
+        return res.status(200).json({
+          success: false,
+          cooldown: true,
+          remainingMs: cooldownMs - elapsed,
+          nextSpinTime: lastSpinTime + cooldownMs,
+          error: 'Cooldown active. You can spin once every 24 hours.'
+        });
+      }
     }
 
     const totalWeight = WHEEL_PRIZES.reduce((acc, p) => acc + p.weight, 0);
@@ -548,6 +570,74 @@ async function handleSpin(req: any, res: any, body: any) {
       pointsAwarded: 20,
       newPointsBalance: user.points,
       nextSpinTime: now + cooldownMs
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+}
+
+async function handleBuySpin(req: any, res: any, body: any) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const userId = body.userId || body.id;
+    if (!userId) {
+      return res.status(400).json({ error: 'Missing userId' });
+    }
+
+    const kvUrl = process.env.KV_REST_API_URL || process.env.REDIS_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+    const kvToken = process.env.KV_REST_API_TOKEN || process.env.REDIS_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+
+    const headers: Record<string, string> = kvToken ? { Authorization: `Bearer ${kvToken}` } : {};
+
+    let user: any = { id: userId, points: 0, pointsHistory: [] };
+
+    if (kvUrl && kvToken) {
+      const userRes = await fetch(`${kvUrl}/get/users:discord:${userId}`, { headers });
+      const userData = await userRes.json().catch(() => null);
+      if (userData?.result) {
+        user = safeParseJson(userData.result) || user;
+      }
+    }
+
+    if ((user.points || 0) < 300) {
+      return res.status(400).json({
+        success: false,
+        error: `Nemáš dostatek MD Pointů. Máš ${user.points || 0} pts, k odemknutí zatočení je potřeba 300 pts.`
+      });
+    }
+
+    const now = Date.now();
+    user.points = Math.max(0, (user.points || 0) - 300);
+    user.lastSpin = 0;
+    if (!user.pointsHistory) user.pointsHistory = [];
+    user.pointsHistory.unshift({
+      id: 'pt-wheel-buy-' + now.toString(36),
+      activity: 'wheel_extra_spin',
+      label: 'Extra Wheel of Fortune Spin (Cooldown Skip for 300 MD Points)',
+      points: -300,
+      timestamp: now
+    });
+
+    if (kvUrl && kvToken) {
+      await Promise.allSettled([
+        fetch(`${kvUrl}/set/users:discord:${userId}`, {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify(user)
+        }),
+        fetch(`${kvUrl}/del/users:discord:${userId}:last_spin`, { headers })
+      ]);
+    }
+
+    return res.status(200).json({
+      success: true,
+      newPoints: user.points,
+      remainingMs: 0,
+      canSpin: true,
+      message: 'Cooldown kola štěstí byl úspěšně přeskočen za 300 MD Pointů! Můžeš točit.'
     });
   } catch (err: any) {
     return res.status(500).json({ error: err.message || 'Internal server error' });
