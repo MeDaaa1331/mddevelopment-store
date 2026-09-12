@@ -251,7 +251,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const buyExtraWheelSpin = async (): Promise<{ success: boolean; message?: string; error?: string }> => {
     if (!user?.id) {
-      return { success: false, error: 'Přihlas se nejdříve přes Discord.' };
+      return { success: false, error: 'Please sign in with Discord first.' };
     }
 
     try {
@@ -264,13 +264,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const data = await res.json();
       if (data.success) {
         await refreshPoints();
-        showPointToast(-300, 'Zatočení kolem štěstí navíc zakoupeno (-300 MD Points)!');
+        showPointToast(-300, 'Extra Wheel Spin purchased (-300 MD Points)!');
         return { success: true, message: data.message };
       } else {
-        return { success: false, error: data.error || 'Nepodařilo se zakoupit zatočení.' };
+        return { success: false, error: data.error || 'Failed to purchase extra spin.' };
       }
     } catch (err: any) {
-      return { success: false, error: err.message || 'Chyba připojení při nákupu zatočení.' };
+      return { success: false, error: err.message || 'Connection error while purchasing extra spin.' };
     }
   };
 

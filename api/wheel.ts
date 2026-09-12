@@ -354,7 +354,7 @@ async function handleSpin(req: any, res: any, body: any) {
         if ((user.points || 0) < 300) {
           return res.status(400).json({
             success: false,
-            error: 'Nemáš dostatek MD Pointů. K zakoupení extra zatočení je potřeba 300 bodů.'
+            error: 'Not enough MD Points. 300 points required for an extra spin.'
           });
         }
         // Deduct 300 points for extra spin
@@ -605,7 +605,7 @@ async function handleBuySpin(req: any, res: any, body: any) {
     if ((user.points || 0) < 300) {
       return res.status(400).json({
         success: false,
-        error: `Nemáš dostatek MD Pointů. Máš ${user.points || 0} pts, k odemknutí zatočení je potřeba 300 pts.`
+        error: `Not enough MD Points. You have ${user.points || 0} pts, 300 pts required.`
       });
     }
 
@@ -637,7 +637,7 @@ async function handleBuySpin(req: any, res: any, body: any) {
       newPoints: user.points,
       remainingMs: 0,
       canSpin: true,
-      message: 'Cooldown kola štěstí byl úspěšně přeskočen za 300 MD Pointů! Můžeš točit.'
+      message: 'Wheel cooldown successfully skipped for 300 MD Points! You can spin now.'
     });
   } catch (err: any) {
     return res.status(500).json({ error: err.message || 'Internal server error' });

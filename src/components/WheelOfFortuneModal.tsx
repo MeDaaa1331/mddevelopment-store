@@ -144,7 +144,7 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
       }
 
       if (usePoints) {
-        showPointToast(-300, 'Zatočení navíc zakoupeno za 300 MD Pointů!');
+        showPointToast(-300, 'Extra Wheel Spin purchased (-300 MD Points)!');
       }
 
       const segmentAngle = 360 / PRIZES.length;
@@ -197,7 +197,7 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
   const handleBuyAndSpin = async () => {
     if (!user || isSpinning || isBuyingSpin) return;
     if (currentPoints < 300) {
-      setBuyError(`Nemáš dostatek MD Pointů. Máš ${currentPoints} pts, k odemknutí zatočení je potřeba 300 pts.`);
+      setBuyError(`Not enough MD Points. You have ${currentPoints} pts, 300 pts required.`);
       return;
     }
 
@@ -207,7 +207,7 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
       await handleSpin(true);
       refreshPoints();
     } catch (err: any) {
-      setBuyError(err.message || 'Chyba při nákupu zatočení');
+      setBuyError(err.message || 'Error purchasing extra spin');
     } finally {
       setIsBuyingSpin(false);
     }
@@ -427,12 +427,12 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
                   <div className="flex items-center gap-2.5">
                     <Clock className="w-4 h-4 text-zinc-400 shrink-0" />
                     <div>
-                      <span className="text-[11px] text-zinc-400 block">Další bezplatné zatočení za:</span>
+                      <span className="text-[11px] text-zinc-400 block">Next Free Spin In:</span>
                       <span className="text-xs font-mono font-bold text-white">{formatCountdown(remainingMs)}</span>
                     </div>
                   </div>
                   <span className="text-[10px] font-mono text-zinc-400 uppercase px-2 py-0.5 rounded bg-zinc-800 border border-white/5 font-semibold">
-                    1x za 24h
+                    Once / 24h
                   </span>
                 </div>
 
@@ -446,18 +446,18 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <h4 className="font-display font-bold text-xs text-white">
-                            Zatočení navíc za 300 MD Points
+                            Extra Spin for 300 MD Points
                           </h4>
                           <span className="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-[9px] font-mono font-bold text-amber-300 border border-amber-500/30">
-                            PŘESKOČIT COOLDOWN
+                            SKIP COOLDOWN
                           </span>
                         </div>
-                        <p className="text-[11px] text-zinc-400 mt-0.5">Nechce se ti čekat? Přeskoč cooldown a získej další šanci na slevu!</p>
+                        <p className="text-[11px] text-zinc-400 mt-0.5">Don't want to wait? Skip cooldown and take an instant extra spin!</p>
                       </div>
                     </div>
 
                     <div className="text-right shrink-0">
-                      <span className="text-[10px] font-mono text-zinc-400 block">Zůstatek</span>
+                      <span className="text-[10px] font-mono text-zinc-400 block">Balance</span>
                       <span className="text-xs font-mono font-bold text-amber-300">
                         {currentPoints.toLocaleString()} pts
                       </span>
@@ -476,17 +476,17 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
                     {isBuyingSpin ? (
                       <>
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                        <span>Odemknutí zatočení...</span>
+                        <span>Unlocking spin...</span>
                       </>
                     ) : currentPoints >= 300 ? (
                       <>
                         <Sparkles className="w-4 h-4 fill-black" />
-                        <span>Koupit zatočení a roztočit kolo (300 pts)</span>
+                        <span>Buy Extra Spin & Spin Wheel (300 pts)</span>
                       </>
                     ) : (
                       <>
                         <Coins className="w-3.5 h-3.5" />
-                        <span>Nedostatek pointů (Máš {currentPoints}/300 pts)</span>
+                        <span>Need more points ({currentPoints}/300 pts)</span>
                       </>
                     )}
                   </button>
