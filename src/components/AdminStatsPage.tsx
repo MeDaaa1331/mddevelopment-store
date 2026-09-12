@@ -41,7 +41,12 @@ import {
   ArrowRight,
   X,
   EyeOff,
-  Radio
+  Radio,
+  Coins,
+  Trophy,
+  Plus,
+  Minus,
+  Medal
 } from 'lucide-react';
 import { getStoredAnalytics, resetAllAnalytics, AnalyticsSummary, DevToolEvent } from '../utils/analytics';
 import { useStore } from '../context/StoreContext';
@@ -118,6 +123,15 @@ export const AdminStatsPage: React.FC = () => {
   const [selectedUserModal, setSelectedUserModal] = useState<any | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  // MD Points Admin States
+  const [discordSubView, setDiscordSubView] = useState<'accounts' | 'leaderboard'>('accounts');
+  const [adjustPointsUser, setAdjustPointsUser] = useState<any | null>(null);
+  const [adjustMode, setAdjustMode] = useState<'add' | 'remove'>('add');
+  const [adjustAmount, setAdjustAmount] = useState<string>('50');
+  const [adjustReason, setAdjustReason] = useState<string>('');
+  const [isSubmittingAdjust, setIsSubmittingAdjust] = useState<boolean>(false);
+  const [adjustToast, setAdjustToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const [announcementForm, setAnnouncementForm] = useState<SiteAnnouncement>({
     id: '',
@@ -255,6 +269,71 @@ export const AdminStatsPage: React.FC = () => {
       textarea.focus();
       textarea.setSelectionRange(start + before.length, start + before.length + (selected ? selected.length : 4));
     }, 50);
+  };
+
+  const handleAdjustPointsSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!adjustPointsUser) return;
+    const num = parseInt(adjustAmount, 10);
+    if (isNaN(num) || num <= 0) {
+      setAdjustToast({ message: 'Zadej platné kladné číslo pointů', type: 'error' });
+      setTimeout(() => setAdjustToast(null), 3000);
+      return;
+    }
+
+    const delta = adjustMode === 'add' ? num : -num;
+    setIsSubmittingAdjust(true);
+    try {
+      const res = await fetch('/api/points?action=admin_adjust', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: adjustPointsUser.id,
+          amount: delta,
+          reason: adjustReason.trim() || undefined
+        })
+      });
+
+      const resData = await res.json();
+      if (!res.ok || !resData.success) {
+        throw new Error(resData.error || 'Nepodařilo se upravit body');
+      }
+
+      const updatedUser = resData.user || {
+        ...adjustPointsUser,
+        points: resData.newPoints,
+        totalPointsEarned: resData.totalPointsEarned
+      };
+
+      setData(prev => {
+        if (!prev || !prev.discordUsers) return prev;
+        return {
+          ...prev,
+          discordUsers: prev.discordUsers.map(u => u.id === adjustPointsUser.id ? { ...u, ...updatedUser } : u)
+        };
+      });
+
+      if (selectedUserModal && selectedUserModal.id === adjustPointsUser.id) {
+        setSelectedUserModal((prev: any) => ({ ...prev, ...updatedUser }));
+      }
+
+      setAdjustToast({
+        message: delta > 0
+          ? `Úspěšně připsáno +${num} pointů pro @${adjustPointsUser.username}`
+          : `Úspěšně odebráno ${num} pointů uživateli @${adjustPointsUser.username}`,
+        type: 'success'
+      });
+      setTimeout(() => setAdjustToast(null), 3500);
+
+      setAdjustPointsUser(null);
+      setAdjustReason('');
+      setAdjustAmount('50');
+    } catch (err: any) {
+      setAdjustToast({ message: err.message || 'Chyba při úpravě pointů', type: 'error' });
+      setTimeout(() => setAdjustToast(null), 4000);
+    } finally {
+      setIsSubmittingAdjust(false);
+    }
   };
 
   const [indicatorStyle, setIndicatorStyle] = useState<{
@@ -1808,172 +1887,561 @@ export const AdminStatsPage: React.FC = () => {
 
         {activeTab === 'discord' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-mono text-zinc-400 uppercase font-bold">Registered Members</span>
-                  <span className="font-display font-black text-2xl text-white block mt-1">
-                    {data?.totalDiscordUsers || (data?.discordUsers?.length || 0)}
-                  </span>
-                </div>
-                <div className="w-10 h-10 rounded-xl bg-[#5865F2]/10 border border-[#5865F2]/30 flex items-center justify-center text-[#8ea1ff]">
-                  <MessageSquare className="w-5 h-5" />
-                </div>
-              </div>
+            {(() => {
+              const allUsers = data?.discordUsers || [];
+              const totalPoints = allUsers.reduce((acc, u) => acc + (u.points || 0), 0);
+              const sortedByPoints = [...allUsers].sort((a, b) => (b.points || 0) - (a.points || 0));
+              const topUser = sortedByPoints[0] && (sortedByPoints[0].points || 0) > 0 ? sortedByPoints[0] : null;
 
-              <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-mono text-zinc-400 uppercase font-bold">Cloud Synced Carts</span>
-                  <span className="font-display font-black text-2xl text-white block mt-1">
-                    {(data?.discordUsers || []).filter(u => u.cart && u.cart.length > 0).length}
-                  </span>
-                </div>
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                  <CheckCircle2 className="w-5 h-5" />
-                </div>
-              </div>
-
-              <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-mono text-zinc-400 uppercase font-bold">Tool Downloads / Copies</span>
-                  <span className="font-display font-black text-2xl text-white block mt-1">
-                    {(data?.discordUsers || []).reduce((acc, u) => acc + (u.downloadsCount || u.history?.length || 0), 0)}
-                  </span>
-                </div>
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
-                  <Download className="w-5 h-5" />
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h3 className="font-display font-extrabold text-base text-white">Discord Member Accounts</h3>
-                  <p className="text-xs text-zinc-400">Users who authenticated via Discord OAuth2</p>
-                </div>
-
-                <div className="relative w-full sm:w-72">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                  <input
-                    type="text"
-                    placeholder="Search by name, ID or country..."
-                    value={discordSearch}
-                    onChange={e => setDiscordSearch(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white"
-                  />
-                </div>
-              </div>
-
-              {(() => {
-                const allUsers = data?.discordUsers || [];
-                const filtered = allUsers.filter(u => {
-                  if (!discordSearch) return true;
-                  const q = discordSearch.toLowerCase();
-                  return (
-                    (u.username && u.username.toLowerCase().includes(q)) ||
-                    (u.global_name && u.global_name.toLowerCase().includes(q)) ||
-                    (u.id && u.id.toLowerCase().includes(q)) ||
-                    (u.country && u.country.toLowerCase().includes(q))
-                  );
-                });
-
-                if (filtered.length === 0) {
-                  return (
-                    <div className="p-12 rounded-2xl bg-zinc-900/40 border border-white/5 text-center">
-                      <MessageSquare className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
-                      <p className="text-xs text-zinc-400 font-mono">
-                        {allUsers.length === 0 ? 'No Discord users have logged in yet.' : 'No users match your search query.'}
-                      </p>
+              return (
+                <>
+                  {/* Top Stats Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-mono text-zinc-400 uppercase font-bold">Registrovaní členové</span>
+                        <span className="font-display font-black text-2xl text-white block mt-1">
+                          {data?.totalDiscordUsers || allUsers.length}
+                        </span>
+                        <span className="text-[11px] text-zinc-500 font-mono">Discord OAuth2</span>
+                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-[#5865F2]/10 border border-[#5865F2]/30 flex items-center justify-center text-[#8ea1ff]">
+                        <MessageSquare className="w-5 h-5" />
+                      </div>
                     </div>
-                  );
-                }
 
-                return (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead>
-                        <tr className="border-b border-white/10 text-zinc-400 font-mono">
-                          <th className="pb-3 pl-2">User</th>
-                          <th className="pb-3">Discord ID</th>
-                          <th className="pb-3">Country</th>
-                          <th className="pb-3">Joined</th>
-                          <th className="pb-3">Last Active</th>
-                          <th className="pb-3">Cart / Favs</th>
-                          <th className="pb-3">Activity</th>
-                          <th className="pb-3 text-right pr-2">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/5 font-sans">
-                        {filtered.map(user => {
-                          const joinedStr = user.firstJoined
-                            ? new Date(user.firstJoined).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                            : 'N/A';
-                          const activeStr = user.lastActive
-                            ? new Date(user.lastActive).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-                            : 'N/A';
+                    <div className="p-5 rounded-2xl bg-zinc-950/80 border border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.08)] flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-mono text-amber-400/90 uppercase font-bold flex items-center gap-1.5">
+                          <Coins className="w-3.5 h-3.5 text-amber-400" />
+                          <span>MD Pointy v oběhu</span>
+                        </span>
+                        <span className="font-display font-black text-2xl text-amber-300 block mt-1">
+                          {totalPoints.toLocaleString()} <span className="text-sm font-mono text-amber-400/70 font-semibold">pts</span>
+                        </span>
+                        <span className="text-[11px] text-zinc-400 font-mono">Zůstatek všech uživatelů</span>
+                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                        <Coins className="w-5 h-5" />
+                      </div>
+                    </div>
 
-                          return (
-                            <tr key={user.id} className="hover:bg-white/[0.02] transition-colors">
-                              <td className="py-3.5 pl-2">
-                                <div className="flex items-center gap-3">
-                                  <img
-                                    src={user.avatarUrl}
-                                    alt={user.username}
-                                    className="w-8 h-8 rounded-xl object-cover border border-white/10 shrink-0"
-                                  />
-                                  <div>
-                                    <span className="font-bold text-white block">
-                                      {user.global_name || user.username}
-                                    </span>
-                                    <span className="font-mono text-[11px] text-zinc-400 block">
-                                      @{user.username}
-                                    </span>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="py-3.5 font-mono text-zinc-400">
-                                <span className="px-2 py-1 rounded bg-zinc-900 border border-white/5 text-[11px]">
-                                  {user.id}
-                                </span>
-                              </td>
-                              <td className="py-3.5 font-mono text-zinc-300">
-                                <span className="px-2 py-0.5 rounded-md bg-zinc-800 text-[10px] font-bold">
-                                  {user.country || 'GLOBAL'}
-                                </span>
-                              </td>
-                              <td className="py-3.5 text-zinc-400 font-mono text-[11px]">{joinedStr}</td>
-                              <td className="py-3.5 text-emerald-400 font-mono text-[11px]">{activeStr}</td>
-                              <td className="py-3.5">
-                                <div className="flex items-center gap-2">
-                                  <span className="px-2 py-0.5 rounded bg-zinc-900 border border-white/5 text-[11px] font-mono text-zinc-300">
-                                    🛒 {user.cart?.length || 0}
-                                  </span>
-                                  <span className="px-2 py-0.5 rounded bg-amber-400/10 border border-amber-400/20 text-[11px] font-mono text-amber-300">
-                                    ★ {user.favorites?.length || 0}
-                                  </span>
-                                </div>
-                              </td>
-                              <td className="py-3.5 font-mono text-zinc-300">
-                                <span className="font-bold">{user.downloadsCount || user.history?.length || 0}</span> events
-                              </td>
-                              <td className="py-3.5 text-right pr-2">
-                                <button
-                                  onClick={() => setSelectedUserModal(user)}
-                                  className="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-xs font-semibold text-zinc-200 hover:text-white transition-all"
-                                >
-                                  View Details
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                    <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-mono text-yellow-400/90 uppercase font-bold flex items-center gap-1.5">
+                          <Trophy className="w-3.5 h-3.5 text-yellow-400" />
+                          <span>Lídr žebříčku</span>
+                        </span>
+                        {topUser ? (
+                          <div className="mt-1 flex items-center gap-2">
+                            <img
+                              src={topUser.avatarUrl}
+                              alt={topUser.username}
+                              className="w-7 h-7 rounded-lg border border-yellow-500/40 object-cover"
+                            />
+                            <div>
+                              <span className="font-display font-black text-sm text-white block leading-tight truncate max-w-[130px]">
+                                {topUser.global_name || topUser.username}
+                              </span>
+                              <span className="text-[11px] text-yellow-400 font-mono font-bold">
+                                {(topUser.points || 0).toLocaleString()} pts
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="font-display font-bold text-base text-zinc-500 block mt-1">
+                            Zatím žádný
+                          </span>
+                        )}
+                        <span className="text-[11px] text-zinc-500 font-mono mt-0.5 block">#1 MD Points</span>
+                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center text-yellow-400">
+                        <Trophy className="w-5 h-5" />
+                      </div>
+                    </div>
+
+                    <div className="p-5 rounded-2xl bg-zinc-950/80 border border-white/10 flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-mono text-zinc-400 uppercase font-bold">Synchronizované košíky</span>
+                        <span className="font-display font-black text-2xl text-white block mt-1">
+                          {allUsers.filter(u => u.cart && u.cart.length > 0).length}
+                        </span>
+                        <span className="text-[11px] text-zinc-500 font-mono">Aktivní košíky v cloudu</span>
+                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                        <CheckCircle2 className="w-5 h-5" />
+                      </div>
+                    </div>
                   </div>
-                );
-              })()}
-            </div>
+
+                  {/* Sub-view Switcher Tabs */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-2 bg-zinc-950/80 rounded-2xl border border-white/10">
+                    <div className="flex items-center gap-1.5 p-1 bg-zinc-900/80 rounded-xl border border-white/5">
+                      <button
+                        onClick={() => setDiscordSubView('accounts')}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
+                          discordSubView === 'accounts'
+                            ? 'bg-white text-black shadow-md'
+                            : 'text-zinc-400 hover:text-white'
+                        }`}
+                      >
+                        <Users className="w-3.5 h-3.5" />
+                        <span>Členské účty ({allUsers.length})</span>
+                      </button>
+                      <button
+                        onClick={() => setDiscordSubView('leaderboard')}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
+                          discordSubView === 'leaderboard'
+                            ? 'bg-amber-400 text-black shadow-[0_0_15px_rgba(251,191,36,0.35)]'
+                            : 'text-zinc-400 hover:text-white'
+                        }`}
+                      >
+                        <Trophy className="w-3.5 h-3.5 text-amber-400 group-hover:text-amber-300" />
+                        <span>🏆 MD Points Žebříček</span>
+                      </button>
+                    </div>
+
+                    {discordSubView === 'accounts' && (
+                      <div className="relative w-full sm:w-72">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                        <input
+                          type="text"
+                          placeholder="Hledat podle jména, ID nebo země..."
+                          value={discordSearch}
+                          onChange={e => setDiscordSearch(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Sub-view 1: ACCOUNTS LIST */}
+                  {discordSubView === 'accounts' && (
+                    <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-display font-extrabold text-base text-white">Discord Member Accounts</h3>
+                          <p className="text-xs text-zinc-400">Přehled přihlášených uživatelů, jejich MD Points a aktivita</p>
+                        </div>
+                      </div>
+
+                      {(() => {
+                        const filtered = allUsers.filter(u => {
+                          if (!discordSearch) return true;
+                          const q = discordSearch.toLowerCase();
+                          return (
+                            (u.username && u.username.toLowerCase().includes(q)) ||
+                            (u.global_name && u.global_name.toLowerCase().includes(q)) ||
+                            (u.id && u.id.toLowerCase().includes(q)) ||
+                            (u.country && u.country.toLowerCase().includes(q))
+                          );
+                        });
+
+                        if (filtered.length === 0) {
+                          return (
+                            <div className="p-12 rounded-2xl bg-zinc-900/40 border border-white/5 text-center">
+                              <MessageSquare className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
+                              <p className="text-xs text-zinc-400 font-mono">
+                                {allUsers.length === 0 ? 'Zatím se nepřihlásil žádný Discord uživatel.' : 'Hledanému výrazu neodpovídá žádný uživatel.'}
+                              </p>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs">
+                              <thead>
+                                <tr className="border-b border-white/10 text-zinc-400 font-mono">
+                                  <th className="pb-3 pl-2">Uživatel</th>
+                                  <th className="pb-3">MD Points</th>
+                                  <th className="pb-3">Discord ID</th>
+                                  <th className="pb-3">Země</th>
+                                  <th className="pb-3">Registrace</th>
+                                  <th className="pb-3">Aktivita</th>
+                                  <th className="pb-3">Košík / Oblíbené</th>
+                                  <th className="pb-3 text-right pr-2">Správa účtu</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-white/5 font-sans">
+                                {filtered.map(user => {
+                                  const joinedStr = user.firstJoined
+                                    ? new Date(user.firstJoined).toLocaleDateString('cs-CZ', { month: 'short', day: 'numeric', year: 'numeric' })
+                                    : 'N/A';
+
+                                  return (
+                                    <tr key={user.id} className="hover:bg-white/[0.02] transition-colors">
+                                      <td className="py-3.5 pl-2">
+                                        <div className="flex items-center gap-3">
+                                          <img
+                                            src={user.avatarUrl}
+                                            alt={user.username}
+                                            className="w-8 h-8 rounded-xl object-cover border border-white/10 shrink-0"
+                                          />
+                                          <div>
+                                            <span className="font-bold text-white block">
+                                              {user.global_name || user.username}
+                                            </span>
+                                            <span className="font-mono text-[11px] text-zinc-400 block">
+                                              @{user.username}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </td>
+
+                                      {/* Points Column */}
+                                      <td className="py-3.5 font-mono">
+                                        <div className="flex flex-col items-start gap-0.5">
+                                          <span className="px-2.5 py-1 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 font-mono font-black text-xs flex items-center gap-1.5 shadow-[0_0_12px_rgba(245,158,11,0.08)]">
+                                            <Coins className="w-3.5 h-3.5 text-amber-400" />
+                                            <span>{(user.points || 0).toLocaleString()} pts</span>
+                                          </span>
+                                          <span className="text-[10px] text-zinc-500 font-mono pl-1">
+                                            celkem: {(user.totalPointsEarned || user.points || 0).toLocaleString()}
+                                          </span>
+                                        </div>
+                                      </td>
+
+                                      <td className="py-3.5 font-mono text-zinc-400">
+                                        <span className="px-2 py-1 rounded bg-zinc-900 border border-white/5 text-[11px]">
+                                          {user.id}
+                                        </span>
+                                      </td>
+                                      <td className="py-3.5 font-mono text-zinc-300">
+                                        <span className="px-2 py-0.5 rounded-md bg-zinc-800 text-[10px] font-bold">
+                                          {user.country || 'GLOBAL'}
+                                        </span>
+                                      </td>
+                                      <td className="py-3.5 text-zinc-400 font-mono text-[11px]">{joinedStr}</td>
+                                      <td className="py-3.5 font-mono text-zinc-300">
+                                        <span className="font-bold">{user.downloadsCount || user.history?.length || 0}</span> akcí
+                                      </td>
+                                      <td className="py-3.5">
+                                        <div className="flex items-center gap-2">
+                                          <span className="px-2 py-0.5 rounded bg-zinc-900 border border-white/5 text-[11px] font-mono text-zinc-300">
+                                            🛒 {user.cart?.length || 0}
+                                          </span>
+                                          <span className="px-2 py-0.5 rounded bg-amber-400/10 border border-amber-400/20 text-[11px] font-mono text-amber-300">
+                                            ★ {user.favorites?.length || 0}
+                                          </span>
+                                        </div>
+                                      </td>
+                                      <td className="py-3.5 text-right pr-2">
+                                        <div className="flex items-center justify-end gap-2">
+                                          <button
+                                            onClick={() => {
+                                              setAdjustPointsUser(user);
+                                              setAdjustMode('add');
+                                              setAdjustAmount('50');
+                                              setAdjustReason('');
+                                            }}
+                                            className="px-2.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-xs font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1.5 transition-all shadow-sm"
+                                            title="Přidat nebo odebrat pointy"
+                                          >
+                                            <Coins className="w-3.5 h-3.5" />
+                                            <span>+/- Body</span>
+                                          </button>
+                                          <button
+                                            onClick={() => setSelectedUserModal(user)}
+                                            className="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-xs font-semibold text-zinc-200 hover:text-white transition-all"
+                                          >
+                                            Detail
+                                          </button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Sub-view 2: MD POINTS LEADERBOARD */}
+                  {discordSubView === 'leaderboard' && (
+                    <div className="space-y-6 animate-fadeIn">
+                      {/* Podium Top 3 */}
+                      {sortedByPoints.length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                          {/* 2nd Place (Silver) */}
+                          {sortedByPoints[1] ? (
+                            <div className="p-6 rounded-3xl bg-zinc-950/80 border border-zinc-400/30 shadow-[0_0_25px_rgba(200,200,200,0.06)] flex flex-col items-center text-center relative overflow-hidden order-2 md:order-1">
+                              <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-zinc-400/20 border border-zinc-400/40 text-[10px] font-mono font-bold text-zinc-300 flex items-center gap-1">
+                                <Medal className="w-3 h-3 text-zinc-300" />
+                                <span>#2 Silver</span>
+                              </div>
+                              <div className="relative mt-2">
+                                <img
+                                  src={sortedByPoints[1].avatarUrl}
+                                  alt={sortedByPoints[1].username}
+                                  className="w-16 h-16 rounded-2xl object-cover border-2 border-zinc-400/40 shadow-md"
+                                />
+                                <span className="absolute -bottom-2 -right-1 w-6 h-6 rounded-full bg-zinc-300 text-black font-extrabold text-xs flex items-center justify-center shadow">
+                                  2
+                                </span>
+                              </div>
+                              <h4 className="font-display font-extrabold text-base text-white mt-3 truncate max-w-full">
+                                {sortedByPoints[1].global_name || sortedByPoints[1].username}
+                              </h4>
+                              <p className="text-xs font-mono text-zinc-400">@{sortedByPoints[1].username}</p>
+
+                              <div className="mt-3 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono font-black text-base flex items-center gap-1.5">
+                                <Coins className="w-4 h-4 text-amber-400" />
+                                <span>{(sortedByPoints[1].points || 0).toLocaleString()} pts</span>
+                              </div>
+                              <p className="text-[11px] text-zinc-500 font-mono mt-1">
+                                Celkem získáno: {(sortedByPoints[1].totalPointsEarned || sortedByPoints[1].points || 0).toLocaleString()} pts
+                              </p>
+
+                              <button
+                                onClick={() => {
+                                  setAdjustPointsUser(sortedByPoints[1]);
+                                  setAdjustMode('add');
+                                  setAdjustAmount('50');
+                                  setAdjustReason('');
+                                }}
+                                className="mt-4 w-full py-2 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-xs font-bold text-zinc-300 hover:text-white flex items-center justify-center gap-1.5 transition-all"
+                              >
+                                <Coins className="w-3.5 h-3.5 text-amber-400" />
+                                <span>Upravit pointy</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="hidden md:block" />
+                          )}
+
+                          {/* 1st Place (Gold Champion) */}
+                          {sortedByPoints[0] && (
+                            <div className="p-6 rounded-3xl bg-gradient-to-b from-amber-950/40 to-zinc-950/90 border border-amber-500/40 shadow-[0_0_35px_rgba(245,158,11,0.18)] flex flex-col items-center text-center relative overflow-hidden order-1 md:order-2 md:-translate-y-2">
+                              <div className="absolute top-3 right-3 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/50 text-[10px] font-mono font-black text-amber-300 flex items-center gap-1 animate-pulse">
+                                <Trophy className="w-3 h-3 text-amber-400" />
+                                <span>#1 CHAMPION</span>
+                              </div>
+                              <div className="relative mt-2">
+                                <img
+                                  src={sortedByPoints[0].avatarUrl}
+                                  alt={sortedByPoints[0].username}
+                                  className="w-20 h-20 rounded-2xl object-cover border-2 border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.3)]"
+                                />
+                                <span className="absolute -bottom-2 -right-1 w-7 h-7 rounded-full bg-amber-400 text-black font-black text-sm flex items-center justify-center shadow-lg">
+                                  👑
+                                </span>
+                              </div>
+                              <h4 className="font-display font-black text-lg text-white mt-3 truncate max-w-full">
+                                {sortedByPoints[0].global_name || sortedByPoints[0].username}
+                              </h4>
+                              <p className="text-xs font-mono text-amber-400/80">@{sortedByPoints[0].username}</p>
+
+                              <div className="mt-3 px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono font-black text-lg flex items-center gap-2 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+                                <Coins className="w-5 h-5 text-amber-400 animate-bounce" />
+                                <span>{(sortedByPoints[0].points || 0).toLocaleString()} pts</span>
+                              </div>
+                              <p className="text-xs text-zinc-400 font-mono mt-1">
+                                Celkem získáno: <strong className="text-amber-300">{(sortedByPoints[0].totalPointsEarned || sortedByPoints[0].points || 0).toLocaleString()} pts</strong>
+                              </p>
+
+                              <button
+                                onClick={() => {
+                                  setAdjustPointsUser(sortedByPoints[0]);
+                                  setAdjustMode('add');
+                                  setAdjustAmount('50');
+                                  setAdjustReason('');
+                                }}
+                                className="mt-4 w-full py-2.5 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md"
+                              >
+                                <Coins className="w-4 h-4" />
+                                <span>Upravit pointy</span>
+                              </button>
+                            </div>
+                          )}
+
+                          {/* 3rd Place (Bronze) */}
+                          {sortedByPoints[2] ? (
+                            <div className="p-6 rounded-3xl bg-zinc-950/80 border border-amber-700/30 shadow-[0_0_25px_rgba(180,83,9,0.06)] flex flex-col items-center text-center relative overflow-hidden order-3">
+                              <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-amber-700/20 border border-amber-700/40 text-[10px] font-mono font-bold text-amber-400 flex items-center gap-1">
+                                <Medal className="w-3 h-3 text-amber-600" />
+                                <span>#3 Bronze</span>
+                              </div>
+                              <div className="relative mt-2">
+                                <img
+                                  src={sortedByPoints[2].avatarUrl}
+                                  alt={sortedByPoints[2].username}
+                                  className="w-16 h-16 rounded-2xl object-cover border-2 border-amber-700/40 shadow-md"
+                                />
+                                <span className="absolute -bottom-2 -right-1 w-6 h-6 rounded-full bg-amber-700 text-white font-extrabold text-xs flex items-center justify-center shadow">
+                                  3
+                                </span>
+                              </div>
+                              <h4 className="font-display font-extrabold text-base text-white mt-3 truncate max-w-full">
+                                {sortedByPoints[2].global_name || sortedByPoints[2].username}
+                              </h4>
+                              <p className="text-xs font-mono text-zinc-400">@{sortedByPoints[2].username}</p>
+
+                              <div className="mt-3 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono font-black text-base flex items-center gap-1.5">
+                                <Coins className="w-4 h-4 text-amber-400" />
+                                <span>{(sortedByPoints[2].points || 0).toLocaleString()} pts</span>
+                              </div>
+                              <p className="text-[11px] text-zinc-500 font-mono mt-1">
+                                Celkem získáno: {(sortedByPoints[2].totalPointsEarned || sortedByPoints[2].points || 0).toLocaleString()} pts
+                              </p>
+
+                              <button
+                                onClick={() => {
+                                  setAdjustPointsUser(sortedByPoints[2]);
+                                  setAdjustMode('add');
+                                  setAdjustAmount('50');
+                                  setAdjustReason('');
+                                }}
+                                className="mt-4 w-full py-2 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-xs font-bold text-zinc-300 hover:text-white flex items-center justify-center gap-1.5 transition-all"
+                              >
+                                <Coins className="w-3.5 h-3.5 text-amber-400" />
+                                <span>Upravit pointy</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="hidden md:block" />
+                          )}
+                        </div>
+                      )}
+
+                      {/* Complete Leaderboard Table */}
+                      <div className="p-6 rounded-3xl bg-zinc-950/80 border border-white/10 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-display font-extrabold text-base text-white flex items-center gap-2">
+                              <Trophy className="w-4 h-4 text-yellow-400" />
+                              <span>Kompletní MD Points Žebříček</span>
+                            </h3>
+                            <p className="text-xs text-zinc-400">Všichni členové seřazeni sestupně podle jejich aktuálního stavu bodů</p>
+                          </div>
+                        </div>
+
+                        {sortedByPoints.length === 0 ? (
+                          <div className="p-12 rounded-2xl bg-zinc-900/40 border border-white/5 text-center">
+                            <Coins className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
+                            <p className="text-xs text-zinc-400 font-mono">Zatím žádní uživatelé v žebříčku.</p>
+                          </div>
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs">
+                              <thead>
+                                <tr className="border-b border-white/10 text-zinc-400 font-mono">
+                                  <th className="pb-3 pl-2 w-16">Pořadí</th>
+                                  <th className="pb-3">Uživatel</th>
+                                  <th className="pb-3">Zůstatek</th>
+                                  <th className="pb-3">Celkem získáno</th>
+                                  <th className="pb-3">Uplatněné slevy</th>
+                                  <th className="pb-3">Poslední aktivita</th>
+                                  <th className="pb-3 text-right pr-2">Akce</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-white/5 font-sans">
+                                {sortedByPoints.map((user, index) => {
+                                  const rank = index + 1;
+                                  const activeStr = user.lastActive
+                                    ? new Date(user.lastActive).toLocaleDateString('cs-CZ', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                    : 'N/A';
+
+                                  return (
+                                    <tr key={user.id} className="hover:bg-white/[0.02] transition-colors">
+                                      <td className="py-3.5 pl-2 font-mono">
+                                        {rank === 1 ? (
+                                          <span className="w-7 h-7 rounded-xl bg-amber-400/20 border border-amber-400/50 text-amber-300 font-black text-xs flex items-center justify-center shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                                            🥇 1
+                                          </span>
+                                        ) : rank === 2 ? (
+                                          <span className="w-7 h-7 rounded-xl bg-zinc-300/20 border border-zinc-300/50 text-zinc-200 font-black text-xs flex items-center justify-center">
+                                            🥈 2
+                                          </span>
+                                        ) : rank === 3 ? (
+                                          <span className="w-7 h-7 rounded-xl bg-amber-700/20 border border-amber-700/50 text-amber-400 font-black text-xs flex items-center justify-center">
+                                            🥉 3
+                                          </span>
+                                        ) : (
+                                          <span className="w-7 h-7 rounded-xl bg-zinc-900 border border-white/10 text-zinc-400 font-bold text-xs flex items-center justify-center">
+                                            #{rank}
+                                          </span>
+                                        )}
+                                      </td>
+
+                                      <td className="py-3.5">
+                                        <div className="flex items-center gap-3">
+                                          <img
+                                            src={user.avatarUrl}
+                                            alt={user.username}
+                                            className="w-8 h-8 rounded-xl object-cover border border-white/10 shrink-0"
+                                          />
+                                          <div>
+                                            <span className="font-bold text-white block">
+                                              {user.global_name || user.username}
+                                            </span>
+                                            <span className="font-mono text-[11px] text-zinc-400 block">
+                                              @{user.username} • <span className="text-zinc-500">ID: {user.id}</span>
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </td>
+
+                                      <td className="py-3.5 font-mono">
+                                        <span className="px-3 py-1 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-black text-xs inline-flex items-center gap-1.5 shadow-[0_0_12px_rgba(245,158,11,0.12)]">
+                                          <Coins className="w-3.5 h-3.5 text-amber-400" />
+                                          {(user.points || 0).toLocaleString()} pts
+                                        </span>
+                                      </td>
+
+                                      <td className="py-3.5 font-mono text-zinc-400">
+                                        <span className="text-zinc-300 font-bold">{(user.totalPointsEarned || user.points || 0).toLocaleString()}</span> pts
+                                      </td>
+
+                                      <td className="py-3.5 font-mono">
+                                        <span className="px-2 py-0.5 rounded bg-zinc-900 border border-white/10 text-[11px] text-zinc-300">
+                                          🏷️ {user.redeemedCoupons?.length || 0} kuponů
+                                        </span>
+                                      </td>
+
+                                      <td className="py-3.5 text-zinc-400 font-mono text-[11px]">
+                                        {activeStr}
+                                      </td>
+
+                                      <td className="py-3.5 text-right pr-2">
+                                        <div className="flex items-center justify-end gap-2">
+                                          <button
+                                            onClick={() => {
+                                              setAdjustPointsUser(user);
+                                              setAdjustMode('add');
+                                              setAdjustAmount('50');
+                                              setAdjustReason('');
+                                            }}
+                                            className="px-2.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-xs font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1.5 transition-all shadow-sm"
+                                            title="Přidat nebo odebrat pointy"
+                                          >
+                                            <Coins className="w-3.5 h-3.5" />
+                                            <span>+/- Body</span>
+                                          </button>
+                                          <button
+                                            onClick={() => setSelectedUserModal(user)}
+                                            className="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-xs font-semibold text-zinc-200 hover:text-white transition-all"
+                                          >
+                                            Detail
+                                          </button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
 
@@ -2232,14 +2700,77 @@ export const AdminStatsPage: React.FC = () => {
                 </button>
               </div>
 
+              {/* MD Points Overview Card */}
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono font-bold text-amber-300 uppercase flex items-center gap-1.5">
+                    <Coins className="w-4 h-4 text-amber-400" />
+                    <span>MD Points Stav účtu</span>
+                  </span>
+                  <button
+                    onClick={() => {
+                      setAdjustPointsUser(selectedUserModal);
+                      setAdjustMode('add');
+                      setAdjustAmount('50');
+                      setAdjustReason('');
+                    }}
+                    className="px-3 py-1 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-extrabold text-xs flex items-center gap-1 shadow-sm transition-all"
+                  >
+                    <Coins className="w-3.5 h-3.5" />
+                    <span>+/- Upravit body</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div className="p-2.5 rounded-xl bg-black/40 border border-white/5">
+                    <span className="text-[10px] font-mono text-zinc-400 block uppercase">Aktuální zůstatek</span>
+                    <span className="text-lg font-mono font-black text-amber-300">
+                      {(selectedUserModal.points || 0).toLocaleString()} <span className="text-xs text-amber-400/80 font-normal">pts</span>
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-black/40 border border-white/5">
+                    <span className="text-[10px] font-mono text-zinc-400 block uppercase">Celkem získáno</span>
+                    <span className="text-lg font-mono font-bold text-white">
+                      {(selectedUserModal.totalPointsEarned || selectedUserModal.points || 0).toLocaleString()} <span className="text-xs text-zinc-400 font-normal">pts</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Redeemed coupons preview */}
+                {selectedUserModal.redeemedCoupons && selectedUserModal.redeemedCoupons.length > 0 && (
+                  <div className="pt-1">
+                    <span className="text-[11px] font-mono text-zinc-400 block mb-1.5 font-bold">
+                      Uplatněné slevové kódy ({selectedUserModal.redeemedCoupons.length}):
+                    </span>
+                    <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                      {selectedUserModal.redeemedCoupons.map((c: any, cIdx: number) => (
+                        <div key={cIdx} className="p-2 rounded-xl bg-zinc-900/80 border border-white/5 flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 font-mono font-bold text-[10px]">
+                              {c.discountPercent || c.discount || 0}% OFF
+                            </span>
+                            <span className="font-mono font-bold text-white text-[11px]">{c.code}</span>
+                          </div>
+                          <span className="text-[10px] font-mono text-zinc-500">
+                            {c.redeemedAt ? new Date(c.redeemedAt).toLocaleDateString('cs-CZ') : ''}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Activity History */}
               <div>
                 <h5 className="text-xs font-mono font-bold text-zinc-400 uppercase tracking-wider mb-2">
-                  Activity History ({selectedUserModal.history?.length || 0})
+                  Historie akcí v DevTools ({selectedUserModal.history?.length || 0})
                 </h5>
                 {(!selectedUserModal.history || selectedUserModal.history.length === 0) ? (
-                  <p className="text-xs text-zinc-500 font-mono py-4 text-center">No recorded activity yet.</p>
+                  <p className="text-xs text-zinc-500 font-mono py-4 text-center">Zatím žádná zaznamenaná aktivita.</p>
                 ) : (
-                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
                     {selectedUserModal.history.map((h: any, idx: number) => (
                       <div key={idx} className="p-2.5 rounded-xl bg-zinc-900/80 border border-white/5 flex items-center justify-between text-xs">
                         <span className="font-semibold text-white truncate max-w-xs">{h.title}</span>
@@ -2255,10 +2786,186 @@ export const AdminStatsPage: React.FC = () => {
                   onClick={() => setSelectedUserModal(null)}
                   className="px-4 py-2 rounded-xl bg-white text-black font-bold text-xs hover:bg-zinc-200"
                 >
-                  Close
+                  Zavřít
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Modal: Adjust User MD Points */}
+        {adjustPointsUser && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center p-4 animate-fadeIn">
+            <div className="w-full max-w-md p-6 rounded-3xl bg-zinc-950 border border-white/15 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={adjustPointsUser.avatarUrl}
+                    alt={adjustPointsUser.username}
+                    className="w-11 h-11 rounded-2xl border border-white/20 object-cover"
+                  />
+                  <div>
+                    <h4 className="font-display font-bold text-base text-white">
+                      Upravit MD Points
+                    </h4>
+                    <p className="text-xs font-mono text-zinc-400">
+                      @{adjustPointsUser.username} • Zůstatek: <span className="text-amber-300 font-bold font-mono">{(adjustPointsUser.points || 0).toLocaleString()} pts</span>
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setAdjustPointsUser(null)}
+                  className="p-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Add vs Remove toggle */}
+              <div className="grid grid-cols-2 gap-2 p-1 bg-zinc-900/90 rounded-2xl border border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setAdjustMode('add')}
+                  className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                    adjustMode === 'add'
+                      ? 'bg-emerald-500 text-black font-extrabold shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Přidat pointy (+)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAdjustMode('remove')}
+                  className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                    adjustMode === 'remove'
+                      ? 'bg-rose-500 text-white font-extrabold shadow-[0_0_15px_rgba(244,63,94,0.3)]'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  <Minus className="w-3.5 h-3.5" />
+                  <span>Odebrat pointy (-)</span>
+                </button>
+              </div>
+
+              {/* Quick amount presets */}
+              <div>
+                <label className="text-[11px] font-mono text-zinc-400 uppercase font-bold block mb-2">
+                  Rychlá volba počtu:
+                </label>
+                <div className="grid grid-cols-5 gap-2">
+                  {['20', '50', '100', '250', '500'].map(val => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setAdjustAmount(val)}
+                      className={`py-1.5 rounded-xl text-xs font-mono font-bold border transition-all ${
+                        adjustAmount === val
+                          ? 'bg-amber-400/20 border-amber-400 text-amber-300'
+                          : 'bg-zinc-900 border-white/10 text-zinc-400 hover:text-white hover:border-white/20'
+                      }`}
+                    >
+                      {adjustMode === 'add' ? `+${val}` : `-${val}`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Amount input */}
+              <div>
+                <label className="text-[11px] font-mono text-zinc-400 uppercase font-bold block mb-1.5">
+                  Počet pointů k {adjustMode === 'add' ? 'připsání' : 'odebrání'}:
+                </label>
+                <div className="relative">
+                  <Coins className="w-4 h-4 text-amber-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={adjustAmount}
+                    onChange={e => setAdjustAmount(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2.5 bg-zinc-900 border border-white/15 rounded-xl text-sm font-mono font-bold text-white focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+              </div>
+
+              {/* Optional reason */}
+              <div>
+                <label className="text-[11px] font-mono text-zinc-400 uppercase font-bold block mb-1.5">
+                  Důvod / Poznámka (volitelné):
+                </label>
+                <input
+                  type="text"
+                  placeholder="např. Výhra v soutěži, VIP role, kompenzace..."
+                  value={adjustReason}
+                  onChange={e => setAdjustReason(e.target.value)}
+                  className="w-full px-3 py-2 bg-zinc-900 border border-white/15 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white"
+                />
+              </div>
+
+              {/* Balance calculation preview */}
+              <div className="p-3 rounded-2xl bg-zinc-900/80 border border-white/10 flex items-center justify-between text-xs font-mono">
+                <span className="text-zinc-400">Nový zůstatek po úpravě:</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-zinc-500 line-through">{(adjustPointsUser.points || 0).toLocaleString()} pts</span>
+                  <ArrowRight className="w-3 h-3 text-zinc-500" />
+                  <span className="font-bold text-amber-300 text-sm">
+                    {Math.max(
+                      0,
+                      (adjustPointsUser.points || 0) + (adjustMode === 'add' ? (parseInt(adjustAmount, 10) || 0) : -(parseInt(adjustAmount, 10) || 0))
+                    ).toLocaleString()} pts
+                  </span>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="pt-2 border-t border-white/10 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAdjustPointsUser(null)}
+                  className="px-4 py-2 rounded-xl bg-zinc-900 text-zinc-400 hover:text-white text-xs font-semibold"
+                >
+                  Zrušit
+                </button>
+                <button
+                  type="button"
+                  disabled={isSubmittingAdjust || !parseInt(adjustAmount, 10)}
+                  onClick={() => handleAdjustPointsSubmit()}
+                  className={`px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all disabled:opacity-50 ${
+                    adjustMode === 'add'
+                      ? 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-[0_0_20px_rgba(16,185,129,0.3)]'
+                      : 'bg-rose-500 hover:bg-rose-400 text-white shadow-[0_0_20px_rgba(244,63,94,0.3)]'
+                  }`}
+                >
+                  {isSubmittingAdjust ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Ukládám...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Coins className="w-3.5 h-3.5" />
+                      <span>{adjustMode === 'add' ? `Přidat +${adjustAmount || 0} pointů` : `Odebrat -${adjustAmount || 0} pointů`}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Adjust Points Toast */}
+        {adjustToast && (
+          <div
+            className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-2xl border shadow-2xl backdrop-blur-xl flex items-center gap-3 text-xs font-semibold animate-fadeIn ${
+              adjustToast.type === 'success'
+                ? 'bg-emerald-950/90 border-emerald-500/40 text-emerald-300'
+                : 'bg-rose-950/90 border-rose-500/40 text-rose-300'
+            }`}
+          >
+            <Coins className="w-4 h-4 shrink-0 text-amber-400" />
+            <span>{adjustToast.message}</span>
           </div>
         )}
       </main>

@@ -321,10 +321,10 @@ export const UserProfileModal: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="w-full sm:w-64 p-3 rounded-xl bg-black/50 border border-white/10 text-xs">
-                    <div className="flex items-center justify-between mb-1 text-[11px] font-mono">
-                      <span className="text-zinc-400">Next Discount Goal</span>
-                      <span className="text-amber-300 font-bold">
+                  <div className="w-full sm:w-72 md:w-80 p-3.5 rounded-xl bg-black/50 border border-white/10 text-xs shrink-0">
+                    <div className="flex items-center justify-between gap-2.5 mb-1.5 text-[11px] font-mono">
+                      <span className="text-zinc-400 whitespace-nowrap">Next Discount Goal</span>
+                      <span className="text-amber-300 font-bold whitespace-nowrap">
                         {nextTier ? `${nextTier.discount}% OFF (${nextTier.cost} pts)` : 'MAX TIER!'}
                       </span>
                     </div>

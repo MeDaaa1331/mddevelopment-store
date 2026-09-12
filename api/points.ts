@@ -34,6 +34,8 @@ export default async function handler(req: any, res: any) {
     return handleActivity(req, res, body);
   } else if (action === 'redeem') {
     return handleRedeem(req, res, body);
+  } else if (action === 'admin_adjust') {
+    return handleAdminAdjust(req, res, body);
   }
 
   return res.status(404).json({ error: `Unknown points action: ${action || 'none'}` });
@@ -565,6 +567,99 @@ async function handleRedeem(req: any, res: any, body: any) {
       coupon: newCoupon,
       newBalance: user.points,
       message: `Discount code ${couponCode} (${discount}% OFF) successfully claimed!`
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+}
+
+async function handleAdminAdjust(req: any, res: any, body: any) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const { userId, amount, reason } = body || {};
+    if (!userId) {
+      return res.status(400).json({ error: 'Missing userId' });
+    }
+
+    const delta = parseInt(String(amount), 10);
+    if (isNaN(delta) || delta === 0) {
+      return res.status(400).json({ error: 'Invalid points amount. Must be a non-zero number.' });
+    }
+
+    const kvUrl = process.env.KV_REST_API_URL || process.env.REDIS_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+    const kvToken = process.env.KV_REST_API_TOKEN || process.env.REDIS_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+
+    const headers: Record<string, string> = kvToken ? { Authorization: `Bearer ${kvToken}` } : {};
+
+    let user: any = {
+      id: userId,
+      points: 0,
+      totalPointsEarned: 0,
+      claimedActivities: {},
+      claimedFreeScripts: [],
+      lastDevToolsUse: 0,
+      lastSpin: 0,
+      redeemedCoupons: [],
+      pointsHistory: []
+    };
+
+    if (kvUrl && kvToken) {
+      try {
+        const userRes = await fetch(`${kvUrl}/get/users:discord:${userId}`, { headers });
+        const userData = await userRes.json().catch(() => null);
+        if (userData?.result) {
+          try {
+            const parsed = typeof userData.result === 'string' ? JSON.parse(userData.result) : userData.result;
+            user = { ...user, ...parsed };
+          } catch {
+            try {
+              const parsed = JSON.parse(decodeURIComponent(userData.result));
+              user = { ...user, ...parsed };
+            } catch {}
+          }
+        }
+      } catch {}
+    }
+
+    const prevPoints = user.points || 0;
+    const newPoints = Math.max(0, prevPoints + delta);
+    user.points = newPoints;
+    if (delta > 0) {
+      user.totalPointsEarned = (user.totalPointsEarned || 0) + delta;
+    }
+
+    const now = Date.now();
+    if (!user.pointsHistory) user.pointsHistory = [];
+    user.pointsHistory.unshift({
+      id: 'pt-admin-' + now.toString(36) + '-' + Math.random().toString(36).substring(2, 6),
+      activity: 'admin_adjust',
+      label: reason?.trim() || (delta > 0 ? `Admin added +${delta} MD Points` : `Admin removed ${Math.abs(delta)} MD Points`),
+      points: delta,
+      timestamp: now
+    });
+
+    if (kvUrl && kvToken) {
+      await fetch(`${kvUrl}/set/users:discord:${userId}`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify(user)
+      }).catch(() => {});
+    }
+
+    return res.status(200).json({
+      success: true,
+      userId,
+      previousPoints: prevPoints,
+      newPoints: user.points,
+      totalPointsEarned: user.totalPointsEarned,
+      delta,
+      message: delta > 0
+        ? `Successfully added +${delta} points to user.`
+        : `Successfully removed ${Math.abs(delta)} points from user.`,
+      user
     });
   } catch (err: any) {
     return res.status(500).json({ error: err.message || 'Internal server error' });
