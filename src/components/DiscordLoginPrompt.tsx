@@ -59,14 +59,17 @@ export const DiscordLoginPrompt: React.FC = () => {
           </div>
 
           <div className="flex-1 pr-4">
-            <div className="flex items-center gap-1.5 mb-1">
+            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
               <span className="font-display font-extrabold text-sm text-white tracking-tight">
                 Unlock Full Potential
+              </span>
+              <span className="px-1.5 py-0.5 rounded-md bg-amber-400/20 border border-amber-400/40 text-[10px] font-mono font-bold text-amber-300">
+                +100 Points
               </span>
               <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin" style={{ animationDuration: '6s' }} />
             </div>
             <p className="text-xs text-zinc-300 leading-relaxed">
-              Sign in with Discord to spin the <strong className="text-amber-300">Daily Wheel of Fortune</strong> (win up to 100% OFF), cloud sync your cart across devices & save favorite FiveM DevTools.
+              Sign in with Discord to get <strong className="text-amber-300 font-bold">+100 MD Points</strong> instantly, spin the <strong className="text-white">Daily Wheel</strong>, collect points for using DevTools and redeem <strong className="text-emerald-400 font-bold">up to 50% OFF coupons</strong>!
             </p>
           </div>
         </div>

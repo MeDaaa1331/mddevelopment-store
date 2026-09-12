@@ -13,7 +13,7 @@ import { ImageLightbox } from './ImageLightbox';
 export const ScriptModal: React.FC = () => {
   const { selectedPackage, setSelectedPackage, navigate } = useStore();
   const { addToCart } = useCart();
-  const { user, isLoggedIn, loginWithDiscord, recordHistory, syncUserData } = useAuth();
+  const { user, isLoggedIn, loginWithDiscord, recordHistory, syncUserData, claimPointActivity } = useAuth();
   const [isClosing, setIsClosing] = useState(false);
   const [mediaTab, setMediaTab] = useState<'image' | 'video'>('image');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -122,6 +122,10 @@ export const ScriptModal: React.FC = () => {
       syncUserData({
         downloadsCount: (user.downloadsCount || 0) + 1
       });
+      claimPointActivity('download_free_script', {
+        scriptId: selectedPackage.id,
+        scriptName: selectedPackage.name
+      }).catch(() => {});
     }
 
     trackEvent('free_download', 'download', selectedPackage.name, {

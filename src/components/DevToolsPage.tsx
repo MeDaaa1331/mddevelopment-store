@@ -19,7 +19,8 @@ import {
   Crosshair,
   User,
   Car,
-  Star
+  Star,
+  Coins
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
@@ -148,7 +149,28 @@ const TOOL_SEO_METADATA: Record<ToolTab, { title: string; description: string }>
 
 export const DevToolsPage: React.FC = () => {
   const { navigate } = useStore();
-  const { user, syncUserData } = useAuth();
+  const { user, syncUserData, claimPointActivity, pointsStatus } = useAuth();
+  const [pointAwardToast, setPointAwardToast] = useState<string | null>(null);
+  const hasTriggeredPointsRef = useRef(false);
+
+  const handleToolInteraction = (e: React.SyntheticEvent) => {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+    const isInteractive = target.closest('button, input, textarea, select, [role="button"], [contenteditable="true"], canvas, svg');
+    if (!isInteractive) return;
+
+    if (!user || hasTriggeredPointsRef.current) return;
+    if (pointsStatus?.cooldowns && !pointsStatus.cooldowns.canUseDevToolsForPoints) return;
+
+    hasTriggeredPointsRef.current = true;
+    claimPointActivity('devtools_use', { toolId: activeTab }).then(res => {
+      if (res.success) {
+        setPointAwardToast(res.message || 'Earned +20 MD Points for using DevTools!');
+        setTimeout(() => setPointAwardToast(null), 5000);
+      }
+    });
+  };
+
   const [activeTab, setActiveTab] = useState<ToolTab>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -408,6 +430,8 @@ export const DevToolsPage: React.FC = () => {
 
         <div
           data-lenis-prevent
+          onClickCapture={handleToolInteraction}
+          onKeyDownCapture={handleToolInteraction}
           className="p-6 sm:p-9 rounded-3xl bg-[#0b0b10]/95 border border-white/12 backdrop-blur-2xl shadow-2xl transition-all duration-300 animate-fadeIn min-h-[600px]"
         >
           <React.Suspense
@@ -492,6 +516,15 @@ export const DevToolsPage: React.FC = () => {
         </section>
 
       </div>
+
+      {pointAwardToast && (
+        <div className="fixed bottom-6 right-6 z-50 p-4 rounded-2xl bg-[#0e0e16]/95 border border-amber-400/40 text-amber-300 text-xs font-bold shadow-[0_10px_30px_rgba(245,158,11,0.3)] flex items-center gap-2.5 animate-slideUp backdrop-blur-xl">
+          <div className="w-7 h-7 rounded-lg bg-amber-400/20 flex items-center justify-center text-amber-400 shrink-0">
+            <Coins className="w-4 h-4" />
+          </div>
+          <span>{pointAwardToast}</span>
+        </div>
+      )}
 
       <Footer />
     </div>

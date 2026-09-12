@@ -10,7 +10,8 @@ import {
   Copy,
   ShoppingCart,
   RefreshCw,
-  Crown
+  Crown,
+  Coins
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useAuth } from '../context/AuthContext';
@@ -34,7 +35,7 @@ interface WheelOfFortuneModalProps {
 }
 
 export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen, onClose }) => {
-  const { user, isLoggedIn, loginWithDiscord, syncUserData } = useAuth();
+  const { user, isLoggedIn, loginWithDiscord, syncUserData, refreshPoints } = useAuth();
   const { applyCoupon, setIsCartOpen } = useCart();
 
   const [inGuild, setInGuild] = useState<boolean>(true);
@@ -161,11 +162,13 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
               lastSpin: Date.now(),
               rewards: [data.reward, ...(user.rewards || [])]
             });
+            refreshPoints();
           }
         } else {
           setIsNoLuck(true);
           if (user) {
             syncUserData({ lastSpin: Date.now() });
+            refreshPoints();
           }
         }
       }, 5200);
@@ -296,9 +299,15 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
 
           {wonReward && (
             <div className="w-full p-4 sm:p-5 rounded-xl bg-zinc-900 border border-white/15 text-center space-y-3 animate-fadeIn">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>You Won {wonReward.label}! 🎉</span>
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>You Won {wonReward.label}! 🎉</span>
+                </div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs font-mono font-bold">
+                  <Coins className="w-3.5 h-3.5 text-amber-400" />
+                  <span>+20 MD Points</span>
+                </div>
               </div>
               <div className="flex items-center justify-center gap-2 font-mono text-base font-bold text-white bg-black/60 p-2.5 rounded-lg border border-white/10">
                 <span>{wonReward.code}</span>
@@ -326,9 +335,15 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
           )}
 
           {isNoLuck && (
-            <div className="w-full p-4 rounded-xl bg-zinc-900/80 border border-white/10 text-center space-y-1.5 animate-fadeIn">
-              <span className="text-xs font-semibold text-zinc-200 block">Better Luck Next Time</span>
-              <p className="text-[11px] text-zinc-400">No discount won today. Your next free spin will be available in 24 hours!</p>
+            <div className="w-full p-4 rounded-xl bg-zinc-900/80 border border-white/10 text-center space-y-2 animate-fadeIn">
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-xs font-semibold text-zinc-200">Better Luck Next Time</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-300 text-[11px] font-mono font-bold">
+                  <Coins className="w-3 h-3 text-amber-400" />
+                  <span>+20 MD Points</span>
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-400">No discount won today, but you earned 20 MD Points! Next spin available in 24 hours.</p>
             </div>
           )}
 

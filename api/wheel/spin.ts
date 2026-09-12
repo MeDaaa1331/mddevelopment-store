@@ -317,6 +317,20 @@ export default async function handler(req: any, res: any) {
       user.rewards = [rewardEntry, ...(user.rewards || [])].slice(0, 30);
     }
 
+    // Award +20 MD Points for daily wheel spin
+    user.points = (user.points || 0) + 20;
+    user.totalPointsEarned = (user.totalPointsEarned || 0) + 20;
+    user.pointsHistory = [
+      {
+        id: 'pt-' + now.toString(36) + '-spin',
+        activity: 'wheel_spin',
+        label: 'Daily Wheel of Fortune Spin',
+        points: 20,
+        timestamp: now
+      },
+      ...(user.pointsHistory || [])
+    ];
+
     user.history = [{
       id: 'hist-spin-' + now.toString(36),
       type: isWin ? 'purchase' : 'download',
@@ -407,6 +421,8 @@ export default async function handler(req: any, res: any) {
       discountPercentage: prize.discount,
       expiresAt: isWin ? expiresAt : null,
       reward: rewardEntry,
+      pointsAwarded: 20,
+      newPointsBalance: user.points,
       nextSpinTime: now + cooldownMs
     });
 

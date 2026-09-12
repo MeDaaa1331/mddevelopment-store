@@ -93,8 +93,29 @@ export default async function handler(req: any, res: any) {
         }
       } catch {}
 
+      // MD Points: First Login Reward (+100 Points, strictly once per Discord ID)
+      if (!finalUser.claimedActivities) {
+        finalUser.claimedActivities = {};
+      }
+      if (!finalUser.claimedActivities.discord_login) {
+        finalUser.claimedActivities.discord_login = true;
+        finalUser.points = (finalUser.points || 0) + 100;
+        finalUser.totalPointsEarned = (finalUser.totalPointsEarned || 0) + 100;
+        finalUser.pointsHistory = [
+          {
+            id: 'pt-' + now.toString(36) + '-login',
+            activity: 'discord_login',
+            label: 'Welcome Discord Login Bonus',
+            points: 100,
+            timestamp: now
+          },
+          ...(finalUser.pointsHistory || [])
+        ];
+      }
+
       const pipelineCommands = [
         ['SET', `users:discord:${discordUser.id}`, JSON.stringify(finalUser)],
+        ['SET', `points:onetime:${discordUser.id}:discord_login`, 'true'],
         ['SADD', 'users:discord:index', discordUser.id],
         ['INCR', 'analytics:discord:total_logins'],
         ['LPUSH', 'analytics:recent_events', JSON.stringify({
