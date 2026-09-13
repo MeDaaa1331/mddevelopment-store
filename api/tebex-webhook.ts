@@ -197,6 +197,10 @@ export async function processTebexPayment(payload: any, headers?: Record<string,
       ['SET', `users:discord:${userId}`, JSON.stringify(user)],
       ['SET', `payments:processed:${txnId}`, JSON.stringify({ txnId, userId, points: pointsToAward, amount, timestamp: now })]
     ];
+    if (basketIdent) {
+      pipeline.push(['SET', `payments:processed:${basketIdent}`, JSON.stringify({ txnId, userId, points: pointsToAward, amount, timestamp: now })]);
+      pipeline.push(['SET', `baskets:claimed:${basketIdent}`, JSON.stringify({ userId, points: pointsToAward, timestamp: now })]);
+    }
     await fetch(`${kvUrl}/pipeline`, {
       method: 'POST',
       headers: { ...kvHeaders, 'Content-Type': 'application/json' },

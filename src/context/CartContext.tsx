@@ -130,31 +130,22 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const rawTotal = cartItems.reduce((sum, item) => sum + (item.package.price * item.quantity), 0);
           const pointsExpected = Math.max(15, Math.round(rawTotal * 15));
           const pkgsString = cartItems.map(i => i.package.name).join(', ');
-
-          const pendingData = {
-            basketId,
-            userId: params.get('userId') || user?.id,
-            totalPrice: rawTotal,
-            expectedPoints: pointsExpected,
-            packageNames: pkgsString,
-            timestamp: Date.now()
-          };
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('md_pending_checkout', JSON.stringify(pendingData));
-          }
+          const targetUserId = params.get('userId') || user?.id;
 
           // Also register with serverless backend
-          fetch('/api/points?action=register_basket', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              basketId,
-              userId: pendingData.userId,
-              username: user?.username || user?.global_name || 'Discord Member',
-              expectedPoints: pointsExpected,
-              packages: pkgsString
-            })
-          }).catch(() => {});
+          if (targetUserId) {
+            fetch('/api/points?action=register_basket', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                basketId,
+                userId: targetUserId,
+                username: user?.username || user?.global_name || 'Discord Member',
+                expectedPoints: pointsExpected,
+                packages: pkgsString
+              })
+            }).catch(() => {});
+          }
 
           localStorage.removeItem(CART_KEY);
           localStorage.removeItem(COUPON_KEY);
@@ -408,18 +399,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           if (ident) {
             const expectedPts = Math.max(15, Math.round(totalPrice * 15));
-            const pkgsString = items.map(i => i.package.name).join(', ');
 
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('md_pending_checkout', JSON.stringify({
-                basketId: ident,
-                userId: user?.id,
-                totalPrice,
-                expectedPoints: expectedPts,
-                packageNames: pkgsString,
-                timestamp: Date.now()
-              }));
-            }
+            const pkgsString = items.map(i => i.package.name).join(', ');
 
             // Register basket with backend so Tebex webhook and redirect can credit points
             if (user?.id) {

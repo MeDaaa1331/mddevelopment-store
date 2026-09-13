@@ -899,36 +899,62 @@ async function handleRegisterBasket(req: any, res: any, body: any) {
 
 async function handleClaimPurchase(req: any, res: any, url: URL, body: any) {
   try {
-    const basketId = req.query?.basketId || url.searchParams.get('basketId') || body?.basketId;
-    let userId = req.query?.userId || url.searchParams.get('userId') || body?.userId;
+    const basketId = (req.query?.basketId || url.searchParams.get('basketId') || body?.basketId || '').toString().trim();
+    let userId = (req.query?.userId || url.searchParams.get('userId') || body?.userId || '').toString().trim();
     let clientExpectedPoints = Number(req.query?.expectedPoints || url.searchParams.get('expectedPoints') || body?.expectedPoints || 0);
-    let clientPackageNames = (req.query?.packages || url.searchParams.get('packages') || body?.packages || body?.packageNames || '').toString();
+    let clientPackageNames = (req.query?.packages || url.searchParams.get('packages') || body?.packages || body?.packageNames || '').toString().trim();
 
-    if (!basketId && !userId) {
-      return res.status(400).json({ error: 'Missing basketId or userId' });
+    if (!basketId) {
+      return res.status(400).json({ success: false, error: 'Missing basketId' });
     }
 
-    const effectiveBasketId = basketId || `client-${Date.now().toString(36)}`;
     const kvUrl = process.env.KV_REST_API_URL || process.env.REDIS_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
     const kvToken = process.env.KV_REST_API_TOKEN || process.env.REDIS_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
     const headers: Record<string, string> = kvToken ? { Authorization: `Bearer ${kvToken}` } : {};
 
-    // Check Redis for registered basket info
+    // 1. Idempotency check: Has this basket already been credited?
     if (kvUrl && kvToken) {
-      // Idempotency check: Has this basket already been credited?
-      const claimedRes = await fetch(`${kvUrl}/get/baskets:claimed:${effectiveBasketId}`, { headers }).catch(() => null);
+      const claimedRes = await fetch(`${kvUrl}/get/baskets:claimed:${basketId}`, { headers }).catch(() => null);
       const claimedData = await claimedRes?.json().catch(() => null);
       if (claimedData?.result) {
+        let pts = 0;
+        try {
+          const parsed = typeof claimedData.result === 'string' ? JSON.parse(claimedData.result) : claimedData.result;
+          pts = Number(parsed.points || 0);
+        } catch {}
         return res.status(200).json({
           success: true,
           alreadyClaimed: true,
-          pointsAwarded: Number(claimedData.result.points || clientExpectedPoints || 0),
+          pointsAwarded: pts,
           message: 'Points for this purchase have already been credited.'
         });
       }
 
+      // Check if Tebex webhook already processed this basket
+      const webhookRes = await fetch(`${kvUrl}/get/payments:processed:${basketId}`, { headers }).catch(() => null);
+      const webhookData = await webhookRes?.json().catch(() => null);
+      if (webhookData?.result) {
+        let pts = 0;
+        try {
+          const parsed = typeof webhookData.result === 'string' ? JSON.parse(webhookData.result) : webhookData.result;
+          pts = Number(parsed.points || 0);
+        } catch {}
+        // Mark as claimed to prevent future checks
+        await fetch(`${kvUrl}/set/baskets:claimed:${basketId}`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ userId, points: pts, timestamp: Date.now() })
+        }).catch(() => {});
+        return res.status(200).json({
+          success: true,
+          alreadyClaimed: true,
+          pointsAwarded: pts,
+          message: 'Payment verified and points already credited via Tebex webhook.'
+        });
+      }
+
       // Lookup basket user association if missing
-      const bRes = await fetch(`${kvUrl}/get/baskets:${effectiveBasketId}:user`, { headers }).catch(() => null);
+      const bRes = await fetch(`${kvUrl}/get/baskets:${basketId}:user`, { headers }).catch(() => null);
       const bData = await bRes?.json().catch(() => null);
       if (bData?.result) {
         try {
@@ -940,59 +966,87 @@ async function handleClaimPurchase(req: any, res: any, url: URL, body: any) {
       }
     }
 
-    // Try fetching basket from Tebex Headless API
-    let amount = 0;
-    let packageNames = clientPackageNames;
-
+    // 2. Fetch basket from Tebex Headless API to verify actual payment status
     const tebexToken = process.env.VITE_TEBEX_PUBLIC_TOKEN || process.env.TEBEX_PUBLIC_TOKEN || 'yry4-4f39d4771913f90be71cc7be4f234a2cfbd8036e';
+    let basket: any = null;
     try {
-      const basketRes = await fetch(`https://headless.tebex.io/api/accounts/${tebexToken}/baskets/${effectiveBasketId}`, {
+      const basketRes = await fetch(`https://headless.tebex.io/api/accounts/${tebexToken}/baskets/${basketId}`, {
         headers: { Accept: 'application/json' }
       });
-
       if (basketRes.ok) {
         const basketJson = await basketRes.json();
-        const basket = basketJson.data || basketJson;
-
-        const rawPrice = parseFloat(basket.total_price ?? basket.base_price ?? 0);
-        amount = isNaN(rawPrice) ? 0 : rawPrice;
-
-        const pkgs = basket.packages || basket.lines || [];
-        if (amount <= 0 && Array.isArray(pkgs)) {
-          const fallbackSum = pkgs.reduce((acc: number, p: any) => acc + (parseFloat(p.price || p.base_price || 0) || 0), 0);
-          if (fallbackSum > 0) amount = fallbackSum;
-        }
-
-        if (Array.isArray(pkgs) && pkgs.length > 0) {
-          packageNames = pkgs.map((p: any) => p.name || p.package?.name).filter(Boolean).join(', ');
-        }
+        basket = basketJson.data || basketJson;
       }
-    } catch {}
-
-    // Calculate points (1€ = 15 MD Points, minimum 15 points per order)
-    let pointsToAward = Math.max(0, Math.round(amount * 15));
-    if (pointsToAward <= 0 && clientExpectedPoints > 0) {
-      pointsToAward = clientExpectedPoints;
-    }
-    if (pointsToAward <= 0) {
-      pointsToAward = 15; // default minimum
+    } catch (e) {
+      console.warn('[handleClaimPurchase] Tebex API fetch error:', e);
     }
 
+    if (!basket) {
+      return res.status(404).json({
+        success: false,
+        error: 'Basket not found on Tebex or invalid basket ID.'
+      });
+    }
+
+    // STRICT CHECK: The basket MUST be completed/paid!
+    const isComplete = Boolean(
+      basket.complete === true ||
+      basket.is_complete === true ||
+      basket.status === 'complete' ||
+      basket.status === 'paid'
+    );
+
+    if (!isComplete) {
+      return res.status(400).json({
+        success: false,
+        paid: false,
+        error: 'Order has not been completed or paid. No points awarded for unpaid checkouts.'
+      });
+    }
+
+    // 3. Basket is officially completed and paid: extract total and packages
+    const rawPrice = parseFloat(basket.total_price ?? basket.base_price ?? 0);
+    let amount = isNaN(rawPrice) ? 0 : rawPrice;
+
+    const pkgs = basket.packages || basket.lines || [];
+    if (amount <= 0 && Array.isArray(pkgs)) {
+      const fallbackSum = pkgs.reduce((acc: number, p: any) => acc + (parseFloat(p.price || p.base_price || 0) || 0), 0);
+      if (fallbackSum > 0) amount = fallbackSum;
+    }
+
+    let packageNames = clientPackageNames;
+    if (Array.isArray(pkgs) && pkgs.length > 0) {
+      packageNames = pkgs.map((p: any) => p.name || p.package?.name).filter(Boolean).join(', ');
+    }
     if (!packageNames) {
       packageNames = 'FiveM Resource Script';
     }
 
-    // Target user
-    const targetUserId = userId;
-    let user: any = { id: targetUserId || 'user', points: 0, totalPointsEarned: 0, pointsHistory: [] };
+    const pointsToAward = Math.max(0, Math.round(amount * 15));
+    if (pointsToAward <= 0) {
+      return res.status(200).json({
+        success: true,
+        pointsAwarded: 0,
+        message: 'Order completed with 0.00 EUR total. 0 points awarded.'
+      });
+    }
 
-    if (targetUserId && kvUrl && kvToken) {
+    const targetUserId = userId;
+    if (!targetUserId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot credit points: Discord user ID not found for this completed basket.'
+      });
+    }
+
+    // 4. Update user points in Redis
+    let user: any = { id: targetUserId, points: 0, totalPointsEarned: 0, pointsHistory: [] };
+    if (kvUrl && kvToken) {
       const userRes = await fetch(`${kvUrl}/get/users:discord:${targetUserId}`, { headers }).catch(() => null);
       const userData = await userRes?.json().catch(() => null);
       if (userData?.result) {
         try {
-          const parsed = typeof userData.result === 'string' ? JSON.parse(userData.result) : userData.result;
-          user = { ...user, ...parsed };
+          user = typeof userData.result === 'string' ? JSON.parse(userData.result) : userData.result;
         } catch {}
       }
     }
@@ -1003,19 +1057,20 @@ async function handleClaimPurchase(req: any, res: any, url: URL, body: any) {
     if (!user.pointsHistory) user.pointsHistory = [];
 
     user.pointsHistory.unshift({
-      id: `pt-pay-${effectiveBasketId}-${now.toString(36)}`,
+      id: `pt-pay-${basketId}-${now.toString(36)}`,
       activity: 'script_purchase',
       label: `Script Purchase: ${packageNames} (+${pointsToAward} MD Points)`,
       points: pointsToAward,
       amountEur: amount > 0 ? amount : undefined,
-      basketId: effectiveBasketId,
+      basketId,
       timestamp: now
     });
 
-    if (targetUserId && kvUrl && kvToken) {
+    if (kvUrl && kvToken) {
       const pipeline = [
         ['SET', `users:discord:${targetUserId}`, JSON.stringify(user)],
-        ['SET', `baskets:claimed:${effectiveBasketId}`, JSON.stringify({ userId: targetUserId, points: pointsToAward, timestamp: now })]
+        ['SET', `baskets:claimed:${basketId}`, JSON.stringify({ userId: targetUserId, points: pointsToAward, timestamp: now })],
+        ['SET', `payments:processed:${basketId}`, JSON.stringify({ basketId, userId: targetUserId, points: pointsToAward, amount, timestamp: now })]
       ];
       await fetch(`${kvUrl}/pipeline`, {
         method: 'POST',
@@ -1072,8 +1127,29 @@ async function handleTebexWebhook(req: any, res: any, body: any) {
     }
     const pointsToAward = Math.max(0, Math.round(amount * 15));
 
+    const basketIdent = (
+      subject.basket?.ident ||
+      subject.basket_ident ||
+      body.basket?.ident ||
+      body.basket_ident ||
+      subject.custom?.basketId ||
+      body.custom?.basketId
+    )?.toString();
+
     let targetUserId = subject.custom?.userId || body.custom?.userId || null;
     if (!targetUserId && subject.custom?.user_id) targetUserId = subject.custom.user_id;
+
+    // If userId missing, lookup via registered basket
+    if (!targetUserId && basketIdent && kvUrl && kvToken) {
+      const basketRes = await fetch(`${kvUrl}/get/baskets:${basketIdent}:user`, { headers: kvHeaders }).catch(() => null);
+      const basketData = await basketRes?.json().catch(() => null);
+      if (basketData?.result) {
+        try {
+          const parsed = typeof basketData.result === 'string' ? JSON.parse(basketData.result) : basketData.result;
+          if (parsed?.userId) targetUserId = parsed.userId.toString();
+        } catch {}
+      }
+    }
 
     if (targetUserId && kvUrl && kvToken) {
       let user: any = { id: targetUserId, points: 0, totalPointsEarned: 0, pointsHistory: [] };
@@ -1085,6 +1161,11 @@ async function handleTebexWebhook(req: any, res: any, body: any) {
         } catch {}
       }
 
+      const products = subject.products || subject.packages || body.products || body.packages || [];
+      const packageNames = Array.isArray(products)
+        ? products.map((p: any) => p.name || p.title || 'Script').filter(Boolean).join(', ')
+        : 'FiveM Script';
+
       const now = Date.now();
       user.points = (user.points || 0) + pointsToAward;
       user.totalPointsEarned = (user.totalPointsEarned || 0) + pointsToAward;
@@ -1092,17 +1173,21 @@ async function handleTebexWebhook(req: any, res: any, body: any) {
       user.pointsHistory.unshift({
         id: `pt-pay-${txnId}-${now.toString(36)}`,
         activity: 'script_purchase',
-        label: `Script Purchase (+${pointsToAward} MD Points)`,
+        label: `Script Purchase: ${packageNames} (+${pointsToAward} MD Points)`,
         points: pointsToAward,
         amountEur: amount > 0 ? amount : undefined,
         txnId,
         timestamp: now
       });
 
-      const pipeline = [
+      const pipeline: any[] = [
         ['SET', `users:discord:${targetUserId}`, JSON.stringify(user)],
         ['SET', `payments:processed:${txnId}`, JSON.stringify({ txnId, userId: targetUserId, points: pointsToAward, amount, timestamp: now })]
       ];
+      if (basketIdent) {
+        pipeline.push(['SET', `payments:processed:${basketIdent}`, JSON.stringify({ txnId, userId: targetUserId, points: pointsToAward, amount, timestamp: now })]);
+        pipeline.push(['SET', `baskets:claimed:${basketIdent}`, JSON.stringify({ userId: targetUserId, points: pointsToAward, timestamp: now })]);
+      }
       await fetch(`${kvUrl}/pipeline`, {
         method: 'POST',
         headers: { ...kvHeaders, 'Content-Type': 'application/json' },

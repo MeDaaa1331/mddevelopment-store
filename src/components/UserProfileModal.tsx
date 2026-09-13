@@ -77,52 +77,6 @@ export const UserProfileModal: React.FC = () => {
   useEffect(() => {
     if (isProfileModalOpen && user?.id) {
       refreshPoints();
-
-      // Check if there is an unclaimed purchase from a completed checkout
-      try {
-        const pendingStr = localStorage.getItem('md_pending_checkout');
-        if (pendingStr) {
-          const pending = JSON.parse(pendingStr);
-          if (pending && (pending.basketId || pending.expectedPoints)) {
-            fetch('/api/points?action=claim_purchase', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                basketId: pending.basketId,
-                userId: user.id,
-                expectedPoints: pending.expectedPoints,
-                packages: pending.packageNames
-              })
-            })
-              .then(r => r.json())
-              .then(data => {
-                if (data.pointsAwarded) {
-                  const pts = Number(data.pointsAwarded);
-                  const now = Date.now();
-                  const histItem: PointsHistoryItem = {
-                    id: `pt-pay-${pending.basketId || now.toString(36)}`,
-                    activity: 'script_purchase',
-                    label: `Script Purchase: ${pending.packageNames || 'FiveM Resource'} (+${pts} MD Points)`,
-                    points: pts,
-                    timestamp: now
-                  };
-                  const currHist = user.pointsHistory || [];
-                  if (!currHist.some(h => h.id === histItem.id)) {
-                    syncUserData({
-                      points: (user.points || 0) + pts,
-                      totalPointsEarned: (user.totalPointsEarned || 0) + pts,
-                      pointsHistory: [histItem, ...currHist]
-                    });
-                    showPointToast(pts, `Order Completed (+${pts} MD Points)!`);
-                  }
-                  refreshPoints();
-                  localStorage.removeItem('md_pending_checkout');
-                }
-              })
-              .catch(() => {});
-          }
-        }
-      } catch {}
     }
   }, [isProfileModalOpen, user?.id, refreshPoints]);
 
