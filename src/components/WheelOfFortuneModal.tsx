@@ -197,8 +197,12 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
             });
           } catch {}
 
+          const serverPoints = (data.newPointsBalance !== undefined && data.newPointsBalance !== null)
+            ? Number(data.newPointsBalance)
+            : undefined;
+
           if (user) {
-            const nextPoints = (user.points || 0) + 20;
+            const nextPoints = serverPoints !== undefined ? serverPoints : ((user.points || 0) + 20);
             const nextTotal = (user.totalPointsEarned || 0) + 20;
             const nextHistory = [spinItem, ...(user.pointsHistory || [])];
             syncUserData({
@@ -213,8 +217,12 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
           showPointToast(20, `Wheel of Fortune: Won ${data.prize?.label || 'Reward'} (+20 MD Points)!`);
         } else {
           setIsNoLuck(true);
+          const serverPoints = (data.newPointsBalance !== undefined && data.newPointsBalance !== null)
+            ? Number(data.newPointsBalance)
+            : undefined;
+
           if (user) {
-            const nextPoints = (user.points || 0) + 20;
+            const nextPoints = serverPoints !== undefined ? serverPoints : ((user.points || 0) + 20);
             const nextTotal = (user.totalPointsEarned || 0) + 20;
             const nextHistory = [spinItem, ...(user.pointsHistory || [])];
             syncUserData({

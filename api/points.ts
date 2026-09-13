@@ -809,6 +809,11 @@ async function handleBuyWheelSpin(req: any, res: any, body: any) {
       }
     }
 
+    const clientPoints = Number(body?.currentPoints || 0);
+    if ((user.points || 0) < 300 && clientPoints >= 300) {
+      user.points = clientPoints;
+    }
+
     if ((user.points || 0) < 300) {
       return res.status(400).json({
         success: false,

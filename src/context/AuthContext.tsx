@@ -190,9 +190,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           pointsStatus?.inGuild
         );
 
-        // Effective points - never wipe earned points to 0
-        const effectivePoints = Math.max(data.points ?? 0, user.points ?? 0);
-        const effectiveTotalEarned = Math.max(data.totalPointsEarned ?? 0, user.totalPointsEarned ?? effectivePoints);
+        // Authoritative server balance
+        const effectivePoints = (data.points !== undefined && data.points !== null)
+          ? Number(data.points)
+          : (user.points ?? 0);
+        const effectiveTotalEarned = (data.totalPointsEarned !== undefined && data.totalPointsEarned !== null)
+          ? Number(data.totalPointsEarned)
+          : Math.max(user.totalPointsEarned ?? 0, effectivePoints);
 
         const mergedClaimed = {
           ...(user.claimedActivities || {}),
@@ -504,6 +508,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const data = await res.json();
       if (data.success && data.coupon) {
+        if (data.newBalance !== undefined) {
+          setUser(prev => {
+            if (!prev) return null;
+            const updated = { ...prev, points: Number(data.newBalance) };
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updated));
+            }
+            return updated;
+          });
+          setPointsStatus(prev => {
+            if (!prev) return null;
+            return { ...prev, points: Number(data.newBalance) };
+          });
+        }
         await refreshPoints();
         return { success: true, coupon: data.coupon };
       } else {
@@ -575,17 +593,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await fetch('/api/points?action=buy_wheel_spin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id })
+        body: JSON.stringify({ userId: user.id, currentPoints })
       });
 
       const data = await res.json().catch(() => ({}));
       if (data.success) {
+        const serverPoints = data.newPoints !== undefined ? Number(data.newPoints) : newPoints;
+        const serverSpins = data.extraSpins !== undefined ? Number(data.extraSpins) : ((user.extraSpins || 0) + 1);
+
+        setUser(prev => {
+          if (!prev) return null;
+          const updated: DiscordUser = {
+            ...prev,
+            points: serverPoints,
+            lastSpin: 0,
+            extraSpins: serverSpins
+          };
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updated));
+          }
+          return updated;
+        });
+
+        setPointsStatus(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            points: serverPoints,
+            extraSpins: serverSpins,
+            cooldowns: {
+              ...prev.cooldowns,
+              wheelSpinRemainingMs: 0,
+              canSpinWheel: true
+            }
+          };
+        });
+
         await refreshPoints();
         return { success: true, message: data.message };
+      } else {
+        await refreshPoints();
+        return { success: false, error: data.error || 'Failed to purchase extra spin.' };
       }
-      return { success: true, message: 'Cooldown reset successfully.' };
-    } catch {
-      return { success: true, message: 'Cooldown reset successfully.' };
+    } catch (err: any) {
+      await refreshPoints();
+      return { success: false, error: err.message || 'Error purchasing extra spin.' };
     }
   };
 
