@@ -152,26 +152,6 @@ export const DevToolsPage: React.FC = () => {
   const { user, syncUserData, claimPointActivity, pointsStatus } = useAuth();
   const hasTriggeredPointsRef = useRef(false);
 
-  const handleToolInteraction = () => {
-    if (!user || hasTriggeredPointsRef.current) return;
-
-    if (pointsStatus?.cooldowns) {
-      const remaining = pointsStatus.cooldowns.devToolsRemainingMs || 0;
-      if (remaining > 0 || pointsStatus.cooldowns.canUseDevToolsForPoints === false) {
-        return;
-      }
-    }
-
-    hasTriggeredPointsRef.current = true;
-    claimPointActivity('devtools_use', { toolId: activeTab }).then(res => {
-      if (res.cooldown || res.alreadyClaimed) {
-        hasTriggeredPointsRef.current = true;
-      } else if (!res.success) {
-        hasTriggeredPointsRef.current = false;
-      }
-    });
-  };
-
   const [activeTab, setActiveTab] = useState<ToolTab>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -182,6 +162,42 @@ export const DevToolsPage: React.FC = () => {
     }
     return 'translator';
   });
+
+  const handleToolInteraction = (toolIdParam?: ToolTab) => {
+    if (!user || hasTriggeredPointsRef.current) return;
+
+    const now = Date.now();
+    const DAY_MS = 86400000;
+    if (user.lastDevToolsUse && (now - user.lastDevToolsUse < DAY_MS)) {
+      hasTriggeredPointsRef.current = true;
+      return;
+    }
+
+    if (pointsStatus?.cooldowns) {
+      const remaining = pointsStatus.cooldowns.devToolsRemainingMs || 0;
+      if (remaining > 0 || pointsStatus.cooldowns.canUseDevToolsForPoints === false) {
+        hasTriggeredPointsRef.current = true;
+        return;
+      }
+    }
+
+    hasTriggeredPointsRef.current = true;
+    claimPointActivity('devtools_use', { toolId: toolIdParam || activeTab }).then(res => {
+      if (res.cooldown || res.alreadyClaimed) {
+        hasTriggeredPointsRef.current = true;
+      } else if (!res.success) {
+        hasTriggeredPointsRef.current = false;
+      }
+    });
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    const timer = setTimeout(() => {
+      handleToolInteraction();
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [user?.id, activeTab]);
 
   const [favorites, setFavorites] = useState<ToolTab[]>(() => {
     if (typeof window !== 'undefined') {
@@ -431,8 +447,8 @@ export const DevToolsPage: React.FC = () => {
 
         <div
           data-lenis-prevent
-          onClickCapture={handleToolInteraction}
-          onKeyDownCapture={handleToolInteraction}
+          onClickCapture={() => handleToolInteraction()}
+          onKeyDownCapture={() => handleToolInteraction()}
           className="p-6 sm:p-9 rounded-3xl bg-[#0b0b10]/95 border border-white/12 backdrop-blur-2xl shadow-2xl transition-all duration-300 animate-fadeIn min-h-[600px]"
         >
           <React.Suspense

@@ -18,6 +18,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { TEBEX_CONFIG } from '../config/tebex';
 import { WheelPrize, SpinReward } from '../types/wheel';
+import { PointsHistoryItem } from '../types/auth';
 
 const PRIZES: WheelPrize[] = [
   { id: 'none', label: 'No Luck', shortLabel: 'NO LUCK', discount: 0, color: '#18181b', textColor: '#71717a', probability: 25 },
@@ -35,7 +36,7 @@ interface WheelOfFortuneModalProps {
 }
 
 export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen, onClose }) => {
-  const { user, isLoggedIn, loginWithDiscord, syncUserData, refreshPoints, showPointToast, pointsStatus } = useAuth();
+  const { user, isLoggedIn, loginWithDiscord, syncUserData, refreshPoints, showPointToast, pointsStatus, buyExtraWheelSpin } = useAuth();
   const { applyCoupon, setIsCartOpen } = useCart();
 
   const [inGuild, setInGuild] = useState<boolean>(true);
@@ -69,15 +70,28 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
 
     setIsCheckingStatus(true);
     try {
+      const now = Date.now();
+      const DAY_MS = 86400000;
+      const localRemaining = user.lastSpin ? Math.max(0, DAY_MS - (now - user.lastSpin)) : 0;
+
       const res = await fetch(`/api/wheel?action=status&userId=${user.id}`);
       if (res.ok) {
         const data = await res.json();
         setInGuild(data.inGuild);
-        setCanSpin(data.canSpin);
-        setRemainingMs(data.remainingMs || 0);
+        const effectiveRemaining = Math.max(data.remainingMs || 0, localRemaining);
+        setCanSpin(effectiveRemaining === 0);
+        setRemainingMs(effectiveRemaining);
+      } else {
+        setCanSpin(localRemaining === 0);
+        setRemainingMs(localRemaining);
+        setInGuild(true);
       }
     } catch (err) {
-      setCanSpin(true);
+      const now = Date.now();
+      const DAY_MS = 86400000;
+      const localRemaining = user.lastSpin ? Math.max(0, DAY_MS - (now - user.lastSpin)) : 0;
+      setCanSpin(localRemaining === 0);
+      setRemainingMs(localRemaining);
       setInGuild(true);
     } finally {
       setIsCheckingStatus(false);
@@ -159,6 +173,15 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
         setCanSpin(false);
         setRemainingMs(86400000);
 
+        const now = Date.now();
+        const spinItem: PointsHistoryItem = {
+          id: 'pt-' + now.toString(36) + '-spin',
+          activity: 'wheel_spin',
+          label: 'Daily Wheel of Fortune Spin',
+          points: 20,
+          timestamp: now
+        };
+
         if (data.discountPercentage > 0 && data.reward) {
           setWonReward(data.reward);
           try {
@@ -171,9 +194,15 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
           } catch {}
 
           if (user) {
+            const nextPoints = (user.points || 0) + 20;
+            const nextTotal = (user.totalPointsEarned || 0) + 20;
+            const nextHistory = [spinItem, ...(user.pointsHistory || [])];
             syncUserData({
-              lastSpin: Date.now(),
-              rewards: [data.reward, ...(user.rewards || [])]
+              lastSpin: now,
+              points: nextPoints,
+              totalPointsEarned: nextTotal,
+              rewards: [data.reward, ...(user.rewards || [])],
+              pointsHistory: nextHistory
             });
             refreshPoints();
           }
@@ -181,7 +210,15 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
         } else {
           setIsNoLuck(true);
           if (user) {
-            syncUserData({ lastSpin: Date.now() });
+            const nextPoints = (user.points || 0) + 20;
+            const nextTotal = (user.totalPointsEarned || 0) + 20;
+            const nextHistory = [spinItem, ...(user.pointsHistory || [])];
+            syncUserData({
+              lastSpin: now,
+              points: nextPoints,
+              totalPointsEarned: nextTotal,
+              pointsHistory: nextHistory
+            });
             refreshPoints();
           }
           showPointToast(20, 'Wheel of Fortune Spin (+20 MD Points)!');
@@ -204,8 +241,14 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
     setIsBuyingSpin(true);
     setBuyError(null);
     try {
-      await handleSpin(true);
-      refreshPoints();
+      const res = await buyExtraWheelSpin();
+      if (!res.success) {
+        setBuyError(res.error || 'Failed to purchase extra spin.');
+        return;
+      }
+      setCanSpin(true);
+      setRemainingMs(0);
+      await handleSpin(false);
     } catch (err: any) {
       setBuyError(err.message || 'Error purchasing extra spin');
     } finally {

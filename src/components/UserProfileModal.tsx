@@ -102,10 +102,18 @@ export const UserProfileModal: React.FC = () => {
     : (user.pointsHistory ?? []);
   const cooldowns = pointsStatus?.cooldowns;
 
-  const wheelRemainingMs = cooldowns?.wheelSpinRemainingMs ?? 0;
-  const devToolsRemainingMs = cooldowns?.devToolsRemainingMs ?? 0;
-  const canSpinWheel = cooldowns ? (cooldowns.canSpinWheel !== false && wheelRemainingMs === 0) : true;
-  const canUseDevTools = cooldowns ? (cooldowns.canUseDevToolsForPoints !== false && devToolsRemainingMs === 0) : true;
+  const now = Date.now();
+  const DAY_MS = 86400000;
+
+  const localWheelRemaining = user.lastSpin ? Math.max(0, DAY_MS - (now - user.lastSpin)) : 0;
+  const serverWheelRemaining = cooldowns?.wheelSpinRemainingMs ?? 0;
+  const wheelRemainingMs = Math.max(serverWheelRemaining, localWheelRemaining);
+  const canSpinWheel = (cooldowns?.canSpinWheel !== false) && wheelRemainingMs === 0;
+
+  const localDevToolsRemaining = user.lastDevToolsUse ? Math.max(0, DAY_MS - (now - user.lastDevToolsUse)) : 0;
+  const serverDevToolsRemaining = cooldowns?.devToolsRemainingMs ?? 0;
+  const devToolsRemainingMs = Math.max(serverDevToolsRemaining, localDevToolsRemaining);
+  const canUseDevTools = (cooldowns?.canUseDevToolsForPoints !== false) && devToolsRemainingMs === 0;
 
   const handleClaimDiscordGuild = async () => {
     setIsClaimingGuild(true);
