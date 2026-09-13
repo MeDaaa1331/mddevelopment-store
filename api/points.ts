@@ -80,15 +80,17 @@ async function handleStatus(req: any, res: any, url: URL, body: any) {
 
     if (kvUrl && kvToken) {
       try {
-        const [userRes, lastSpinRes, devtoolsDailyRes] = await Promise.all([
+        const [userRes, lastSpinRes, devtoolsDailyRes, extraSpinsRes] = await Promise.all([
           fetch(`${kvUrl}/get/users:discord:${userId}`, { headers }),
           fetch(`${kvUrl}/get/users:discord:${userId}:last_spin`, { headers }),
-          fetch(`${kvUrl}/get/points:daily:${userId}:devtools_use`, { headers })
+          fetch(`${kvUrl}/get/points:daily:${userId}:devtools_use`, { headers }),
+          fetch(`${kvUrl}/get/users:discord:${userId}:extra_spins`, { headers })
         ]);
 
         const userData = await userRes.json().catch(() => null);
         const lastSpinData = await lastSpinRes.json().catch(() => null);
         const devtoolsDailyData = await devtoolsDailyRes.json().catch(() => null);
+        const extraSpinsData = await extraSpinsRes.json().catch(() => null);
 
         if (userData?.result) {
           try {
@@ -102,10 +104,22 @@ async function handleStatus(req: any, res: any, url: URL, body: any) {
           }
         }
 
+        let extraSpins = Number(user.extraSpins || 0);
+        if (extraSpinsData?.result) {
+          const directExtra = parseInt(String(extraSpinsData.result), 10) || 0;
+          if (directExtra > extraSpins) extraSpins = directExtra;
+        }
+        user.extraSpins = extraSpins;
+
         lastSpinTime = user.lastSpin || 0;
         if (lastSpinData?.result) {
           const directSpin = parseInt(String(lastSpinData.result), 10) || 0;
           if (directSpin > lastSpinTime) lastSpinTime = directSpin;
+        }
+
+        // If extra spins are available, cooldown is completely bypassed
+        if (extraSpins > 0) {
+          lastSpinTime = 0;
         }
 
         lastDevTime = user.lastDevToolsUse || 0;
@@ -115,7 +129,8 @@ async function handleStatus(req: any, res: any, url: URL, body: any) {
         }
       } catch {}
     } else {
-      lastSpinTime = user.lastSpin || 0;
+      const extraSpins = Number(user.extraSpins || 0);
+      lastSpinTime = extraSpins > 0 ? 0 : (user.lastSpin || 0);
       lastDevTime = user.lastDevToolsUse || 0;
     }
 
@@ -226,6 +241,7 @@ async function handleStatus(req: any, res: any, url: URL, body: any) {
       success: true,
       points: user.points || 0,
       totalPointsEarned: user.totalPointsEarned || 0,
+      extraSpins: user.extraSpins || 0,
       claimedActivities: user.claimedActivities || {},
       claimedFreeScripts: user.claimedFreeScripts || [],
       cooldowns: {
@@ -794,29 +810,34 @@ async function handleBuyWheelSpin(req: any, res: any, body: any) {
     const now = Date.now();
     user.points = Math.max(0, (user.points || 0) - 300);
     user.lastSpin = 0;
+    user.extraSpins = (user.extraSpins || 0) + 1;
     if (!user.pointsHistory) user.pointsHistory = [];
     user.pointsHistory.unshift({
       id: 'pt-' + now.toString(36) + '-wheel-extra',
       activity: 'wheel_extra_spin',
-      label: 'Extra Wheel Spin (Cooldown Skip for 300 MD Points)',
+      label: 'Extra Wheel Spin (300 MD Points)',
       points: -300,
       timestamp: now
     });
 
     if (kvUrl && kvToken) {
-      await Promise.allSettled([
-        fetch(`${kvUrl}/set/users:discord:${userId}`, {
-          method: 'POST',
-          headers: { ...headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify(user)
-        }),
-        fetch(`${kvUrl}/del/users:discord:${userId}:last_spin`, { headers })
-      ]);
+      const pipeline = [
+        ['SET', `users:discord:${userId}`, JSON.stringify(user)],
+        ['SET', `users:discord:${userId}:last_spin`, '0'],
+        ['SET', `users:discord:${userId}:extra_spins`, String(user.extraSpins)],
+        ['DEL', `users:discord:${userId}:last_spin`]
+      ];
+      await fetch(`${kvUrl}/pipeline`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify(pipeline)
+      }).catch(() => {});
     }
 
     return res.status(200).json({
       success: true,
       newPoints: user.points,
+      extraSpins: user.extraSpins,
       remainingMs: 0,
       canSpin: true,
       message: 'Wheel cooldown successfully skipped for 300 MD Points! You can spin now.'

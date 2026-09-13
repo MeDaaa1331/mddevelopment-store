@@ -214,30 +214,40 @@ async function handleStatus(req: any, res: any, url: URL, body: any) {
     const kvToken = process.env.KV_REST_API_TOKEN || process.env.REDIS_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
     let lastSpin = 0;
+    let extraSpins = 0;
     let rewards: any[] = [];
 
     if (kvUrl && kvToken) {
       const headers = { Authorization: `Bearer ${kvToken}` };
-      const [userRes, lastSpinRes] = await Promise.all([
+      const [userRes, lastSpinRes, extraSpinsRes] = await Promise.all([
         fetch(`${kvUrl}/get/users:discord:${userId}`, { headers }),
-        fetch(`${kvUrl}/get/users:discord:${userId}:last_spin`, { headers })
+        fetch(`${kvUrl}/get/users:discord:${userId}:last_spin`, { headers }),
+        fetch(`${kvUrl}/get/users:discord:${userId}:extra_spins`, { headers })
       ]);
 
       const userData = await userRes.json().catch(() => null);
       const lastSpinData = await lastSpinRes.json().catch(() => null);
+      const extraSpinsData = await extraSpinsRes.json().catch(() => null);
 
       if (userData?.result) {
         try {
           const parsed = typeof userData.result === 'string' ? JSON.parse(userData.result) : userData.result;
           lastSpin = parsed.lastSpin || 0;
           rewards = parsed.rewards || [];
+          if (parsed.extraSpins) extraSpins = Number(parsed.extraSpins) || 0;
         } catch {
           try {
             const parsed = JSON.parse(decodeURIComponent(userData.result));
             lastSpin = parsed.lastSpin || 0;
             rewards = parsed.rewards || [];
+            if (parsed.extraSpins) extraSpins = Number(parsed.extraSpins) || 0;
           } catch {}
         }
+      }
+
+      if (extraSpinsData?.result) {
+        const directExtra = parseInt(String(extraSpinsData.result), 10) || 0;
+        if (directExtra > extraSpins) extraSpins = directExtra;
       }
 
       if (lastSpinData?.result) {
@@ -245,6 +255,11 @@ async function handleStatus(req: any, res: any, url: URL, body: any) {
         if (directSpin > lastSpin) {
           lastSpin = directSpin;
         }
+      }
+
+      // If extra spins are available, cooldown is bypassed
+      if (extraSpins > 0) {
+        lastSpin = 0;
       }
     }
 
@@ -259,6 +274,7 @@ async function handleStatus(req: any, res: any, url: URL, body: any) {
       inGuild,
       canSpin,
       remainingMs,
+      extraSpins,
       nextSpinTime: lastSpin + cooldownMs,
       rewards
     });
@@ -316,13 +332,15 @@ async function handleSpin(req: any, res: any, body: any) {
     if (kvUrl && kvToken) {
       const headers = { Authorization: `Bearer ${kvToken}` };
       try {
-        const [userRes, lastSpinRes] = await Promise.all([
+        const [userRes, lastSpinRes, extraSpinsRes] = await Promise.all([
           fetch(`${kvUrl}/get/users:discord:${userId}`, { headers }),
-          fetch(`${kvUrl}/get/users:discord:${userId}:last_spin`, { headers })
+          fetch(`${kvUrl}/get/users:discord:${userId}:last_spin`, { headers }),
+          fetch(`${kvUrl}/get/users:discord:${userId}:extra_spins`, { headers })
         ]);
 
         const userData = await userRes.json().catch(() => null);
         const lastSpinData = await lastSpinRes.json().catch(() => null);
+        const extraSpinsData = await extraSpinsRes.json().catch(() => null);
 
         if (userData?.result) {
           try {
@@ -336,6 +354,13 @@ async function handleSpin(req: any, res: any, body: any) {
           }
         }
 
+        let extraSpins = Number(user.extraSpins || 0);
+        if (extraSpinsData?.result) {
+          const directExtra = parseInt(String(extraSpinsData.result), 10) || 0;
+          if (directExtra > extraSpins) extraSpins = directExtra;
+        }
+        user.extraSpins = extraSpins;
+
         if (lastSpinData?.result) {
           lastSpinTime = parseInt(String(lastSpinData.result), 10) || 0;
         } else if (user.lastSpin) {
@@ -348,8 +373,12 @@ async function handleSpin(req: any, res: any, body: any) {
     const cooldownMs = 86400000;
     const elapsed = now - lastSpinTime;
     const usePoints = Boolean(body.usePoints);
+    const availableExtraSpins = Number(user.extraSpins || 0);
 
-    if (lastSpinTime > 0 && elapsed < cooldownMs) {
+    if (availableExtraSpins > 0) {
+      // User has a purchased extra spin available - consume it and bypass cooldown
+      user.extraSpins = Math.max(0, availableExtraSpins - 1);
+    } else if (lastSpinTime > 0 && elapsed < cooldownMs) {
       if (usePoints) {
         if ((user.points || 0) < 300) {
           return res.status(400).json({
@@ -502,6 +531,7 @@ async function handleSpin(req: any, res: any, body: any) {
       const pipelineCommands: any[] = [
         ['SET', `users:discord:${userId}`, JSON.stringify(user)],
         ['SET', `users:discord:${userId}:last_spin`, String(now)],
+        ['SET', `users:discord:${userId}:extra_spins`, String(user.extraSpins || 0)],
         ['LPUSH', 'analytics:spin_history', JSON.stringify(historyEntry)],
         ['LTRIM', 'analytics:spin_history', '0', '199'],
         ['INCR', 'analytics:spins:total'],
@@ -612,29 +642,34 @@ async function handleBuySpin(req: any, res: any, body: any) {
     const now = Date.now();
     user.points = Math.max(0, (user.points || 0) - 300);
     user.lastSpin = 0;
+    user.extraSpins = (user.extraSpins || 0) + 1;
     if (!user.pointsHistory) user.pointsHistory = [];
     user.pointsHistory.unshift({
       id: 'pt-wheel-buy-' + now.toString(36),
       activity: 'wheel_extra_spin',
-      label: 'Extra Wheel of Fortune Spin (Cooldown Skip for 300 MD Points)',
+      label: 'Extra Wheel of Fortune Spin (300 MD Points)',
       points: -300,
       timestamp: now
     });
 
     if (kvUrl && kvToken) {
-      await Promise.allSettled([
-        fetch(`${kvUrl}/set/users:discord:${userId}`, {
-          method: 'POST',
-          headers: { ...headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify(user)
-        }),
-        fetch(`${kvUrl}/del/users:discord:${userId}:last_spin`, { headers })
-      ]);
+      const pipeline = [
+        ['SET', `users:discord:${userId}`, JSON.stringify(user)],
+        ['SET', `users:discord:${userId}:last_spin`, '0'],
+        ['SET', `users:discord:${userId}:extra_spins`, String(user.extraSpins)],
+        ['DEL', `users:discord:${userId}:last_spin`]
+      ];
+      await fetch(`${kvUrl}/pipeline`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify(pipeline)
+      }).catch(() => {});
     }
 
     return res.status(200).json({
       success: true,
       newPoints: user.points,
+      extraSpins: user.extraSpins,
       remainingMs: 0,
       canSpin: true,
       message: 'Wheel cooldown successfully skipped for 300 MD Points! You can spin now.'

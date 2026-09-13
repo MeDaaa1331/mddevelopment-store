@@ -72,25 +72,29 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
     try {
       const now = Date.now();
       const DAY_MS = 86400000;
-      const localRemaining = user.lastSpin ? Math.max(0, DAY_MS - (now - user.lastSpin)) : 0;
+      const extraSpins = Number(user.extraSpins || pointsStatus?.extraSpins || 0);
+      const localRemaining = extraSpins > 0 ? 0 : (user.lastSpin ? Math.max(0, DAY_MS - (now - user.lastSpin)) : 0);
 
       const res = await fetch(`/api/wheel?action=status&userId=${user.id}`);
       if (res.ok) {
         const data = await res.json();
         setInGuild(data.inGuild);
-        const effectiveRemaining = Math.max(data.remainingMs || 0, localRemaining);
-        setCanSpin(effectiveRemaining === 0);
+        const serverExtraSpins = Number(data.extraSpins || 0);
+        const effectiveExtraSpins = Math.max(extraSpins, serverExtraSpins);
+        const effectiveRemaining = effectiveExtraSpins > 0 ? 0 : Math.max(data.remainingMs || 0, localRemaining);
+        setCanSpin(effectiveExtraSpins > 0 || effectiveRemaining === 0);
         setRemainingMs(effectiveRemaining);
       } else {
-        setCanSpin(localRemaining === 0);
+        setCanSpin(extraSpins > 0 || localRemaining === 0);
         setRemainingMs(localRemaining);
         setInGuild(true);
       }
     } catch (err) {
       const now = Date.now();
       const DAY_MS = 86400000;
-      const localRemaining = user.lastSpin ? Math.max(0, DAY_MS - (now - user.lastSpin)) : 0;
-      setCanSpin(localRemaining === 0);
+      const extraSpins = Number(user.extraSpins || pointsStatus?.extraSpins || 0);
+      const localRemaining = extraSpins > 0 ? 0 : (user.lastSpin ? Math.max(0, DAY_MS - (now - user.lastSpin)) : 0);
+      setCanSpin(extraSpins > 0 || localRemaining === 0);
       setRemainingMs(localRemaining);
       setInGuild(true);
     } finally {
@@ -543,10 +547,16 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
               <button
                 onClick={() => handleSpin(false)}
                 disabled={isSpinning || !canSpin}
-                className="w-full py-3 rounded-xl bg-white text-black hover:bg-zinc-200 font-semibold text-xs tracking-wide transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-xl bg-white text-black hover:bg-zinc-200 font-semibold text-xs tracking-wide transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Sparkles className="w-4 h-4 fill-black" />
-                <span>{isSpinning ? 'Spinning...' : 'Spin the Wheel'}</span>
+                <span>
+                  {isSpinning
+                    ? 'Spinning...'
+                    : (user?.extraSpins || pointsStatus?.extraSpins || 0) > 0
+                      ? `Spin the Wheel (${user?.extraSpins || pointsStatus?.extraSpins} Extra Spin${(user?.extraSpins || pointsStatus?.extraSpins || 0) > 1 ? 's' : ''})`
+                      : 'Spin the Wheel'}
+                </span>
               </button>
             )}
           </div>

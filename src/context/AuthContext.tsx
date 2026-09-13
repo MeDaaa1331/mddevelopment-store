@@ -15,6 +15,7 @@ export interface PointsStatus {
   points: number;
   totalPointsEarned: number;
   inGuild: boolean;
+  extraSpins?: number;
   claimedActivities: Record<string, boolean>;
   claimedFreeScripts: (string | number)[];
   cooldowns: {
@@ -152,19 +153,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!res.ok) return;
       const data = await res.json();
       if (data.success || data.points !== undefined) {
+        const extraSpins = Number(data.extraSpins !== undefined ? data.extraSpins : (user.extraSpins || 0));
+
         // Calculate local cooldowns
         const localDevToolsRemaining = user.lastDevToolsUse ? Math.max(0, DAY_MS - (now - user.lastDevToolsUse)) : 0;
-        const localWheelRemaining = user.lastSpin ? Math.max(0, DAY_MS - (now - user.lastSpin)) : 0;
+        const localWheelRemaining = extraSpins > 0 ? 0 : (user.lastSpin ? Math.max(0, DAY_MS - (now - user.lastSpin)) : 0);
 
         const serverDevToolsRemaining = data.cooldowns?.devToolsRemainingMs ?? data.devTools?.remainingMs ?? 0;
-        const serverWheelRemaining = data.cooldowns?.wheelSpinRemainingMs ?? data.wheel?.remainingMs ?? 0;
+        const serverWheelRemaining = extraSpins > 0 ? 0 : (data.cooldowns?.wheelSpinRemainingMs ?? data.wheel?.remainingMs ?? 0);
 
         // Effective cooldowns MUST respect both server and local state
         const devToolsRemaining = Math.max(serverDevToolsRemaining, localDevToolsRemaining);
-        const wheelRemaining = Math.max(serverWheelRemaining, localWheelRemaining);
+        const wheelRemaining = extraSpins > 0 ? 0 : Math.max(serverWheelRemaining, localWheelRemaining);
 
         const canUseDevTools = (data.cooldowns?.canUseDevToolsForPoints !== false) && devToolsRemaining === 0;
-        const canSpin = (data.cooldowns?.canSpinWheel !== false) && wheelRemaining === 0;
+        const canSpin = extraSpins > 0 || ((data.cooldowns?.canSpinWheel !== false) && wheelRemaining === 0);
 
         // Merge points history safely
         const serverHistory: PointsHistoryItem[] = (Array.isArray(data.pointsHistory) && data.pointsHistory.length > 0)
@@ -202,6 +205,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           points: effectivePoints,
           totalPointsEarned: effectiveTotalEarned,
           inGuild: isMember,
+          extraSpins,
           claimedActivities: mergedClaimed,
           claimedFreeScripts: data.claimedFreeScripts || user.claimedFreeScripts || [],
           cooldowns: {
@@ -221,6 +225,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ...prev,
             points: effectivePoints,
             totalPointsEarned: effectiveTotalEarned,
+            extraSpins,
+            lastSpin: extraSpins > 0 ? 0 : prev.lastSpin,
             claimedActivities: mergedClaimed,
             claimedFreeScripts: data.claimedFreeScripts || prev.claimedFreeScripts,
             redeemedCoupons: data.redeemedCoupons || prev.redeemedCoupons,
@@ -539,6 +545,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...prev,
         points: newPoints,
         lastSpin: 0,
+        extraSpins: (prev.extraSpins || 0) + 1,
         pointsHistory: newHistory
       };
       if (typeof window !== 'undefined') {
@@ -552,6 +559,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return {
         ...prev,
         points: newPoints,
+        extraSpins: (prev.extraSpins || 0) + 1,
         cooldowns: {
           ...prev.cooldowns,
           wheelSpinRemainingMs: 0,

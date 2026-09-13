@@ -37,6 +37,7 @@ export interface DiscordUser {
   firstJoined: number;
   lastActive: number;
   lastSpin?: number;
+  extraSpins?: number;
   rewards?: SpinReward[];
   cart?: any[];
   favorites?: string[];
