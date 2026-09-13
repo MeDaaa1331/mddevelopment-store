@@ -267,6 +267,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentUrl.searchParams.delete('user');
         window.history.replaceState(null, '', currentUrl.pathname + currentUrl.search);
       } catch (err) {}
+    } else if (authStatus === 'error') {
+      const reason = params.get('reason');
+      console.warn('[Discord Auth]: Login failed or cancelled:', reason);
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.delete('discord_auth');
+      currentUrl.searchParams.delete('reason');
+      window.history.replaceState(null, '', currentUrl.pathname + currentUrl.search);
     }
   }, []);
 

@@ -123,7 +123,7 @@ async function handleStatus(req: any, res: any, url: URL, body: any) {
     const botToken = process.env.DISCORD_BOT_TOKEN;
     // Default inGuild to true for Discord-authenticated users (matches wheel.ts),
     // or if already marked/claimed in user profile
-    let inGuild = Boolean(user.claimedActivities?.discord_guild || user.inGuild ?? true);
+    let inGuild = Boolean(user.claimedActivities?.discord_guild || (user.inGuild ?? true));
 
     if (guildId && botToken) {
       try {
