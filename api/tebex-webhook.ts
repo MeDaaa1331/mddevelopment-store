@@ -77,7 +77,19 @@ export async function processTebexPayment(payload: any, headers?: Record<string,
     0
   );
 
-  const amount = isNaN(rawAmount) ? 0 : rawAmount;
+  let amount = isNaN(rawAmount) ? 0 : rawAmount;
+
+  // Fallback for 100% discount test orders or coupons: use product base price so testing costs 0 €
+  if (amount <= 0) {
+    const products = subject.products || subject.packages || payload.products || payload.packages || [];
+    if (Array.isArray(products) && products.length > 0) {
+      const fallbackSum = products.reduce((acc: number, p: any) => acc + (parseFloat(p.price || p.base_price || 0) || 0), 0);
+      if (fallbackSum > 0) {
+        amount = fallbackSum;
+      }
+    }
+  }
+
   const pointsToAward = Math.max(0, Math.round(amount * 15));
 
   // Identify the Discord user ID:

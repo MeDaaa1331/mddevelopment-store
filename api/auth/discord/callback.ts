@@ -78,17 +78,30 @@ export default async function handler(req: any, res: any) {
         const existingData = await existingRes.json();
         if (existingData?.result) {
           try {
-            const parsed = JSON.parse(decodeURIComponent(existingData.result));
-            finalUser = {
-              ...parsed,
-              username: discordUser.username,
-              global_name: discordUser.global_name || discordUser.username,
-              avatar: discordUser.avatar,
-              avatarUrl,
-              email: discordUser.email || parsed.email,
-              country: country || parsed.country,
-              lastActive: now
-            };
+            let parsed: any = null;
+            if (typeof existingData.result === 'object') {
+              parsed = existingData.result;
+            } else if (typeof existingData.result === 'string') {
+              try {
+                parsed = JSON.parse(existingData.result);
+              } catch {
+                try {
+                  parsed = JSON.parse(decodeURIComponent(existingData.result));
+                } catch {}
+              }
+            }
+            if (parsed) {
+              finalUser = {
+                ...parsed,
+                username: discordUser.username,
+                global_name: discordUser.global_name || discordUser.username,
+                avatar: discordUser.avatar,
+                avatarUrl,
+                email: discordUser.email || parsed.email,
+                country: country || parsed.country,
+                lastActive: now
+              };
+            }
           } catch {}
         }
       } catch {}
@@ -97,25 +110,87 @@ export default async function handler(req: any, res: any) {
       if (!finalUser.claimedActivities) {
         finalUser.claimedActivities = {};
       }
+      if (!finalUser.pointsHistory) {
+        finalUser.pointsHistory = [];
+      }
+
       if (!finalUser.claimedActivities.discord_login) {
         finalUser.claimedActivities.discord_login = true;
         finalUser.points = (finalUser.points || 0) + 100;
         finalUser.totalPointsEarned = (finalUser.totalPointsEarned || 0) + 100;
-        finalUser.pointsHistory = [
-          {
+        finalUser.pointsHistory.unshift({
+          id: 'pt-' + now.toString(36) + '-login',
+          activity: 'discord_login',
+          label: 'Welcome Discord Login Bonus',
+          points: 100,
+          timestamp: now
+        });
+      }
+
+      // Check Discord Guild membership
+      const guildId = process.env.DISCORD_GUILD_ID;
+      const botToken = process.env.DISCORD_BOT_TOKEN;
+      let inGuild = Boolean(finalUser.claimedActivities?.discord_guild || finalUser.inGuild ?? true);
+
+      if (guildId && botToken) {
+        try {
+          const gRes = await fetch(`https://discord.com/api/guilds/${guildId.trim()}/members/${discordUser.id}`, {
+            headers: { Authorization: `Bot ${botToken.trim()}` }
+          });
+          if (gRes.status === 404) {
+            if (!finalUser.claimedActivities?.discord_guild) {
+              inGuild = false;
+            }
+          } else {
+            inGuild = true;
+          }
+        } catch {
+          inGuild = true;
+        }
+      }
+
+      finalUser.inGuild = inGuild;
+
+      // Auto-award discord_guild if inGuild and not yet claimed
+      if (inGuild && !finalUser.claimedActivities.discord_guild) {
+        finalUser.claimedActivities.discord_guild = true;
+        finalUser.points = (finalUser.points || 0) + 50;
+        finalUser.totalPointsEarned = (finalUser.totalPointsEarned || 0) + 50;
+        finalUser.pointsHistory.unshift({
+          id: 'pt-' + (now + 1).toString(36) + '-guild',
+          activity: 'discord_guild',
+          label: 'Joined MD Development Discord Server',
+          points: 50,
+          timestamp: now
+        });
+      }
+
+      // Self-heal: If pointsHistory is empty, reconstruct from claimed activities
+      if (finalUser.pointsHistory.length === 0) {
+        if (finalUser.claimedActivities.discord_login) {
+          finalUser.pointsHistory.push({
             id: 'pt-' + now.toString(36) + '-login',
             activity: 'discord_login',
             label: 'Welcome Discord Login Bonus',
             points: 100,
+            timestamp: finalUser.firstJoined || now
+          });
+        }
+        if (finalUser.claimedActivities.discord_guild || inGuild) {
+          finalUser.pointsHistory.push({
+            id: 'pt-' + (now + 1).toString(36) + '-guild',
+            activity: 'discord_guild',
+            label: 'Joined MD Development Discord Server',
+            points: 50,
             timestamp: now
-          },
-          ...(finalUser.pointsHistory || [])
-        ];
+          });
+        }
       }
 
       const pipelineCommands = [
         ['SET', `users:discord:${discordUser.id}`, JSON.stringify(finalUser)],
         ['SET', `points:onetime:${discordUser.id}:discord_login`, 'true'],
+        ...(finalUser.claimedActivities.discord_guild ? [['SET', `points:onetime:${discordUser.id}:discord_guild`, 'true']] : []),
         ['SADD', 'users:discord:index', discordUser.id],
         ['INCR', 'analytics:discord:total_logins'],
         ['LPUSH', 'analytics:recent_events', JSON.stringify({

@@ -121,37 +121,44 @@ async function handleStatus(req: any, res: any, url: URL, body: any) {
 
     const guildId = process.env.DISCORD_GUILD_ID;
     const botToken = process.env.DISCORD_BOT_TOKEN;
-    let inGuild = false;
+    // Default inGuild to true for Discord-authenticated users (matches wheel.ts),
+    // or if already marked/claimed in user profile
+    let inGuild = Boolean(user.claimedActivities?.discord_guild || user.inGuild ?? true);
 
     if (guildId && botToken) {
       try {
         const guildRes = await fetch(`https://discord.com/api/guilds/${guildId.trim()}/members/${userId.toString().trim()}`, {
           headers: { Authorization: `Bot ${botToken.trim()}` }
         });
-        if (guildRes.ok) {
+        if (guildRes.status === 404) {
+          if (!user.claimedActivities?.discord_guild) {
+            inGuild = false;
+          }
+        } else {
           inGuild = true;
         }
       } catch {
-        inGuild = false;
+        inGuild = true;
       }
     }
 
     const now = Date.now();
     let userModified = false;
 
-    // Safety auto-award: First Discord Login (+100 points) if missing
     if (!user.claimedActivities) user.claimedActivities = {};
+    if (!user.pointsHistory) user.pointsHistory = [];
+
+    // Safety auto-award: First Discord Login (+100 points) if missing
     if (!user.claimedActivities.discord_login) {
       user.claimedActivities.discord_login = true;
       user.points = (user.points || 0) + 100;
       user.totalPointsEarned = (user.totalPointsEarned || 0) + 100;
-      if (!user.pointsHistory) user.pointsHistory = [];
       user.pointsHistory.unshift({
         id: 'pt-' + now.toString(36) + '-login',
         activity: 'discord_login',
         label: 'Welcome Discord Login Bonus',
         points: 100,
-        timestamp: now
+        timestamp: user.firstJoined || now
       });
       userModified = true;
     }
@@ -161,14 +168,36 @@ async function handleStatus(req: any, res: any, url: URL, body: any) {
       user.claimedActivities.discord_guild = true;
       user.points = (user.points || 0) + 50;
       user.totalPointsEarned = (user.totalPointsEarned || 0) + 50;
-      if (!user.pointsHistory) user.pointsHistory = [];
       user.pointsHistory.unshift({
-        id: 'pt-' + now.toString(36) + '-guild',
+        id: 'pt-' + (now + 1).toString(36) + '-guild',
         activity: 'discord_guild',
         label: 'Joined MD Development Discord Server',
         points: 50,
         timestamp: now
       });
+      userModified = true;
+    }
+
+    // Safety Self-heal: If pointsHistory is empty, reconstruct records based on claimed activities
+    if (user.pointsHistory.length === 0) {
+      if (user.claimedActivities.discord_login) {
+        user.pointsHistory.push({
+          id: 'pt-' + now.toString(36) + '-login',
+          activity: 'discord_login',
+          label: 'Welcome Discord Login Bonus',
+          points: 100,
+          timestamp: user.firstJoined || now
+        });
+      }
+      if (user.claimedActivities.discord_guild || inGuild) {
+        user.pointsHistory.push({
+          id: 'pt-' + (now + 1).toString(36) + '-guild',
+          activity: 'discord_guild',
+          label: 'Joined MD Development Discord Server',
+          points: 50,
+          timestamp: now
+        });
+      }
       userModified = true;
     }
 
@@ -190,6 +219,8 @@ async function handleStatus(req: any, res: any, url: URL, body: any) {
     const elapsedSpin = lastSpinTime > 0 ? (now - lastSpinTime) : cooldown24h + 1;
     const wheelSpinRemainingMs = (lastSpinTime > 0 && elapsedSpin < cooldown24h) ? Math.max(0, cooldown24h - elapsedSpin) : 0;
     const canSpinWheel = wheelSpinRemainingMs === 0;
+
+    const isMember = inGuild || Boolean(user.claimedActivities?.discord_guild);
 
     return res.status(200).json({
       success: true,
@@ -214,8 +245,9 @@ async function handleStatus(req: any, res: any, url: URL, body: any) {
         lastSpin: lastSpinTime
       },
       history: user.pointsHistory || [],
+      pointsHistory: user.pointsHistory || [],
       redeemedCoupons: user.redeemedCoupons || [],
-      inGuild
+      inGuild: isMember
     });
 
   } catch (err: any) {
@@ -404,6 +436,49 @@ async function handleActivity(req: any, res: any, body: any) {
         pointsAwarded: 20,
         newBalance: user.points,
         message: `Successfully earned +20 MD Points for downloading ${scriptTitle}!`
+      });
+    }
+
+    // --- ACTIVITY 3: JOIN DISCORD SERVER (+50 Points, 1x) ---
+    if (activity === 'discord_guild') {
+      if (user.claimedActivities?.discord_guild) {
+        return res.status(200).json({
+          success: true,
+          alreadyClaimed: true,
+          inGuild: true,
+          message: 'Discord membership points have already been claimed.'
+        });
+      }
+
+      user.claimedActivities.discord_guild = true;
+      user.points = (user.points || 0) + 50;
+      user.totalPointsEarned = (user.totalPointsEarned || 0) + 50;
+      user.pointsHistory.unshift({
+        id: 'pt-' + now.toString(36) + '-guild',
+        activity: 'discord_guild',
+        label: 'Joined MD Development Discord Server',
+        points: 50,
+        timestamp: now
+      });
+
+      if (kvUrl && kvToken) {
+        const pipeline = [
+          ['SET', `users:discord:${userId}`, JSON.stringify(user)],
+          ['SET', `points:onetime:${userId}:discord_guild`, 'true']
+        ];
+        await fetch(`${kvUrl}/pipeline`, {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify(pipeline)
+        }).catch(() => {});
+      }
+
+      return res.status(200).json({
+        success: true,
+        pointsAwarded: 50,
+        newBalance: user.points,
+        inGuild: true,
+        message: 'Successfully claimed +50 MD Points for joining MD Development Discord!'
       });
     }
 
@@ -825,7 +900,17 @@ async function handleClaimPurchase(req: any, res: any, url: URL, body: any) {
 
     // Calculate points: 1 € = 15 points
     const rawPrice = parseFloat(basket.total_price ?? basket.base_price ?? 0);
-    const amount = isNaN(rawPrice) ? 0 : rawPrice;
+    let amount = isNaN(rawPrice) ? 0 : rawPrice;
+
+    // Fallback for 100% discount test orders or coupons: use packages base price
+    if (amount <= 0 && Array.isArray(basket.packages || basket.lines)) {
+      const pkgs = basket.packages || basket.lines;
+      const fallbackSum = pkgs.reduce((acc: number, p: any) => acc + (parseFloat(p.price || p.base_price || 0) || 0), 0);
+      if (fallbackSum > 0) {
+        amount = fallbackSum;
+      }
+    }
+
     const pointsToAward = Math.max(0, Math.round(amount * 15));
 
     // Resolve target userId

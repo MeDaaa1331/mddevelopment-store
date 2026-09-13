@@ -36,9 +36,9 @@ interface AuthContextType {
   dismissPointToast: () => void;
   refreshPoints: () => Promise<void>;
   claimPointActivity: (
-    activity: 'devtools_use' | 'download_free_script',
+    activity: 'devtools_use' | 'download_free_script' | 'discord_guild' | string,
     payload?: { toolId?: string; scriptId?: string | number; scriptName?: string }
-  ) => Promise<{ success: boolean; message?: string; pointsAwarded?: number; cooldown?: boolean; alreadyClaimed?: boolean }>;
+  ) => Promise<{ success: boolean; message?: string; pointsAwarded?: number; cooldown?: boolean; alreadyClaimed?: boolean; inGuild?: boolean }>;
   redeemCoupon: (discountPercentage: number) => Promise<{ success: boolean; coupon?: RedeemedCoupon; error?: string }>;
   buyExtraWheelSpin: () => Promise<{ success: boolean; message?: string; error?: string }>;
   loginWithDiscord: () => void;
@@ -94,10 +94,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const canUseDevTools = data.cooldowns?.canUseDevToolsForPoints ?? (devToolsRemaining === 0);
         const canSpin = data.cooldowns?.canSpinWheel ?? (wheelRemaining === 0);
 
+        const historyList = (Array.isArray(data.pointsHistory) && data.pointsHistory.length > 0)
+          ? data.pointsHistory
+          : (Array.isArray(data.history) && data.history.length > 0)
+            ? data.history
+            : (pointsStatus?.pointsHistory || user?.pointsHistory || []);
+
+        const isMember = Boolean(data.inGuild || data.claimedActivities?.discord_guild);
+
         setPointsStatus({
-          points: data.points || 0,
-          totalPointsEarned: data.totalPointsEarned || 0,
-          inGuild: Boolean(data.inGuild),
+          points: data.points ?? 0,
+          totalPointsEarned: data.totalPointsEarned ?? 0,
+          inGuild: isMember,
           claimedActivities: data.claimedActivities || {},
           claimedFreeScripts: data.claimedFreeScripts || [],
           cooldowns: {
@@ -107,7 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             canSpinWheel: canSpin
           },
           redeemedCoupons: data.redeemedCoupons || [],
-          pointsHistory: data.history || data.pointsHistory || []
+          pointsHistory: historyList
         });
 
         // Keep local user in sync
@@ -115,12 +123,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (!prev) return null;
           const updated = {
             ...prev,
-            points: data.points,
-            totalPointsEarned: data.totalPointsEarned,
-            claimedActivities: data.claimedActivities,
-            claimedFreeScripts: data.claimedFreeScripts,
-            redeemedCoupons: data.redeemedCoupons,
-            pointsHistory: data.pointsHistory
+            points: data.points ?? prev.points,
+            totalPointsEarned: data.totalPointsEarned ?? prev.totalPointsEarned,
+            claimedActivities: data.claimedActivities || prev.claimedActivities,
+            claimedFreeScripts: data.claimedFreeScripts || prev.claimedFreeScripts,
+            redeemedCoupons: data.redeemedCoupons || prev.redeemedCoupons,
+            pointsHistory: historyList
           };
           if (typeof window !== 'undefined') {
             localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updated));
@@ -179,7 +187,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const claimPointActivity = async (
-    activity: 'devtools_use' | 'download_free_script',
+    activity: 'devtools_use' | 'download_free_script' | 'discord_guild' | string,
     payload?: { toolId?: string; scriptId?: string | number; scriptName?: string }
   ) => {
     if (!user?.id) {
@@ -207,14 +215,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return {
           success: true,
           message: data.message,
-          pointsAwarded: pts
+          pointsAwarded: pts,
+          inGuild: data.inGuild
         };
       } else {
         return {
           success: false,
           cooldown: Boolean(data.cooldown),
           alreadyClaimed: Boolean(data.alreadyClaimed),
-          message: data.message || 'Points could not be awarded.'
+          message: data.message || 'Points could not be awarded.',
+          inGuild: data.inGuild
         };
       }
     } catch {

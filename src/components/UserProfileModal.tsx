@@ -38,16 +38,28 @@ const DISCOUNT_TIERS = [
 ];
 
 export const UserProfileModal: React.FC = () => {
-  const { user, isProfileModalOpen, setIsProfileModalOpen, logout, pointsStatus, refreshPoints, redeemCoupon, buyExtraWheelSpin } = useAuth();
+  const {
+    user,
+    isProfileModalOpen,
+    setIsProfileModalOpen,
+    logout,
+    pointsStatus,
+    refreshPoints,
+    redeemCoupon,
+    buyExtraWheelSpin,
+    claimPointActivity
+  } = useAuth();
   const { applyCoupon, setIsCartOpen } = useCart();
   const { setIsWheelOpen, navigate } = useStore();
 
   const [activeTab, setActiveTab] = useState<'points' | 'overview' | 'rewards' | 'history'>('points');
+  const [historyFilter, setHistoryFilter] = useState<'all' | 'points' | 'devtools'>('all');
   const [isClosing, setIsClosing] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
   const [isRedeeming, setIsRedeeming] = useState<number | null>(null);
   const [isBuyingExtraSpin, setIsBuyingExtraSpin] = useState<boolean>(false);
+  const [isClaimingGuild, setIsClaimingGuild] = useState<boolean>(false);
   const [redeemSuccessMsg, setRedeemSuccessMsg] = useState<string | null>(null);
   const [redeemErrorMsg, setRedeemErrorMsg] = useState<string | null>(null);
 
@@ -78,15 +90,37 @@ export const UserProfileModal: React.FC = () => {
 
   const currentPoints = pointsStatus?.points ?? user.points ?? 0;
   const totalEarned = pointsStatus?.totalPointsEarned ?? user.totalPointsEarned ?? currentPoints;
-  const inGuild = pointsStatus?.inGuild ?? false;
+  const isDiscordMember = Boolean(
+    pointsStatus?.inGuild ||
+    user.claimedActivities?.discord_guild ||
+    pointsStatus?.claimedActivities?.discord_guild
+  );
+  const inGuild = isDiscordMember;
   const redeemedCoupons = pointsStatus?.redeemedCoupons ?? user.redeemedCoupons ?? [];
-  const pointsHistory = pointsStatus?.pointsHistory ?? user.pointsHistory ?? [];
+  const pointsHistory = (pointsStatus?.pointsHistory && pointsStatus.pointsHistory.length > 0)
+    ? pointsStatus.pointsHistory
+    : (user.pointsHistory ?? []);
   const cooldowns = pointsStatus?.cooldowns;
 
   const wheelRemainingMs = cooldowns?.wheelSpinRemainingMs ?? 0;
   const devToolsRemainingMs = cooldowns?.devToolsRemainingMs ?? 0;
   const canSpinWheel = cooldowns ? (cooldowns.canSpinWheel !== false && wheelRemainingMs === 0) : true;
   const canUseDevTools = cooldowns ? (cooldowns.canUseDevToolsForPoints !== false && devToolsRemainingMs === 0) : true;
+
+  const handleClaimDiscordGuild = async () => {
+    setIsClaimingGuild(true);
+    setRedeemErrorMsg(null);
+    setRedeemSuccessMsg(null);
+    const res = await claimPointActivity('discord_guild');
+    setIsClaimingGuild(false);
+    if (res.success) {
+      setRedeemSuccessMsg(res.message || 'Successfully claimed +50 MD Points for Discord membership!');
+      setTimeout(() => setRedeemSuccessMsg(null), 5000);
+    } else {
+      setRedeemErrorMsg(res.message || 'Could not claim Discord membership points.');
+      setTimeout(() => setRedeemErrorMsg(null), 5000);
+    }
+  };
 
   const handleCopyId = () => {
     navigator.clipboard.writeText(user.id);
@@ -309,6 +343,9 @@ export const UserProfileModal: React.FC = () => {
           >
             <Activity className="w-3.5 h-3.5 text-cyan-400" />
             <span>Activity History</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-cyan-400/20 text-[10px] font-mono font-bold text-cyan-300">
+              {pointsHistory.length + (user.history?.length || 0)}
+            </span>
           </button>
         </div>
 
@@ -597,8 +634,9 @@ export const UserProfileModal: React.FC = () => {
                         <span className="text-[11px] text-zinc-400 block">Sign in with your Discord account (one-time)</span>
                       </div>
                     </div>
-                    <span className="px-2 py-1 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono text-xs font-bold shrink-0">
-                      ✓ Claimed (+100 pts)
+                    <span className="px-2.5 py-1 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono text-xs font-bold flex items-center gap-1 shrink-0">
+                      <Check className="w-3 h-3" />
+                      <span>Claimed (+100 pts)</span>
                     </span>
                   </div>
 
@@ -613,20 +651,31 @@ export const UserProfileModal: React.FC = () => {
                         <span className="text-[11px] text-zinc-400 block">Be an active member of our official community (one-time)</span>
                       </div>
                     </div>
-                    {inGuild ? (
-                      <span className="px-2 py-1 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono text-xs font-bold shrink-0">
-                        ✓ Claimed (+50 pts)
+                    {isDiscordMember ? (
+                      <span className="px-2.5 py-1 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono text-xs font-bold flex items-center gap-1 shrink-0">
+                        <Check className="w-3 h-3" />
+                        <span>Claimed (+50 pts)</span>
                       </span>
                     ) : (
-                      <a
-                        href={TEBEX_CONFIG.discordUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-3 py-1 rounded-lg bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold text-xs flex items-center gap-1 shrink-0"
-                      >
-                        <span>Join (+50 pts)</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <a
+                          href={TEBEX_CONFIG.discordUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1 rounded-lg bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold text-xs flex items-center gap-1 shrink-0 transition-all hover:scale-105"
+                        >
+                          <span>Join</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                        <button
+                          onClick={handleClaimDiscordGuild}
+                          disabled={isClaimingGuild}
+                          className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs flex items-center gap-1 shrink-0 cursor-pointer transition-all hover:scale-105"
+                        >
+                          {isClaimingGuild ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                          <span>Claim (+50 pts)</span>
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -647,24 +696,24 @@ export const UserProfileModal: React.FC = () => {
                           handleClose();
                           setIsWheelOpen(true);
                         }}
-                        className="px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs flex items-center gap-1 shrink-0 cursor-pointer"
+                        className="px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs flex items-center gap-1 shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-all"
                       >
                         <span>Spin (+20 pts)</span>
                         <ArrowRight className="w-3 h-3" />
                       </button>
                     ) : (
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className="px-2 py-1 rounded-md bg-zinc-800/80 text-zinc-400 font-mono text-xs font-bold hidden sm:flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          <span>Cooldown</span>
+                        <span className="px-2.5 py-1 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono text-xs font-bold flex items-center gap-1">
+                          <Check className="w-3 h-3" />
+                          <span>Completed Today</span>
                         </span>
                         <button
                           onClick={handleBuyExtraSpinFromProfile}
                           disabled={isBuyingExtraSpin || currentPoints < 300}
-                          className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shrink-0 transition-all ${
+                          className={`px-3 py-1 rounded-xl font-bold text-xs flex items-center gap-1.5 shrink-0 transition-all ${
                             currentPoints >= 300
                               ? 'bg-amber-400 hover:bg-amber-300 text-black shadow-sm cursor-pointer hover:scale-[1.02] active:scale-[0.98]'
-                              : 'bg-zinc-800 text-zinc-400 border border-white/5 cursor-not-allowed opacity-80'
+                              : 'bg-zinc-800 text-zinc-500 border border-white/5 cursor-not-allowed opacity-80'
                           }`}
                           title="Skip 24h cooldown for 300 MD Points"
                         >
@@ -673,7 +722,7 @@ export const UserProfileModal: React.FC = () => {
                           ) : (
                             <Coins className="w-3 h-3 text-amber-900" />
                           )}
-                          <span>Skip Cooldown (300 pts)</span>
+                          <span>Skip (300 pts)</span>
                         </button>
                       </div>
                     )}
@@ -696,15 +745,15 @@ export const UserProfileModal: React.FC = () => {
                           handleClose();
                           navigate('/devtools');
                         }}
-                        className="px-3 py-1 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs flex items-center gap-1 shrink-0 cursor-pointer"
+                        className="px-3 py-1 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs flex items-center gap-1 shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-all"
                       >
                         <span>Use Tool (+20 pts)</span>
                         <ChevronRight className="w-3 h-3" />
                       </button>
                     ) : (
-                      <span className="px-2 py-1 rounded-md bg-zinc-800 text-zinc-400 font-mono text-xs font-bold flex items-center gap-1 shrink-0">
-                        <Clock className="w-3 h-3" />
-                        <span>Completed Today</span>
+                      <span className="px-2.5 py-1 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono text-xs font-bold flex items-center gap-1 shrink-0">
+                        <Check className="w-3 h-3" />
+                        <span>Completed Today (+20 pts)</span>
                       </span>
                     )}
                   </div>
@@ -720,8 +769,31 @@ export const UserProfileModal: React.FC = () => {
                         <span className="text-[11px] text-zinc-400 block">Earn +20 points for each unique free script downloaded</span>
                       </div>
                     </div>
-                    <span className="px-2 py-1 rounded-md bg-purple-500/20 border border-purple-500/30 text-purple-300 font-mono text-xs font-bold shrink-0">
-                      +20 pts / script
+                    {(pointsStatus?.claimedFreeScripts?.length || user.claimedFreeScripts?.length || 0) > 0 ? (
+                      <span className="px-2.5 py-1 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono text-xs font-bold flex items-center gap-1 shrink-0">
+                        <Check className="w-3 h-3" />
+                        <span>{(pointsStatus?.claimedFreeScripts?.length || user.claimedFreeScripts?.length || 0)} Claimed (+{((pointsStatus?.claimedFreeScripts?.length || user.claimedFreeScripts?.length || 0) * 20)} pts)</span>
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 rounded-md bg-purple-500/20 border border-purple-500/30 text-purple-300 font-mono text-xs font-bold shrink-0">
+                        +20 pts / script
+                      </span>
+                    )}
+                  </div>
+
+                  {/* 6. Purchase Scripts */}
+                  <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-white/5 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
+                        <ShoppingCart className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-white block">Store Purchases (Cashback)</span>
+                        <span className="text-[11px] text-zinc-400 block">Earn 15 MD Points for every 1€ spent on any Tebex order</span>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-md bg-amber-500/20 border border-amber-500/30 text-amber-300 font-mono text-xs font-bold shrink-0">
+                      1€ = 15 pts
                     </span>
                   </div>
                 </div>
@@ -729,31 +801,42 @@ export const UserProfileModal: React.FC = () => {
 
               {/* Points History Log */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Activity className="w-4 h-4 text-zinc-400" />
-                  <h3 className="font-display font-bold text-sm text-white">Points Activity Log</h3>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-amber-400" />
+                    <h3 className="font-display font-bold text-sm text-white">Points Activity Log ({pointsHistory.length})</h3>
+                  </div>
                 </div>
 
                 {pointsHistory.length === 0 ? (
-                  <p className="text-xs text-zinc-500">No point transactions yet.</p>
+                  <div className="p-4 rounded-xl bg-zinc-950/60 border border-white/5 text-center">
+                    <p className="text-xs text-zinc-500">No point transactions yet. Complete daily activities above to start earning!</p>
+                  </div>
                 ) : (
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                     {pointsHistory.map(item => (
                       <div
                         key={item.id}
-                        className="p-3 rounded-xl bg-zinc-900/60 border border-white/5 flex items-center justify-between gap-3 text-xs"
+                        className="p-3 rounded-xl bg-zinc-900/70 border border-white/5 flex items-center justify-between gap-3 text-xs hover:border-white/15 transition-all"
                       >
-                        <div>
-                          <span className="font-semibold text-zinc-200 block">{item.label}</span>
-                          <span className="text-[10px] font-mono text-zinc-500">
-                            {new Date(item.timestamp).toLocaleString()}
-                          </span>
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                            item.points > 0 ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-400'
+                          }`}>
+                            {item.points > 0 ? <Coins className="w-3.5 h-3.5" /> : <Tag className="w-3.5 h-3.5" />}
+                          </div>
+                          <div>
+                            <span className="font-semibold text-zinc-200 block">{item.label}</span>
+                            <span className="text-[10px] font-mono text-zinc-500">
+                              {new Date(item.timestamp).toLocaleString()}
+                            </span>
+                          </div>
                         </div>
                         <span
                           className={`font-mono font-bold text-xs px-2 py-0.5 rounded ${
                             item.points > 0
-                              ? 'bg-emerald-500/20 text-emerald-400'
-                              : 'bg-amber-500/20 text-amber-300'
+                              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                              : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                           }`}
                         >
                           {item.points > 0 ? `+${item.points}` : item.points} pts
@@ -883,19 +966,88 @@ export const UserProfileModal: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 4: GENERAL HISTORY */}
+          {/* TAB 4: GENERAL & POINTS HISTORY */}
           {activeTab === 'history' && (
-            <div className="space-y-2.5 animate-fadeIn transition-opacity duration-300">
-              {(!user.history || user.history.length === 0) ? (
-                <div className="p-8 rounded-2xl bg-zinc-950/60 border border-white/5 text-center">
-                  <Activity className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
-                  <span className="text-xs font-bold text-zinc-300 block">No activity recorded yet</span>
-                  <p className="text-[11px] text-zinc-500 mt-1 max-w-xs mx-auto">
-                    Exported handling files, translated script locales, and copied code snippets will appear here.
-                  </p>
-                </div>
-              ) : (
-                user.history.map(item => {
+            <div className="space-y-4 animate-fadeIn transition-opacity duration-300">
+              {/* Filter Tabs */}
+              <div className="flex items-center gap-2 p-1 rounded-xl bg-zinc-900/80 border border-white/5 overflow-x-auto">
+                <button
+                  onClick={() => setHistoryFilter('all')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    historyFilter === 'all'
+                      ? 'bg-zinc-800 text-white shadow-sm'
+                      : 'text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  All ({pointsHistory.length + (user.history?.length || 0)})
+                </button>
+                <button
+                  onClick={() => setHistoryFilter('points')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    historyFilter === 'points'
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-sm'
+                      : 'text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  <Coins className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Points ({pointsHistory.length})</span>
+                </button>
+                <button
+                  onClick={() => setHistoryFilter('devtools')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    historyFilter === 'devtools'
+                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm'
+                      : 'text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  <Award className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>DevTools & Actions ({user.history?.length || 0})</span>
+                </button>
+              </div>
+
+              {/* Items List */}
+              <div className="space-y-2.5">
+                {/* 1. Points History Items */}
+                {(historyFilter === 'all' || historyFilter === 'points') && pointsHistory.map(item => (
+                  <div
+                    key={item.id}
+                    className="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/5 flex items-center justify-between gap-3 hover:border-white/20 hover:bg-zinc-900/90 transition-all hover:translate-x-1"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                        item.points > 0 ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                      }`}>
+                        {item.activity === 'script_purchase' && <ShoppingCart className="w-4 h-4" />}
+                        {item.activity === 'discord_login' && <Sparkles className="w-4 h-4 text-amber-300" />}
+                        {item.activity === 'discord_guild' && <MessageSquare className="w-4 h-4 text-[#8ea1ff]" />}
+                        {(item.activity === 'wheel_spin' || item.activity === 'wheel_extra_spin') && <Gift className="w-4 h-4 text-purple-400" />}
+                        {item.activity === 'devtools_use' && <Award className="w-4 h-4 text-cyan-400" />}
+                        {item.activity === 'download_free_script' && <Download className="w-4 h-4 text-emerald-400" />}
+                        {!['script_purchase', 'discord_login', 'discord_guild', 'wheel_spin', 'wheel_extra_spin', 'devtools_use', 'download_free_script'].includes(item.activity) && (
+                          <Coins className="w-4 h-4 text-amber-400" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-xs font-bold text-white block truncate">{item.label}</span>
+                        <span className="text-[10px] font-mono text-zinc-400 block mt-0.5">
+                          {new Date(item.timestamp).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                    <span
+                      className={`font-mono font-bold text-xs px-2.5 py-1 rounded-lg shrink-0 ${
+                        item.points > 0
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                      }`}
+                    >
+                      {item.points > 0 ? `+${item.points}` : item.points} pts
+                    </span>
+                  </div>
+                ))}
+
+                {/* 2. DevTools User History Items */}
+                {(historyFilter === 'all' || historyFilter === 'devtools') && (user.history || []).map(item => {
                   const dateStr = new Date(item.timestamp).toLocaleString('en-US', {
                     month: 'short',
                     day: 'numeric',
@@ -909,7 +1061,7 @@ export const UserProfileModal: React.FC = () => {
                       className="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/5 flex items-center justify-between gap-3 hover:border-white/20 hover:bg-zinc-900/90 transition-all hover:translate-x-1"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-zinc-800 flex items-center justify-center text-zinc-300 shrink-0">
+                        <div className="w-9 h-9 rounded-xl bg-zinc-800 flex items-center justify-center text-zinc-300 shrink-0 border border-white/10">
                           {item.type === 'download' && <Download className="w-4 h-4 text-emerald-400" />}
                           {item.type === 'export' && <Download className="w-4 h-4 text-cyan-400" />}
                           {item.type === 'copy' && <Copy className="w-4 h-4 text-amber-400" />}
@@ -917,7 +1069,7 @@ export const UserProfileModal: React.FC = () => {
                         </div>
                         <div className="min-w-0">
                           <span className="text-xs font-bold text-white block truncate">{item.title}</span>
-                          <span className="text-[10px] font-mono text-zinc-400 block">{dateStr}</span>
+                          <span className="text-[10px] font-mono text-zinc-400 block mt-0.5">{dateStr}</span>
                         </div>
                       </div>
                       <span className="px-2 py-0.5 rounded-md bg-zinc-800 text-[10px] font-mono text-zinc-400 uppercase font-bold shrink-0">
@@ -925,8 +1077,21 @@ export const UserProfileModal: React.FC = () => {
                       </span>
                     </div>
                   );
-                })
-              )}
+                })}
+
+                {/* Empty State */}
+                {((historyFilter === 'all' && pointsHistory.length === 0 && (!user.history || user.history.length === 0)) ||
+                  (historyFilter === 'points' && pointsHistory.length === 0) ||
+                  (historyFilter === 'devtools' && (!user.history || user.history.length === 0))) && (
+                  <div className="p-8 rounded-2xl bg-zinc-950/60 border border-white/5 text-center">
+                    <Activity className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
+                    <span className="text-xs font-bold text-zinc-300 block">No activity recorded yet</span>
+                    <p className="text-[11px] text-zinc-500 mt-1 max-w-xs mx-auto">
+                      Points earned from spins, logins, DevTools, or store orders will appear here.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
