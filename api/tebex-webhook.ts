@@ -219,8 +219,9 @@ export default async function handler(req: any, res: any) {
     const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
     const body = parseBody(req);
 
-    // If Tebex dashboard validation ping:
-    if (body.type === 'validation' || (body.id && !body.subject && !body.amount && !body.price)) {
+    // If Tebex dashboard validation ping (Tebex sends type "validation.webhook" with subject: {}):
+    const typeStr = (body.type || body.event || '').toString().toLowerCase();
+    if (typeStr.includes('validation') || (body.id && (!body.subject || Object.keys(body.subject).length === 0))) {
       return res.status(200).json({ id: body.id || 'validation' });
     }
 

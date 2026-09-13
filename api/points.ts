@@ -905,7 +905,8 @@ async function handleClaimPurchase(req: any, res: any, url: URL, body: any) {
 }
 
 async function handleTebexWebhook(req: any, res: any, body: any) {
-  if (body.type === 'validation' || (body.id && !body.subject && !body.amount && !body.price)) {
+  const typeStr = (body.type || body.event || '').toString().toLowerCase();
+  if (typeStr.includes('validation') || (body.id && (!body.subject || Object.keys(body.subject).length === 0))) {
     return res.status(200).json({ id: body.id || 'validation' });
   }
   const result = await processTebexPayment(body, req.headers);
