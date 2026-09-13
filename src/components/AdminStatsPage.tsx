@@ -294,7 +294,14 @@ export const AdminStatsPage: React.FC = () => {
         })
       });
 
-      const resData = await res.json();
+      let resData: any = {};
+      try {
+        const text = await res.text();
+        resData = JSON.parse(text);
+      } catch {
+        throw new Error(`Server returned error (${res.status})`);
+      }
+
       if (!res.ok || !resData.success) {
         throw new Error(resData.error || 'Nepodařilo se upravit body');
       }

@@ -1,5 +1,3 @@
-import { processTebexPayment } from './tebex-webhook';
-
 function parseBody(req: any): any {
   if (!req.body) return {};
   if (typeof req.body === 'object') return req.body;
@@ -16,39 +14,44 @@ function parseBody(req: any): any {
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-BC-Sig');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-BC-Sig, X-Signature');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
-  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-  const body = parseBody(req);
-  const queryAction = req.query?.action || url.searchParams.get('action') || body.action;
-  const pathParts = url.pathname.split('/').filter(Boolean);
-  const lastPart = pathParts[pathParts.length - 1];
-  const pathAction = (lastPart && lastPart !== 'points' && lastPart !== 'api' && lastPart !== '[action]') ? lastPart : '';
-  const action = (queryAction || pathAction || '').toString().toLowerCase();
+  try {
+    const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    const body = parseBody(req);
+    const queryAction = req.query?.action || url.searchParams.get('action') || body.action;
+    const pathParts = url.pathname.split('/').filter(Boolean);
+    const lastPart = pathParts[pathParts.length - 1];
+    const pathAction = (lastPart && lastPart !== 'points' && lastPart !== 'api' && lastPart !== '[action]') ? lastPart : '';
+    const action = (queryAction || pathAction || '').toString().toLowerCase();
 
-  if (action === 'status') {
-    return handleStatus(req, res, url, body);
-  } else if (action === 'activity') {
-    return handleActivity(req, res, body);
-  } else if (action === 'redeem') {
-    return handleRedeem(req, res, body);
-  } else if (action === 'admin_adjust') {
-    return handleAdminAdjust(req, res, body);
-  } else if (action === 'buy_wheel_spin') {
-    return handleBuyWheelSpin(req, res, body);
-  } else if (action === 'register_basket') {
-    return handleRegisterBasket(req, res, body);
-  } else if (action === 'claim_purchase') {
-    return handleClaimPurchase(req, res, url, body);
-  } else if (action === 'tebex_webhook' || action === 'webhook') {
-    return handleTebexWebhook(req, res, body);
+    if (action === 'status') {
+      return await handleStatus(req, res, url, body);
+    } else if (action === 'activity') {
+      return await handleActivity(req, res, body);
+    } else if (action === 'redeem') {
+      return await handleRedeem(req, res, body);
+    } else if (action === 'admin_adjust') {
+      return await handleAdminAdjust(req, res, body);
+    } else if (action === 'buy_wheel_spin') {
+      return await handleBuyWheelSpin(req, res, body);
+    } else if (action === 'register_basket') {
+      return await handleRegisterBasket(req, res, body);
+    } else if (action === 'claim_purchase') {
+      return await handleClaimPurchase(req, res, url, body);
+    } else if (action === 'tebex_webhook' || action === 'webhook') {
+      return await handleTebexWebhook(req, res, body);
+    }
+
+    return res.status(404).json({ error: `Unknown points action: ${action || 'none'}` });
+  } catch (err: any) {
+    console.error('[Points Handler Error]:', err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
   }
-
-  return res.status(404).json({ error: `Unknown points action: ${action || 'none'}` });
 }
 
 async function handleStatus(req: any, res: any, url: URL, body: any) {
@@ -217,10 +220,13 @@ async function handleStatus(req: any, res: any, url: URL, body: any) {
     }
 
     if (userModified && kvUrl && kvToken) {
-      await fetch(`${kvUrl}/set/users:discord:${userId}`, {
+      const pipeline = [
+        ['SET', `users:discord:${userId}`, JSON.stringify(user)]
+      ];
+      await fetch(`${kvUrl}/pipeline`, {
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify(user)
+        body: JSON.stringify(pipeline)
       }).catch(() => {});
     }
 
@@ -743,10 +749,13 @@ async function handleAdminAdjust(req: any, res: any, body: any) {
     });
 
     if (kvUrl && kvToken) {
-      await fetch(`${kvUrl}/set/users:discord:${userId}`, {
+      const pipeline = [
+        ['SET', `users:discord:${userId}`, JSON.stringify(user)]
+      ];
+      await fetch(`${kvUrl}/pipeline`, {
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify(user)
+        body: JSON.stringify(pipeline)
       }).catch(() => {});
     }
 
@@ -867,12 +876,14 @@ async function handleRegisterBasket(req: any, res: any, body: any) {
     const kvToken = process.env.KV_REST_API_TOKEN || process.env.REDIS_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
     if (kvUrl && kvToken) {
-      const headers = { Authorization: `Bearer ${kvToken}`, 'Content-Type': 'application/json' };
-      await fetch(`${kvUrl}/set/baskets:${basketId}:user?ex=172800`, {
+      const pipeline = [
+        ['SET', `baskets:${basketId}:user`, JSON.stringify({ userId, username, expectedPoints, packages, timestamp: Date.now() }), 'EX', '172800']
+      ];
+      await fetch(`${kvUrl}/pipeline`, {
         method: 'POST',
-        headers,
-        body: JSON.stringify({ userId, username, expectedPoints, packages, timestamp: Date.now() })
-      });
+        headers: { Authorization: `Bearer ${kvToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(pipeline)
+      }).catch(() => {});
     }
 
     return res.status(200).json({ success: true, registered: true });
@@ -997,18 +1008,15 @@ async function handleClaimPurchase(req: any, res: any, url: URL, body: any) {
     });
 
     if (targetUserId && kvUrl && kvToken) {
-      await Promise.allSettled([
-        fetch(`${kvUrl}/set/users:discord:${targetUserId}`, {
-          method: 'POST',
-          headers: { ...headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify(user)
-        }),
-        fetch(`${kvUrl}/set/baskets:claimed:${effectiveBasketId}`, {
-          method: 'POST',
-          headers: { ...headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: targetUserId, points: pointsToAward, timestamp: now })
-        })
-      ]);
+      const pipeline = [
+        ['SET', `users:discord:${targetUserId}`, JSON.stringify(user)],
+        ['SET', `baskets:claimed:${effectiveBasketId}`, JSON.stringify({ userId: targetUserId, points: pointsToAward, timestamp: now })]
+      ];
+      await fetch(`${kvUrl}/pipeline`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify(pipeline)
+      }).catch(() => {});
     }
 
     return res.status(200).json({
@@ -1024,11 +1032,82 @@ async function handleClaimPurchase(req: any, res: any, url: URL, body: any) {
 }
 
 async function handleTebexWebhook(req: any, res: any, body: any) {
-  const typeStr = (body.type || body.event || '').toString().toLowerCase();
-  if (typeStr.includes('validation') || (body.id && (!body.subject || Object.keys(body.subject).length === 0))) {
-    return res.status(200).json({ id: body.id || 'validation' });
+  try {
+    const typeStr = (body.type || body.event || '').toString().toLowerCase();
+    if (typeStr.includes('validation') || (body.id && (!body.subject || Object.keys(body.subject).length === 0))) {
+      return res.status(200).json({ id: body.id || 'validation' });
+    }
+
+    const kvUrl = process.env.KV_REST_API_URL || process.env.REDIS_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+    const kvToken = process.env.KV_REST_API_TOKEN || process.env.REDIS_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+    const kvHeaders: Record<string, string> = kvToken ? { Authorization: `Bearer ${kvToken}` } : {};
+
+    const subject = body.subject || body;
+    const txnId = (subject.transaction_id || subject.id || body.transaction_id || body.id)?.toString();
+    if (!txnId) {
+      return res.status(400).json({ error: 'Missing transaction ID' });
+    }
+
+    if (kvUrl && kvToken) {
+      const checkRes = await fetch(`${kvUrl}/get/payments:processed:${txnId}`, { headers: kvHeaders }).catch(() => null);
+      const checkData = await checkRes?.json().catch(() => null);
+      if (checkData?.result) {
+        return res.status(200).json({ success: true, message: 'Already processed', txnId });
+      }
+    }
+
+    const rawAmount = parseFloat(subject.price?.amount ?? subject.amount ?? body.price?.amount ?? body.amount ?? 0);
+    let amount = isNaN(rawAmount) ? 0 : rawAmount;
+    if (amount <= 0) {
+      const products = subject.products || subject.packages || body.products || body.packages || [];
+      if (Array.isArray(products) && products.length > 0) {
+        const fallbackSum = products.reduce((acc: number, p: any) => acc + (parseFloat(p.price || p.base_price || 0) || 0), 0);
+        if (fallbackSum > 0) amount = fallbackSum;
+      }
+    }
+    const pointsToAward = Math.max(0, Math.round(amount * 15));
+
+    let targetUserId = subject.custom?.userId || body.custom?.userId || null;
+    if (!targetUserId && subject.custom?.user_id) targetUserId = subject.custom.user_id;
+
+    if (targetUserId && kvUrl && kvToken) {
+      let user: any = { id: targetUserId, points: 0, totalPointsEarned: 0, pointsHistory: [] };
+      const userRes = await fetch(`${kvUrl}/get/users:discord:${targetUserId}`, { headers: kvHeaders }).catch(() => null);
+      const userData = await userRes?.json().catch(() => null);
+      if (userData?.result) {
+        try {
+          user = typeof userData.result === 'string' ? JSON.parse(userData.result) : userData.result;
+        } catch {}
+      }
+
+      const now = Date.now();
+      user.points = (user.points || 0) + pointsToAward;
+      user.totalPointsEarned = (user.totalPointsEarned || 0) + pointsToAward;
+      if (!user.pointsHistory) user.pointsHistory = [];
+      user.pointsHistory.unshift({
+        id: `pt-pay-${txnId}-${now.toString(36)}`,
+        activity: 'script_purchase',
+        label: `Script Purchase (+${pointsToAward} MD Points)`,
+        points: pointsToAward,
+        amountEur: amount > 0 ? amount : undefined,
+        txnId,
+        timestamp: now
+      });
+
+      const pipeline = [
+        ['SET', `users:discord:${targetUserId}`, JSON.stringify(user)],
+        ['SET', `payments:processed:${txnId}`, JSON.stringify({ txnId, userId: targetUserId, points: pointsToAward, amount, timestamp: now })]
+      ];
+      await fetch(`${kvUrl}/pipeline`, {
+        method: 'POST',
+        headers: { ...kvHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify(pipeline)
+      }).catch(() => {});
+    }
+
+    return res.status(200).json({ success: true, txnId, pointsAwarded: pointsToAward });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || 'Webhook processing failed' });
   }
-  const result = await processTebexPayment(body, req.headers);
-  return res.status(result.success ? 200 : 200).json(result);
 }
 

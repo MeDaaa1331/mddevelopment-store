@@ -103,10 +103,13 @@ export default async function handler(req: any, res: any) {
         if (!announcementData) {
           return res.status(400).json({ error: 'Missing announcement payload' });
         }
-        await fetch(`${kvUrl}/set/site:announcement`, {
+        const pipeline = [
+          ['SET', 'site:announcement', JSON.stringify(announcementData)]
+        ];
+        await fetch(`${kvUrl}/pipeline`, {
           method: 'POST',
           headers: { ...headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify(announcementData)
+          body: JSON.stringify(pipeline)
         });
         return res.status(200).json({ success: true, announcement: announcementData });
       }

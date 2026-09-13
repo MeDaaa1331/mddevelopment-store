@@ -154,10 +154,11 @@ export const UserProfileModal: React.FC = () => {
   const now = Date.now();
   const DAY_MS = 86400000;
 
-  const localWheelRemaining = user.lastSpin ? Math.max(0, DAY_MS - (now - user.lastSpin)) : 0;
-  const serverWheelRemaining = cooldowns?.wheelSpinRemainingMs ?? 0;
+  const extraSpins = Number(user.extraSpins || pointsStatus?.extraSpins || 0);
+  const localWheelRemaining = extraSpins > 0 ? 0 : (user.lastSpin ? Math.max(0, DAY_MS - (now - user.lastSpin)) : 0);
+  const serverWheelRemaining = extraSpins > 0 ? 0 : (cooldowns?.wheelSpinRemainingMs ?? 0);
   const wheelRemainingMs = Math.max(serverWheelRemaining, localWheelRemaining);
-  const canSpinWheel = (cooldowns?.canSpinWheel !== false) && wheelRemainingMs === 0;
+  const canSpinWheel = extraSpins > 0 || ((cooldowns?.canSpinWheel !== false) && wheelRemainingMs === 0);
 
   const localDevToolsRemaining = user.lastDevToolsUse ? Math.max(0, DAY_MS - (now - user.lastDevToolsUse)) : 0;
   const serverDevToolsRemaining = cooldowns?.devToolsRemainingMs ?? 0;

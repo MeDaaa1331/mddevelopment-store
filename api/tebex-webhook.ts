@@ -134,10 +134,13 @@ export async function processTebexPayment(payload: any, headers?: Record<string,
   if (!userId) {
     // Save unassigned payment in Redis so it can be manually claimed or associated later
     if (kvUrl && kvToken) {
-      await fetch(`${kvUrl}/set/payments:unassigned:${txnId}`, {
+      const pipeline = [
+        ['SET', `payments:unassigned:${txnId}`, JSON.stringify({ txnId, amount, basketIdent, payload, timestamp: Date.now() })]
+      ];
+      await fetch(`${kvUrl}/pipeline`, {
         method: 'POST',
         headers: { ...kvHeaders, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ txnId, amount, basketIdent, payload, timestamp: Date.now() })
+        body: JSON.stringify(pipeline)
       }).catch(() => {});
     }
     return { success: false, message: `No Discord user found for transaction ${txnId}`, txnId };
@@ -146,10 +149,13 @@ export async function processTebexPayment(payload: any, headers?: Record<string,
   // If points are 0 (e.g. 0.00 EUR order), we still mark it processed without error
   if (pointsToAward <= 0) {
     if (kvUrl && kvToken) {
-      await fetch(`${kvUrl}/set/payments:processed:${txnId}`, {
+      const pipeline = [
+        ['SET', `payments:processed:${txnId}`, JSON.stringify({ txnId, userId, points: 0, timestamp: Date.now() })]
+      ];
+      await fetch(`${kvUrl}/pipeline`, {
         method: 'POST',
         headers: { ...kvHeaders, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ txnId, userId, points: 0, timestamp: Date.now() })
+        body: JSON.stringify(pipeline)
       }).catch(() => {});
     }
     return { success: true, message: 'Zero amount transaction processed', userId, txnId, pointsAwarded: 0 };
@@ -187,18 +193,15 @@ export async function processTebexPayment(payload: any, headers?: Record<string,
   });
 
   if (kvUrl && kvToken) {
-    await Promise.allSettled([
-      fetch(`${kvUrl}/set/users:discord:${userId}`, {
-        method: 'POST',
-        headers: { ...kvHeaders, 'Content-Type': 'application/json' },
-        body: JSON.stringify(user)
-      }),
-      fetch(`${kvUrl}/set/payments:processed:${txnId}`, {
-        method: 'POST',
-        headers: { ...kvHeaders, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ txnId, userId, points: pointsToAward, amount, timestamp: now })
-      })
-    ]);
+    const pipeline = [
+      ['SET', `users:discord:${userId}`, JSON.stringify(user)],
+      ['SET', `payments:processed:${txnId}`, JSON.stringify({ txnId, userId, points: pointsToAward, amount, timestamp: now })]
+    ];
+    await fetch(`${kvUrl}/pipeline`, {
+      method: 'POST',
+      headers: { ...kvHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify(pipeline)
+    }).catch(() => {});
   }
 
   return {
