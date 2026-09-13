@@ -289,7 +289,7 @@ export const UserProfileModal: React.FC = () => {
             <X className="w-4 h-4 pointer-events-none" />
           </button>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10 pr-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10 pr-12 sm:pr-16">
             <div className="flex items-center gap-4">
               <div className="relative shrink-0 group">
                 <img
@@ -338,7 +338,7 @@ export const UserProfileModal: React.FC = () => {
             </div>
 
             {/* Points Badge in Header */}
-            <div className="flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-amber-600/15 border border-amber-400/30 shadow-[0_0_20px_rgba(245,158,11,0.15)] self-start sm:self-center">
+            <div className="flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-amber-600/15 border border-amber-400/30 shadow-[0_0_20px_rgba(245,158,11,0.15)] self-start sm:self-center shrink-0 sm:mr-3">
               <div className="w-8 h-8 rounded-xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center text-amber-300 shadow-sm">
                 <Coins className="w-4 h-4" />
               </div>
