@@ -17,7 +17,7 @@ function safeRedirect(res: any, url: string, statusCode = 302) {
 export default async function handler(req: any, res: any) {
   try {
     const query = req.query || {};
-    const { code, error } = query;
+    const { code, error, state } = query;
 
     if (error || !code) {
       return safeRedirect(res, '/?discord_auth=error&reason=' + encodeURIComponent(String(error || 'no_code')));
@@ -26,8 +26,21 @@ export default async function handler(req: any, res: any) {
     const clientId = process.env.DISCORD_CLIENT_ID?.trim();
     const clientSecret = process.env.DISCORD_CLIENT_SECRET?.trim();
     const proto = (req.headers?.['x-forwarded-proto'] || 'https').toString().split(',')[0].trim();
-    const host = (req.headers?.host || 'md-development.cz').toString().trim();
-    const redirectUri = process.env.DISCORD_REDIRECT_URI?.trim() || `${proto}://${host}/api/auth/discord/callback`;
+    const host = (req.headers?.host || 'mddevelopment.store').toString().trim();
+
+    // Prefer exact redirectUri preserved in OAuth2 state, or env var, or request headers
+    let redirectUri = process.env.DISCORD_REDIRECT_URI?.trim();
+    if (!redirectUri && state) {
+      try {
+        const decodedState = JSON.parse(Buffer.from(String(state), 'base64url').toString('utf-8'));
+        if (decodedState?.redirectUri) {
+          redirectUri = String(decodedState.redirectUri).trim();
+        }
+      } catch {}
+    }
+    if (!redirectUri) {
+      redirectUri = `${proto}://${host}/api/auth/discord/callback`;
+    }
 
     if (!clientId || !clientSecret) {
       return safeRedirect(res, '/?discord_auth=error&reason=missing_server_credentials');
@@ -46,7 +59,16 @@ export default async function handler(req: any, res: any) {
     });
 
     if (!tokenRes.ok) {
-      return safeRedirect(res, '/?discord_auth=error&reason=token_exchange_failed');
+      const errBody = await tokenRes.text().catch(() => '');
+      console.error('[Discord OAuth] Token exchange error:', tokenRes.status, errBody);
+      let reason = 'token_exchange_failed';
+      try {
+        const jsonErr = JSON.parse(errBody);
+        reason = jsonErr.error_description || jsonErr.error || reason;
+      } catch {
+        if (errBody) reason = errBody.slice(0, 60);
+      }
+      return safeRedirect(res, '/?discord_auth=error&reason=' + encodeURIComponent(reason));
     }
 
     const tokenData = await tokenRes.json();
@@ -57,7 +79,9 @@ export default async function handler(req: any, res: any) {
     });
 
     if (!userRes.ok) {
-      return safeRedirect(res, '/?discord_auth=error&reason=user_fetch_failed');
+      const userErrBody = await userRes.text().catch(() => '');
+      console.error('[Discord OAuth] User fetch error:', userRes.status, userErrBody);
+      return safeRedirect(res, '/?discord_auth=error&reason=' + encodeURIComponent('user_fetch_failed_' + userRes.status));
     }
 
     const discordUser = await userRes.json();
@@ -245,16 +269,17 @@ export default async function handler(req: any, res: any) {
       } catch {}
     }
 
-    // Prepare lean payload for URL redirect so Location header never exceeds HTTP header size limits (8KB)
+    // Prepare lean payload encoded as URL-safe base64
     const sessionUser = {
       ...finalUser,
-      history: (finalUser.history || []).slice(0, 10),
-      pointsHistory: (finalUser.pointsHistory || []).slice(0, 10),
-      cart: (finalUser.cart || []).slice(0, 20),
-      favorites: (finalUser.favorites || []).slice(0, 50)
+      history: (finalUser.history || []).slice(0, 5),
+      pointsHistory: (finalUser.pointsHistory || []).slice(0, 5),
+      cart: (finalUser.cart || []).slice(0, 10),
+      favorites: (finalUser.favorites || []).slice(0, 20)
     };
 
-    const payload = encodeURIComponent(JSON.stringify(sessionUser));
+    const userJson = JSON.stringify(sessionUser);
+    const payload = Buffer.from(userJson, 'utf-8').toString('base64url');
     return safeRedirect(res, `/?discord_auth=success&user=${payload}`, 302);
   } catch (err: any) {
     const errorMsg = err?.message || 'unknown_error';

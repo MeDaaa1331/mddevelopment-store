@@ -249,8 +249,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const userPayload = params.get('user');
 
     if (authStatus === 'success' && userPayload) {
+      let parsedUser: DiscordUser | null = null;
+
+      // Method 1: URL-safe Base64 decode (recommended, handles emojis & UTF-8)
       try {
-        const parsedUser: DiscordUser = JSON.parse(decodeURIComponent(userPayload));
+        const base64 = userPayload.replace(/-/g, '+').replace(/_/g, '/');
+        const binStr = atob(base64);
+        const bytes = Uint8Array.from(binStr, c => c.charCodeAt(0));
+        const decodedText = new TextDecoder().decode(bytes);
+        parsedUser = JSON.parse(decodedText);
+      } catch {}
+
+      // Method 2: Direct JSON parse
+      if (!parsedUser) {
+        try {
+          parsedUser = JSON.parse(userPayload);
+        } catch {}
+      }
+
+      // Method 3: decodeURIComponent + JSON parse
+      if (!parsedUser) {
+        try {
+          parsedUser = JSON.parse(decodeURIComponent(userPayload));
+        } catch {}
+      }
+
+      if (parsedUser && parsedUser.id) {
         setUser(parsedUser);
         localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(parsedUser));
         setJustLoggedIn(true);
@@ -266,16 +290,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentUrl.searchParams.delete('discord_auth');
         currentUrl.searchParams.delete('user');
         window.history.replaceState(null, '', currentUrl.pathname + currentUrl.search);
-      } catch (err) {}
+      } else {
+        console.error('[Discord Auth]: Failed to parse user payload:', userPayload);
+        showPointToast(0, 'Failed to complete Discord login. Please try again.');
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.delete('discord_auth');
+        currentUrl.searchParams.delete('user');
+        window.history.replaceState(null, '', currentUrl.pathname + currentUrl.search);
+      }
     } else if (authStatus === 'error') {
-      const reason = params.get('reason');
-      console.warn('[Discord Auth]: Login failed or cancelled:', reason);
+      const reason = params.get('reason') || 'unknown';
+      console.error('[Discord Auth Error]:', reason);
+      showPointToast(0, `Discord Login Error: ${reason.replace(/_/g, ' ')}`);
       const currentUrl = new URL(window.location.href);
       currentUrl.searchParams.delete('discord_auth');
       currentUrl.searchParams.delete('reason');
       window.history.replaceState(null, '', currentUrl.pathname + currentUrl.search);
     }
-  }, []);
+  }, [showPointToast]);
 
   const loginWithDiscord = () => {
     window.location.href = '/api/auth/discord/login';

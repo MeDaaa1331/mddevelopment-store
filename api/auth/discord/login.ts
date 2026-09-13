@@ -18,19 +18,27 @@ export default async function handler(req: any, res: any) {
   try {
     const clientId = process.env.DISCORD_CLIENT_ID?.trim();
     const proto = (req.headers?.['x-forwarded-proto'] || 'https').toString().split(',')[0].trim();
-    const host = (req.headers?.host || 'md-development.cz').toString().trim();
+    const host = (req.headers?.host || 'mddevelopment.store').toString().trim();
     const redirectUri = (process.env.DISCORD_REDIRECT_URI?.trim()) || `${proto}://${host}/api/auth/discord/callback`;
 
     if (!clientId) {
       return safeRedirect(res, '/?discord_auth=error&reason=missing_client_id');
     }
 
+    // Embed exact redirectUri in OAuth2 state so callback.ts always matches it
+    const stateData = {
+      redirectUri,
+      t: Date.now()
+    };
+    const state = Buffer.from(JSON.stringify(stateData), 'utf-8').toString('base64url');
+
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: 'code',
       scope: 'identify email guilds.join',
-      prompt: 'consent'
+      prompt: 'consent',
+      state
     });
 
     const targetUrl = `https://discord.com/oauth2/authorize?${params.toString()}`;
