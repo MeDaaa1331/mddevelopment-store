@@ -366,8 +366,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
           body: JSON.stringify({
-            complete_url: `${window.location.origin}/?payment-complete=1`,
-            cancel_url: window.location.origin
+            complete_url: `${window.location.origin}/?payment-complete=1${user?.id ? `&userId=${user.id}` : ''}`,
+            cancel_url: window.location.origin,
+            custom: user?.id ? { userId: user.id } : undefined
           })
         });
 
@@ -376,8 +377,21 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const ident: string | undefined = bData.data?.ident || bData.ident;
 
           if (ident) {
+            // Register basket with backend so Tebex webhook and redirect can credit points
+            if (user?.id) {
+              fetch('/api/points?action=register_basket', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  basketId: ident,
+                  userId: user.id,
+                  username: user.username || user.global_name || 'Discord Member',
+                  expectedPoints: Math.max(15, Math.round(totalPrice * 15))
+                })
+              }).catch(() => {});
+            }
 
-            const callbackUrl = `${window.location.origin}/?checkout-callback=1&basketId=${ident}`;
+            const callbackUrl = `${window.location.origin}/?checkout-callback=1&basketId=${ident}${user?.id ? `&userId=${user.id}` : ''}`;
 
             const authRes = await fetch(
               `${TEBEX_HEADLESS_BASE}/accounts/${token}/baskets/${ident}/auth?returnUrl=${encodeURIComponent(callbackUrl)}`,

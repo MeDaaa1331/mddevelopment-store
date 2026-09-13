@@ -1,3 +1,5 @@
+import { processTebexPayment } from './tebex-webhook';
+
 function parseBody(req: any): any {
   if (!req.body) return {};
   if (typeof req.body === 'object') return req.body;
@@ -14,7 +16,7 @@ function parseBody(req: any): any {
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-BC-Sig');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -38,6 +40,12 @@ export default async function handler(req: any, res: any) {
     return handleAdminAdjust(req, res, body);
   } else if (action === 'buy_wheel_spin') {
     return handleBuyWheelSpin(req, res, body);
+  } else if (action === 'register_basket') {
+    return handleRegisterBasket(req, res, body);
+  } else if (action === 'claim_purchase') {
+    return handleClaimPurchase(req, res, url, body);
+  } else if (action === 'tebex_webhook' || action === 'webhook') {
+    return handleTebexWebhook(req, res, body);
   }
 
   return res.status(404).json({ error: `Unknown points action: ${action || 'none'}` });
@@ -741,5 +749,166 @@ async function handleBuyWheelSpin(req: any, res: any, body: any) {
   } catch (err: any) {
     return res.status(500).json({ error: err.message || 'Internal server error' });
   }
+}
+
+async function handleRegisterBasket(req: any, res: any, body: any) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const basketId = body.basketId || body.basket_ident || body.ident;
+    const userId = body.userId;
+    const username = body.username || 'Discord User';
+    const expectedPoints = Number(body.expectedPoints || 0);
+
+    if (!basketId || !userId) {
+      return res.status(400).json({ error: 'Missing basketId or userId' });
+    }
+
+    const kvUrl = process.env.KV_REST_API_URL || process.env.REDIS_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+    const kvToken = process.env.KV_REST_API_TOKEN || process.env.REDIS_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+
+    if (kvUrl && kvToken) {
+      const headers = { Authorization: `Bearer ${kvToken}`, 'Content-Type': 'application/json' };
+      await fetch(`${kvUrl}/set/baskets:${basketId}:user?ex=172800`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ userId, username, expectedPoints, timestamp: Date.now() })
+      });
+    }
+
+    return res.status(200).json({ success: true, registered: true });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+}
+
+async function handleClaimPurchase(req: any, res: any, url: URL, body: any) {
+  try {
+    const basketId = req.query?.basketId || url.searchParams.get('basketId') || body?.basketId;
+    const userId = req.query?.userId || url.searchParams.get('userId') || body?.userId;
+
+    if (!basketId) {
+      return res.status(400).json({ error: 'Missing basketId' });
+    }
+
+    const kvUrl = process.env.KV_REST_API_URL || process.env.REDIS_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+    const kvToken = process.env.KV_REST_API_TOKEN || process.env.REDIS_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+    const headers: Record<string, string> = kvToken ? { Authorization: `Bearer ${kvToken}` } : {};
+
+    // Idempotency check: Has this basket already been credited?
+    if (kvUrl && kvToken) {
+      const claimedRes = await fetch(`${kvUrl}/get/baskets:claimed:${basketId}`, { headers }).catch(() => null);
+      const claimedData = await claimedRes?.json().catch(() => null);
+      if (claimedData?.result) {
+        return res.status(200).json({
+          success: true,
+          alreadyClaimed: true,
+          message: 'Points for this purchase have already been credited.'
+        });
+      }
+    }
+
+    // Fetch basket from Tebex Headless API
+    const tebexToken = process.env.VITE_TEBEX_PUBLIC_TOKEN || process.env.TEBEX_PUBLIC_TOKEN || 'yry4-4f39d4771913f90be71cc7be4f234a2cfbd8036e';
+    const basketRes = await fetch(`https://headless.tebex.io/api/accounts/${tebexToken}/baskets/${basketId}`, {
+      headers: { Accept: 'application/json' }
+    });
+
+    if (!basketRes.ok) {
+      return res.status(404).json({ error: 'Basket not found or invalid' });
+    }
+
+    const basketJson = await basketRes.json();
+    const basket = basketJson.data || basketJson;
+
+    // Calculate points: 1 € = 15 points
+    const rawPrice = parseFloat(basket.total_price ?? basket.base_price ?? 0);
+    const amount = isNaN(rawPrice) ? 0 : rawPrice;
+    const pointsToAward = Math.max(0, Math.round(amount * 15));
+
+    // Resolve target userId
+    let targetUserId = userId;
+    if (!targetUserId && kvUrl && kvToken) {
+      const bRes = await fetch(`${kvUrl}/get/baskets:${basketId}:user`, { headers }).catch(() => null);
+      const bData = await bRes?.json().catch(() => null);
+      if (bData?.result) {
+        try {
+          const parsed = typeof bData.result === 'string' ? JSON.parse(bData.result) : bData.result;
+          targetUserId = parsed.userId;
+        } catch {}
+      }
+    }
+
+    if (!targetUserId) {
+      return res.status(400).json({ error: 'No Discord user associated with this purchase' });
+    }
+
+    // Fetch user and update points in Redis
+    let user: any = { id: targetUserId, points: 0, totalPointsEarned: 0, pointsHistory: [] };
+    if (kvUrl && kvToken) {
+      const userRes = await fetch(`${kvUrl}/get/users:discord:${targetUserId}`, { headers }).catch(() => null);
+      const userData = await userRes?.json().catch(() => null);
+      if (userData?.result) {
+        try {
+          const parsed = typeof userData.result === 'string' ? JSON.parse(userData.result) : userData.result;
+          user = { ...user, ...parsed };
+        } catch {}
+      }
+    }
+
+    const packages = basket.packages || basket.lines || [];
+    const packageNames = Array.isArray(packages)
+      ? packages.map((p: any) => p.name || p.package?.name).filter(Boolean).join(', ')
+      : 'FiveM Script';
+
+    const now = Date.now();
+    user.points = (user.points || 0) + pointsToAward;
+    user.totalPointsEarned = (user.totalPointsEarned || 0) + pointsToAward;
+    if (!user.pointsHistory) user.pointsHistory = [];
+
+    user.pointsHistory.unshift({
+      id: `pt-pay-${basketId}-${now.toString(36)}`,
+      activity: 'script_purchase',
+      label: `Script Purchase: ${packageNames || 'FiveM Resource'} (+${pointsToAward} MD Points)`,
+      points: pointsToAward,
+      amountEur: amount,
+      basketId,
+      timestamp: now
+    });
+
+    if (kvUrl && kvToken) {
+      await Promise.allSettled([
+        fetch(`${kvUrl}/set/users:discord:${targetUserId}`, {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify(user)
+        }),
+        fetch(`${kvUrl}/set/baskets:claimed:${basketId}`, {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: targetUserId, points: pointsToAward, timestamp: now })
+        })
+      ]);
+    }
+
+    return res.status(200).json({
+      success: true,
+      pointsAwarded: pointsToAward,
+      newPoints: user.points,
+      message: `Successfully credited ${pointsToAward} MD Points for your purchase!`
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+}
+
+async function handleTebexWebhook(req: any, res: any, body: any) {
+  if (body.type === 'validation' || (body.id && !body.subject && !body.amount && !body.price)) {
+    return res.status(200).json({ id: body.id || 'validation' });
+  }
+  const result = await processTebexPayment(body, req.headers);
+  return res.status(result.success ? 200 : 200).json(result);
 }
 

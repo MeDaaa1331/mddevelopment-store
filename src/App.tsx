@@ -1,5 +1,6 @@
-import React, { Suspense, lazy } from 'react';
-import { Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
+import { Loader2, AlertTriangle, CheckCircle2, Coins } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { AnnouncementBanner } from './components/AnnouncementBanner';
@@ -60,6 +61,61 @@ const PageLoadingFallback: React.FC = () => (
   </div>
 );
 
+const PaymentSuccessScreen: React.FC = () => {
+  const [pointsAwarded, setPointsAwarded] = useState<number | null>(null);
+
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const basketId = p.get('basketId');
+    const userId = p.get('userId');
+
+    if (basketId) {
+      fetch(`/api/points?action=claim_purchase&basketId=${encodeURIComponent(basketId)}${userId ? `&userId=${encodeURIComponent(userId)}` : ''}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.pointsAwarded) {
+            setPointsAwarded(data.pointsAwarded);
+            try {
+              confetti({ particleCount: 50, spread: 70, origin: { y: 0.6 } });
+            } catch {}
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-[#050507] text-white flex flex-col items-center justify-center p-6 text-center font-sans">
+      <div className="w-20 h-20 rounded-3xl bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-center mb-5 shadow-glow-sm">
+        <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+      </div>
+      <h2 className="font-display font-extrabold text-2xl text-white mb-2">Payment Successful!</h2>
+      <p className="text-sm text-zinc-400 max-w-md mb-5 leading-relaxed">
+        Thank you for your order! Your FiveM resources are being delivered to your <strong className="text-white">CFX Keymaster</strong> granted assets now.
+      </p>
+
+      {pointsAwarded !== null && pointsAwarded > 0 && (
+        <div className="mb-6 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-center gap-3 text-left animate-fade-in">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+            <Coins className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-xs font-bold text-white block">+{pointsAwarded} MD Points Awarded!</span>
+            <span className="text-[11px] text-amber-300/80 block">Points have been added to your Discord profile balance.</span>
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={() => { window.location.href = window.location.origin; }}
+        className="px-6 py-3 rounded-xl bg-white text-black font-bold text-xs hover:bg-zinc-200 transition-all shadow-glow-white cursor-pointer"
+      >
+        Continue Browsing MD Development
+      </button>
+    </div>
+  );
+};
+
 const AppContent: React.FC = () => {
   useSmoothScroll();
   const { isCallbackProcessing, callbackError } = useCart();
@@ -99,23 +155,7 @@ const AppContent: React.FC = () => {
 
   const params = new URLSearchParams(window.location.search);
   if (params.get('payment-complete') === '1') {
-    return (
-      <div className="min-h-screen bg-[#050507] text-white flex flex-col items-center justify-center p-6 text-center font-sans">
-        <div className="w-20 h-20 rounded-3xl bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-center mb-5 shadow-glow-sm">
-          <CheckCircle2 className="w-10 h-10 text-emerald-400" />
-        </div>
-        <h2 className="font-display font-extrabold text-2xl text-white mb-2">Payment Successful!</h2>
-        <p className="text-sm text-zinc-400 max-w-md mb-6 leading-relaxed">
-          Thank you for your order! Your FiveM resources are being delivered to your <strong className="text-white">CFX Keymaster</strong> granted assets now.
-        </p>
-        <button
-          onClick={() => { window.location.href = window.location.origin; }}
-          className="px-6 py-3 rounded-xl bg-white text-black font-bold text-xs hover:bg-zinc-200 transition-all shadow-glow-white"
-        >
-          Continue Browsing MD Development
-        </button>
-      </div>
-    );
+    return <PaymentSuccessScreen />;
   }
 
   if (currentRoute === '/admin') {

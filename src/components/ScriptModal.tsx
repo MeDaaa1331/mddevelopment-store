@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Check, ShoppingCart, ShieldCheck, Download, Play, Image as ImageIcon, ChevronLeft, ChevronRight, Gift, MessageSquare, RefreshCw, Sparkles, ExternalLink, Zap, ZoomIn, BookOpen } from 'lucide-react';
+import { X, Check, ShoppingCart, ShieldCheck, Download, Play, Image as ImageIcon, ChevronLeft, ChevronRight, Gift, MessageSquare, RefreshCw, Sparkles, ExternalLink, Zap, ZoomIn, BookOpen, Coins } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { DOCS_ARTICLES } from '../data/docsData';
 import { useCart } from '../context/CartContext';
@@ -422,6 +422,45 @@ export const ScriptModal: React.FC = () => {
                   </div>
                 ) : (
                   <>
+                    {/* MD Points Reward Preview (1€ = 15 MD Points) */}
+                    {selectedPackage.price > 0 && (
+                      <div className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-2.5 text-xs ${
+                        isLoggedIn && user
+                          ? 'bg-amber-500/10 border-amber-500/25 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.06)]'
+                          : 'bg-zinc-900/80 border-white/10 text-zinc-300'
+                      }`}>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                            isLoggedIn && user ? 'bg-amber-500/20 text-amber-400' : 'bg-zinc-800 text-zinc-400'
+                          }`}>
+                            <Coins className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0">
+                            {isLoggedIn && user ? (
+                              <span className="text-zinc-200 block truncate font-medium">Earn on this purchase:</span>
+                            ) : (
+                              <span className="text-zinc-400 block truncate">Sign in with Discord to earn:</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {isLoggedIn && user ? (
+                          <span className="font-mono font-bold text-amber-300 shrink-0 text-xs sm:text-sm bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">
+                            +{Math.max(15, Math.round(selectedPackage.price * 15))} pts
+                          </span>
+                        ) : (
+                          <button
+                            onClick={loginWithDiscord}
+                            className="font-mono font-bold text-amber-400 hover:text-amber-300 shrink-0 text-xs underline decoration-amber-400/40 hover:decoration-amber-300 cursor-pointer flex items-center gap-1"
+                            title="Sign in with Discord to collect MD Points on your purchases"
+                          >
+                            <span>+{Math.max(15, Math.round(selectedPackage.price * 15))} pts</span>
+                            <span className="text-[10px] font-sans no-underline font-normal text-zinc-400">(Sign In)</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+
                     <button
                       onClick={handleAddToCart}
                       className="w-full py-3.5 rounded-xl bg-white text-black font-extrabold text-sm hover:bg-zinc-200 transition-all duration-200 flex items-center justify-center gap-2 shadow-glow-white active:scale-98 hover:scale-[1.01] cursor-pointer"
