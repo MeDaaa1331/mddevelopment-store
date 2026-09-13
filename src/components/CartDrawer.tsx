@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, ShieldCheck, Tag, Loader2 } from 'lucide-react';
+import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, ShieldCheck, Tag, Loader2, Coins } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 
 export const CartDrawer: React.FC = () => {
+  const { user, loginWithDiscord } = useAuth();
   const {
     items, isCartOpen, setIsCartOpen,
     removeFromCart, updateQuantity, clearCart,
@@ -215,6 +217,27 @@ export const CartDrawer: React.FC = () => {
                   <span>Total</span>
                   <span className="font-mono text-emerald-400">€{totalPrice.toFixed(2)}</span>
                 </div>
+
+                {totalPrice > 0 && (
+                  <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between text-xs text-amber-300">
+                    <div className="flex items-center gap-1.5 font-medium">
+                      <Coins className="w-3.5 h-3.5 text-amber-400" />
+                      <span>{user ? 'You will earn:' : 'Sign in to earn:'}</span>
+                    </div>
+                    {user ? (
+                      <span className="font-mono font-bold text-amber-300">
+                        +{Math.max(15, Math.round(totalPrice * 15))} pts
+                      </span>
+                    ) : (
+                      <button
+                        onClick={loginWithDiscord}
+                        className="font-mono font-bold text-amber-400 hover:text-amber-300 underline cursor-pointer"
+                      >
+                        +{Math.max(15, Math.round(totalPrice * 15))} pts
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               <button

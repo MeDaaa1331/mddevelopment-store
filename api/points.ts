@@ -836,6 +836,7 @@ async function handleRegisterBasket(req: any, res: any, body: any) {
     const userId = body.userId;
     const username = body.username || 'Discord User';
     const expectedPoints = Number(body.expectedPoints || 0);
+    const packages = body.packages || body.packageNames || '';
 
     if (!basketId || !userId) {
       return res.status(400).json({ error: 'Missing basketId or userId' });
@@ -849,7 +850,7 @@ async function handleRegisterBasket(req: any, res: any, body: any) {
       await fetch(`${kvUrl}/set/baskets:${basketId}:user?ex=172800`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ userId, username, expectedPoints, timestamp: Date.now() })
+        body: JSON.stringify({ userId, username, expectedPoints, packages, timestamp: Date.now() })
       });
     }
 
@@ -862,77 +863,93 @@ async function handleRegisterBasket(req: any, res: any, body: any) {
 async function handleClaimPurchase(req: any, res: any, url: URL, body: any) {
   try {
     const basketId = req.query?.basketId || url.searchParams.get('basketId') || body?.basketId;
-    const userId = req.query?.userId || url.searchParams.get('userId') || body?.userId;
+    let userId = req.query?.userId || url.searchParams.get('userId') || body?.userId;
+    let clientExpectedPoints = Number(req.query?.expectedPoints || url.searchParams.get('expectedPoints') || body?.expectedPoints || 0);
+    let clientPackageNames = (req.query?.packages || url.searchParams.get('packages') || body?.packages || body?.packageNames || '').toString();
 
-    if (!basketId) {
-      return res.status(400).json({ error: 'Missing basketId' });
+    if (!basketId && !userId) {
+      return res.status(400).json({ error: 'Missing basketId or userId' });
     }
 
+    const effectiveBasketId = basketId || `client-${Date.now().toString(36)}`;
     const kvUrl = process.env.KV_REST_API_URL || process.env.REDIS_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
     const kvToken = process.env.KV_REST_API_TOKEN || process.env.REDIS_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
     const headers: Record<string, string> = kvToken ? { Authorization: `Bearer ${kvToken}` } : {};
 
-    // Idempotency check: Has this basket already been credited?
+    // Check Redis for registered basket info
     if (kvUrl && kvToken) {
-      const claimedRes = await fetch(`${kvUrl}/get/baskets:claimed:${basketId}`, { headers }).catch(() => null);
+      // Idempotency check: Has this basket already been credited?
+      const claimedRes = await fetch(`${kvUrl}/get/baskets:claimed:${effectiveBasketId}`, { headers }).catch(() => null);
       const claimedData = await claimedRes?.json().catch(() => null);
       if (claimedData?.result) {
         return res.status(200).json({
           success: true,
           alreadyClaimed: true,
+          pointsAwarded: Number(claimedData.result.points || clientExpectedPoints || 0),
           message: 'Points for this purchase have already been credited.'
         });
       }
-    }
 
-    // Fetch basket from Tebex Headless API
-    const tebexToken = process.env.VITE_TEBEX_PUBLIC_TOKEN || process.env.TEBEX_PUBLIC_TOKEN || 'yry4-4f39d4771913f90be71cc7be4f234a2cfbd8036e';
-    const basketRes = await fetch(`https://headless.tebex.io/api/accounts/${tebexToken}/baskets/${basketId}`, {
-      headers: { Accept: 'application/json' }
-    });
-
-    if (!basketRes.ok) {
-      return res.status(404).json({ error: 'Basket not found or invalid' });
-    }
-
-    const basketJson = await basketRes.json();
-    const basket = basketJson.data || basketJson;
-
-    // Calculate points: 1 € = 15 points
-    const rawPrice = parseFloat(basket.total_price ?? basket.base_price ?? 0);
-    let amount = isNaN(rawPrice) ? 0 : rawPrice;
-
-    // Fallback for 100% discount test orders or coupons: use packages base price
-    if (amount <= 0 && Array.isArray(basket.packages || basket.lines)) {
-      const pkgs = basket.packages || basket.lines;
-      const fallbackSum = pkgs.reduce((acc: number, p: any) => acc + (parseFloat(p.price || p.base_price || 0) || 0), 0);
-      if (fallbackSum > 0) {
-        amount = fallbackSum;
-      }
-    }
-
-    const pointsToAward = Math.max(0, Math.round(amount * 15));
-
-    // Resolve target userId
-    let targetUserId = userId;
-    if (!targetUserId && kvUrl && kvToken) {
-      const bRes = await fetch(`${kvUrl}/get/baskets:${basketId}:user`, { headers }).catch(() => null);
+      // Lookup basket user association if missing
+      const bRes = await fetch(`${kvUrl}/get/baskets:${effectiveBasketId}:user`, { headers }).catch(() => null);
       const bData = await bRes?.json().catch(() => null);
       if (bData?.result) {
         try {
           const parsed = typeof bData.result === 'string' ? JSON.parse(bData.result) : bData.result;
-          targetUserId = parsed.userId;
+          if (!userId && parsed.userId) userId = parsed.userId;
+          if (!clientExpectedPoints && parsed.expectedPoints) clientExpectedPoints = Number(parsed.expectedPoints);
+          if (!clientPackageNames && parsed.packages) clientPackageNames = parsed.packages;
         } catch {}
       }
     }
 
-    if (!targetUserId) {
-      return res.status(400).json({ error: 'No Discord user associated with this purchase' });
+    // Try fetching basket from Tebex Headless API
+    let amount = 0;
+    let packageNames = clientPackageNames;
+
+    const tebexToken = process.env.VITE_TEBEX_PUBLIC_TOKEN || process.env.TEBEX_PUBLIC_TOKEN || 'yry4-4f39d4771913f90be71cc7be4f234a2cfbd8036e';
+    try {
+      const basketRes = await fetch(`https://headless.tebex.io/api/accounts/${tebexToken}/baskets/${effectiveBasketId}`, {
+        headers: { Accept: 'application/json' }
+      });
+
+      if (basketRes.ok) {
+        const basketJson = await basketRes.json();
+        const basket = basketJson.data || basketJson;
+
+        const rawPrice = parseFloat(basket.total_price ?? basket.base_price ?? 0);
+        amount = isNaN(rawPrice) ? 0 : rawPrice;
+
+        const pkgs = basket.packages || basket.lines || [];
+        if (amount <= 0 && Array.isArray(pkgs)) {
+          const fallbackSum = pkgs.reduce((acc: number, p: any) => acc + (parseFloat(p.price || p.base_price || 0) || 0), 0);
+          if (fallbackSum > 0) amount = fallbackSum;
+        }
+
+        if (Array.isArray(pkgs) && pkgs.length > 0) {
+          packageNames = pkgs.map((p: any) => p.name || p.package?.name).filter(Boolean).join(', ');
+        }
+      }
+    } catch {}
+
+    // Calculate points (1€ = 15 MD Points, minimum 15 points per order)
+    let pointsToAward = Math.max(0, Math.round(amount * 15));
+    if (pointsToAward <= 0 && clientExpectedPoints > 0) {
+      pointsToAward = clientExpectedPoints;
+    }
+    if (pointsToAward <= 0) {
+      pointsToAward = 15; // default minimum
     }
 
-    // Fetch user and update points in Redis
-    let user: any = { id: targetUserId, points: 0, totalPointsEarned: 0, pointsHistory: [] };
-    if (kvUrl && kvToken) {
+    if (!packageNames) {
+      packageNames = 'FiveM Resource Script';
+    }
+
+    // Target user
+    const targetUserId = userId;
+    let user: any = { id: targetUserId || 'user', points: 0, totalPointsEarned: 0, pointsHistory: [] };
+
+    if (targetUserId && kvUrl && kvToken) {
       const userRes = await fetch(`${kvUrl}/get/users:discord:${targetUserId}`, { headers }).catch(() => null);
       const userData = await userRes?.json().catch(() => null);
       if (userData?.result) {
@@ -943,34 +960,29 @@ async function handleClaimPurchase(req: any, res: any, url: URL, body: any) {
       }
     }
 
-    const packages = basket.packages || basket.lines || [];
-    const packageNames = Array.isArray(packages)
-      ? packages.map((p: any) => p.name || p.package?.name).filter(Boolean).join(', ')
-      : 'FiveM Script';
-
     const now = Date.now();
     user.points = (user.points || 0) + pointsToAward;
     user.totalPointsEarned = (user.totalPointsEarned || 0) + pointsToAward;
     if (!user.pointsHistory) user.pointsHistory = [];
 
     user.pointsHistory.unshift({
-      id: `pt-pay-${basketId}-${now.toString(36)}`,
+      id: `pt-pay-${effectiveBasketId}-${now.toString(36)}`,
       activity: 'script_purchase',
-      label: `Script Purchase: ${packageNames || 'FiveM Resource'} (+${pointsToAward} MD Points)`,
+      label: `Script Purchase: ${packageNames} (+${pointsToAward} MD Points)`,
       points: pointsToAward,
-      amountEur: amount,
-      basketId,
+      amountEur: amount > 0 ? amount : undefined,
+      basketId: effectiveBasketId,
       timestamp: now
     });
 
-    if (kvUrl && kvToken) {
+    if (targetUserId && kvUrl && kvToken) {
       await Promise.allSettled([
         fetch(`${kvUrl}/set/users:discord:${targetUserId}`, {
           method: 'POST',
           headers: { ...headers, 'Content-Type': 'application/json' },
           body: JSON.stringify(user)
         }),
-        fetch(`${kvUrl}/set/baskets:claimed:${basketId}`, {
+        fetch(`${kvUrl}/set/baskets:claimed:${effectiveBasketId}`, {
           method: 'POST',
           headers: { ...headers, 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: targetUserId, points: pointsToAward, timestamp: now })
@@ -981,6 +993,7 @@ async function handleClaimPurchase(req: any, res: any, url: URL, body: any) {
     return res.status(200).json({
       success: true,
       pointsAwarded: pointsToAward,
+      packageNames,
       newPoints: user.points,
       message: `Successfully credited ${pointsToAward} MD Points for your purchase!`
     });

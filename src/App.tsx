@@ -15,7 +15,8 @@ import { DiscordWelcomeToast } from './components/DiscordWelcomeToast';
 import { PointAwardToast } from './components/PointAwardToast';
 import { StoreProvider, useStore } from './context/StoreContext';
 import { CartProvider, useCart } from './context/CartContext';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { PointsHistoryItem } from './types/auth';
 import { useSmoothScroll } from './hooks/useSmoothScroll';
 
 const DevToolsPage = lazy(() => import('./components/DevToolsPage').then(m => ({ default: m.DevToolsPage })));
@@ -62,27 +63,107 @@ const PageLoadingFallback: React.FC = () => (
 );
 
 const PaymentSuccessScreen: React.FC = () => {
+  const { user, refreshPoints, syncUserData, showPointToast } = useAuth();
   const [pointsAwarded, setPointsAwarded] = useState<number | null>(null);
+  const [packageNames, setPackageNames] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState<boolean>(true);
+  const processedRef = React.useRef<boolean>(false);
 
   useEffect(() => {
-    const p = new URLSearchParams(window.location.search);
-    const basketId = p.get('basketId');
-    const userId = p.get('userId');
+    if (processedRef.current) return;
+    processedRef.current = true;
 
-    if (basketId) {
-      fetch(`/api/points?action=claim_purchase&basketId=${encodeURIComponent(basketId)}${userId ? `&userId=${encodeURIComponent(userId)}` : ''}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.success && data.pointsAwarded) {
-            setPointsAwarded(data.pointsAwarded);
-            try {
-              confetti({ particleCount: 50, spread: 70, origin: { y: 0.6 } });
-            } catch {}
-          }
-        })
-        .catch(() => {});
+    const p = new URLSearchParams(window.location.search);
+    let basketId = p.get('basketId') || p.get('ident') || p.get('basket') || p.get('tebex_basket_id');
+    let targetUserId = p.get('userId') || user?.id;
+
+    // Check localStorage for pending checkout order
+    let pendingOrder: any = null;
+    try {
+      const stored = localStorage.getItem('md_pending_checkout');
+      if (stored) pendingOrder = JSON.parse(stored);
+    } catch {}
+
+    if (!basketId && pendingOrder?.basketId) {
+      basketId = pendingOrder.basketId;
     }
-  }, []);
+    if (!targetUserId && pendingOrder?.userId) {
+      targetUserId = pendingOrder.userId;
+    }
+
+    const expectedPoints = pendingOrder?.expectedPoints || 15;
+    const pkgsName = pendingOrder?.packageNames || 'FiveM Script';
+    setPackageNames(pkgsName);
+
+    const awardPoints = async () => {
+      let awarded = expectedPoints;
+      try {
+        const res = await fetch(`/api/points?action=claim_purchase`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            basketId: basketId || `order-${Date.now().toString(36)}`,
+            userId: targetUserId,
+            expectedPoints,
+            packages: pkgsName
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (data.pointsAwarded) {
+          awarded = Number(data.pointsAwarded);
+        }
+        if (data.packageNames) {
+          setPackageNames(data.packageNames);
+        }
+      } catch (err) {}
+
+      setPointsAwarded(awarded);
+      setIsProcessing(false);
+
+      // Instantly credit points into local user state and storage
+      const now = Date.now();
+      const currentPts = user?.points || 0;
+      const currentTot = user?.totalPointsEarned || 0;
+      const currentHist = user?.pointsHistory || [];
+
+      const purchaseItem: PointsHistoryItem = {
+        id: `pt-pay-${basketId || now.toString(36)}`,
+        activity: 'script_purchase',
+        label: `Script Purchase: ${pkgsName} (+${awarded} MD Points)`,
+        points: awarded,
+        timestamp: now
+      };
+
+      const alreadyHas = currentHist.some(h => h.id === purchaseItem.id);
+      if (!alreadyHas) {
+        const nextHist = [purchaseItem, ...currentHist];
+        const nextPts = currentPts + awarded;
+        const nextTot = currentTot + awarded;
+
+        syncUserData({
+          points: nextPts,
+          totalPointsEarned: nextTot,
+          pointsHistory: nextHist
+        });
+
+        showPointToast(awarded, `Order Completed (+${awarded} MD Points earned)!`);
+      }
+
+      refreshPoints();
+      localStorage.removeItem('md_pending_checkout');
+
+      try {
+        confetti({
+          particleCount: 60,
+          spread: 75,
+          origin: { y: 0.6 },
+          colors: ['#ffffff', '#5865F2', '#10b981', '#f59e0b']
+        });
+      } catch {}
+    };
+
+    awardPoints();
+  }, [user?.id]);
 
   return (
     <div className="min-h-screen bg-[#050507] text-white flex flex-col items-center justify-center p-6 text-center font-sans">
@@ -94,14 +175,24 @@ const PaymentSuccessScreen: React.FC = () => {
         Thank you for your order! Your FiveM resources are being delivered to your <strong className="text-white">CFX Keymaster</strong> granted assets now.
       </p>
 
-      {pointsAwarded !== null && pointsAwarded > 0 && (
-        <div className="mb-6 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-center gap-3 text-left animate-fade-in">
-          <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
-            <Coins className="w-4 h-4" />
+      {isProcessing ? (
+        <div className="mb-6 p-3.5 rounded-2xl bg-zinc-900/60 border border-white/10 flex items-center gap-3 text-left">
+          <Loader2 className="w-5 h-5 text-amber-400 animate-spin shrink-0" />
+          <span className="text-xs text-zinc-300">Calculating and crediting your MD Points...</span>
+        </div>
+      ) : pointsAwarded !== null && pointsAwarded > 0 && (
+        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-amber-600/15 border border-amber-500/30 flex items-center gap-3.5 text-left animate-fade-in shadow-[0_0_25px_rgba(245,158,11,0.15)] max-w-md w-full">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/25 text-amber-300 border border-amber-500/40 flex items-center justify-center shrink-0">
+            <Coins className="w-5 h-5" />
           </div>
-          <div>
-            <span className="text-xs font-bold text-white block">+{pointsAwarded} MD Points Awarded!</span>
-            <span className="text-[11px] text-amber-300/80 block">Points have been added to your Discord profile balance.</span>
+          <div className="min-w-0">
+            <span className="text-sm font-extrabold text-white block">+{pointsAwarded} MD Points Credited!</span>
+            <span className="text-xs text-amber-300/90 block truncate mt-0.5">
+              {packageNames || 'FiveM Resource Purchase'}
+            </span>
+            <span className="text-[11px] text-zinc-400 block mt-1">
+              Added to your profile. Redeem for discount coupons on your next purchase!
+            </span>
           </div>
         </div>
       )}
