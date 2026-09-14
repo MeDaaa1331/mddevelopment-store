@@ -9,6 +9,7 @@ import { ScriptGrid } from './components/ScriptGrid';
 import { FeaturesSection } from './components/FeaturesSection';
 import { RecentPayments } from './components/RecentPayments';
 import { FAQSection } from './components/FAQSection';
+import { TopVSection } from './components/TopVSection';
 import { Footer } from './components/Footer';
 import { DiscordLoginPrompt } from './components/DiscordLoginPrompt';
 import { DiscordWelcomeToast } from './components/DiscordWelcomeToast';
@@ -267,6 +268,7 @@ const AppContent: React.FC = () => {
       </main>
       <RecentPayments />
       <FeaturesSection />
+      <TopVSection />
       <FAQSection />
       <Footer />
       <AppModals />

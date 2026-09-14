@@ -181,6 +181,22 @@ export const Footer: React.FC = () => {
             <p className="text-[11px] text-zinc-500 mt-3 leading-relaxed">
               Native multi-framework auto-detection engineered for every script.
             </p>
+            <div className="mt-4 pt-3 border-t border-white/5">
+              <a
+                href="https://topv.gg/creators/frajermeda"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block transition-transform duration-200 hover:scale-105"
+                title="TopV.gg frajermeda reputation"
+              >
+                <img
+                  src="https://topv.gg/api/badge/frajermeda?color=violet"
+                  alt="TopV"
+                  className="h-7 w-auto rounded drop-shadow-sm"
+                  loading="lazy"
+                />
+              </a>
+            </div>
           </div>
 
         </div>
