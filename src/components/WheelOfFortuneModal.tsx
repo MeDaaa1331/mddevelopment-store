@@ -106,7 +106,7 @@ export const WheelOfFortuneModal: React.FC<WheelOfFortuneModalProps> = ({ isOpen
     if (isOpen) {
       checkStatus();
     }
-  }, [isOpen, user]);
+  }, [isOpen, user?.id]);
 
   useEffect(() => {
     if (remainingMs <= 0) return;

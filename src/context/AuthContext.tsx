@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { DiscordUser, UserHistoryItem, PointsHistoryItem, RedeemedCoupon } from '../types/auth';
 
 const USER_STORAGE_KEY = 'md_discord_user_v1';
@@ -142,22 +142,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return items;
   };
 
+  // User and pointsStatus refs to keep refreshPoints stable and prevent dependency cycles
+  const userRef = useRef<DiscordUser | null>(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  const pointsStatusRef = useRef<PointsStatus | null>(pointsStatus);
+  useEffect(() => {
+    pointsStatusRef.current = pointsStatus;
+  }, [pointsStatus]);
+
+  const isRefreshingRef = useRef(false);
+  const lastRefreshTimeRef = useRef(0);
+
   // Sync / Refresh Points from server
   const refreshPoints = useCallback(async () => {
-    if (!user?.id) return;
+    const currentUser = userRef.current;
+    if (!currentUser?.id) return;
+
+    // Prevent concurrent calls and excessive rapid polling (debounce 2s)
+    const now = Date.now();
+    if (isRefreshingRef.current) return;
+    if (now - lastRefreshTimeRef.current < 2000) return;
+
+    isRefreshingRef.current = true;
+    lastRefreshTimeRef.current = now;
+
     try {
-      const now = Date.now();
       const DAY_MS = 86400000;
 
-      const res = await fetch(`/api/points?action=status&userId=${user.id}`);
+      const res = await fetch(`/api/points?action=status&userId=${currentUser.id}`);
       if (!res.ok) return;
       const data = await res.json();
       if (data.success || data.points !== undefined) {
-        const extraSpins = Number(data.extraSpins !== undefined ? data.extraSpins : (user.extraSpins || 0));
+        const extraSpins = Number(data.extraSpins !== undefined ? data.extraSpins : (currentUser.extraSpins || 0));
 
         // Calculate local cooldowns
-        const localDevToolsRemaining = user.lastDevToolsUse ? Math.max(0, DAY_MS - (now - user.lastDevToolsUse)) : 0;
-        const localWheelRemaining = extraSpins > 0 ? 0 : (user.lastSpin ? Math.max(0, DAY_MS - (now - user.lastSpin)) : 0);
+        const localDevToolsRemaining = currentUser.lastDevToolsUse ? Math.max(0, DAY_MS - (now - currentUser.lastDevToolsUse)) : 0;
+        const localWheelRemaining = extraSpins > 0 ? 0 : (currentUser.lastSpin ? Math.max(0, DAY_MS - (now - currentUser.lastSpin)) : 0);
 
         const serverDevToolsRemaining = data.cooldowns?.devToolsRemainingMs ?? data.devTools?.remainingMs ?? 0;
         const serverWheelRemaining = extraSpins > 0 ? 0 : (data.cooldowns?.wheelSpinRemainingMs ?? data.wheel?.remainingMs ?? 0);
@@ -176,30 +199,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ? data.history
             : [];
 
-        const localHistory = user.pointsHistory || pointsStatus?.pointsHistory || [];
+        const localHistory = currentUser.pointsHistory || pointsStatusRef.current?.pointsHistory || [];
         let historyList = mergePointsHistory(serverHistory, localHistory);
 
         if (historyList.length === 0) {
-          historyList = generateDefaultHistory(user);
+          historyList = generateDefaultHistory(currentUser);
         }
 
         const isMember = Boolean(
           data.inGuild ||
           data.claimedActivities?.discord_guild ||
-          user.claimedActivities?.discord_guild ||
-          pointsStatus?.inGuild
+          currentUser.claimedActivities?.discord_guild ||
+          pointsStatusRef.current?.inGuild
         );
 
         // Authoritative server balance
         const effectivePoints = (data.points !== undefined && data.points !== null)
           ? Number(data.points)
-          : (user.points ?? 0);
+          : (currentUser.points ?? 0);
         const effectiveTotalEarned = (data.totalPointsEarned !== undefined && data.totalPointsEarned !== null)
           ? Number(data.totalPointsEarned)
-          : Math.max(user.totalPointsEarned ?? 0, effectivePoints);
+          : Math.max(currentUser.totalPointsEarned ?? 0, effectivePoints);
 
         const mergedClaimed = {
-          ...(user.claimedActivities || {}),
+          ...(currentUser.claimedActivities || {}),
           ...(data.claimedActivities || {}),
           discord_login: true,
           discord_guild: isMember
@@ -211,14 +234,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           inGuild: isMember,
           extraSpins,
           claimedActivities: mergedClaimed,
-          claimedFreeScripts: data.claimedFreeScripts || user.claimedFreeScripts || [],
+          claimedFreeScripts: data.claimedFreeScripts || currentUser.claimedFreeScripts || [],
           cooldowns: {
             devToolsRemainingMs: devToolsRemaining,
             wheelSpinRemainingMs: wheelRemaining,
             canUseDevToolsForPoints: canUseDevTools,
             canSpinWheel: canSpin
           },
-          redeemedCoupons: data.redeemedCoupons || user.redeemedCoupons || [],
+          redeemedCoupons: data.redeemedCoupons || currentUser.redeemedCoupons || [],
           pointsHistory: historyList
         });
 
@@ -242,14 +265,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return updated;
         });
       }
-    } catch {}
-  }, [user?.id, user?.lastSpin, user?.lastDevToolsUse, user?.points, user?.totalPointsEarned, pointsStatus?.inGuild, pointsStatus?.pointsHistory]);
+    } catch (err) {
+      console.warn('[refreshPoints] error:', err);
+    } finally {
+      isRefreshingRef.current = false;
+    }
+  }, []);
 
   useEffect(() => {
     if (user?.id) {
       refreshPoints();
     }
-  }, [user?.id, refreshPoints]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
