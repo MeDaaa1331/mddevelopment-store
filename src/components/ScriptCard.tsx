@@ -3,6 +3,7 @@ import { ShoppingCart, Eye, Check, Code2, Sparkles, Flame, Gift, Download } from
 import { TebexPackage } from '../types';
 import { useCart } from '../context/CartContext';
 import { useStore } from '../context/StoreContext';
+import { getScriptUrl } from '../utils/slug';
 
 interface ScriptCardProps {
   pkg: TebexPackage;
@@ -12,6 +13,7 @@ export const ScriptCard: React.FC<ScriptCardProps> = memo(({ pkg }) => {
   const { addToCart } = useCart();
   const { setSelectedPackage } = useStore();
   const isFree = pkg.price === 0 || pkg.category_type === 'free' || pkg.is_free;
+  const scriptUrl = getScriptUrl(pkg);
 
   const handleCardClick = () => {
     setSelectedPackage(pkg);
@@ -102,7 +104,16 @@ export const ScriptCard: React.FC<ScriptCardProps> = memo(({ pkg }) => {
           </div>
 
           <h3 className="font-display font-bold text-lg sm:text-xl text-white group-hover:text-zinc-100 transition-colors line-clamp-1 tracking-tight">
-            {pkg.name}
+            <a
+              href={scriptUrl}
+              onClick={(e) => {
+                e.preventDefault();
+                handleCardClick();
+              }}
+              className="hover:underline focus:outline-none"
+            >
+              {pkg.name}
+            </a>
           </h3>
 
           <p className="mt-2 text-xs sm:text-sm text-zinc-400 line-clamp-2 leading-relaxed font-normal">
@@ -149,15 +160,19 @@ export const ScriptCard: React.FC<ScriptCardProps> = memo(({ pkg }) => {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleCardClick}
-              className="p-2.5 rounded-xl text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-white/10 hover:border-white/20 transition-all duration-200 active:scale-95 cursor-pointer"
+            <a
+              href={scriptUrl}
+              onClick={(e) => {
+                e.preventDefault();
+                handleCardClick();
+              }}
+              className="p-2.5 rounded-xl text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-white/10 hover:border-white/20 transition-all duration-200 active:scale-95 cursor-pointer inline-flex items-center justify-center"
               data-tooltip="Preview Details"
               data-tooltip-pos="left"
-              aria-label="Preview script details"
+              aria-label={`Preview ${pkg.name} details`}
             >
               <Eye className="w-4 h-4" />
-            </button>
+            </a>
             <button
               onClick={handleActionClick}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-extrabold text-xs transition-all duration-200 active:scale-95 hover:scale-[1.02] cursor-pointer ${

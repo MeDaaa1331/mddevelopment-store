@@ -4,6 +4,7 @@ import { useStore } from '../context/StoreContext';
 import { useCart } from '../context/CartContext';
 import { useDiscordStats } from '../hooks/useDiscordStats';
 import { smoothScrollTo } from '../hooks/useSmoothScroll';
+import { getScriptUrl } from '../utils/slug';
 
 export const Hero: React.FC = () => {
   const { packages, setSelectedPackage, setCategory } = useStore();
@@ -133,7 +134,16 @@ export const Hero: React.FC = () => {
                   </div>
 
                   <h3 className="font-semibold text-sm text-white group-hover:text-zinc-200 line-clamp-1 transition-colors">
-                    {pkg.name}
+                    <a
+                      href={getScriptUrl(pkg)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setSelectedPackage(pkg);
+                      }}
+                      className="hover:underline focus:outline-none"
+                    >
+                      {pkg.name}
+                    </a>
                   </h3>
 
                   <div 

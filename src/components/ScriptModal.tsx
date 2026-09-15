@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Check, ShoppingCart, ShieldCheck, Download, Play, Image as ImageIcon, ChevronLeft, ChevronRight, Gift, MessageSquare, RefreshCw, Sparkles, ExternalLink, Zap, ZoomIn, BookOpen, Coins } from 'lucide-react';
+import { X, Check, ShoppingCart, ShieldCheck, Download, Play, Image as ImageIcon, ChevronLeft, ChevronRight, Gift, MessageSquare, RefreshCw, Sparkles, ExternalLink, Zap, ZoomIn, BookOpen, Coins, Share2 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { DOCS_ARTICLES } from '../data/docsData';
 import { useCart } from '../context/CartContext';
@@ -9,6 +9,7 @@ import { TEBEX_CONFIG } from '../config/tebex';
 import { triggerDirectScriptDownload } from '../utils/directDownload';
 import { trackEvent } from '../utils/analytics';
 import { ImageLightbox } from './ImageLightbox';
+import { getScriptUrl } from '../utils/slug';
 
 export const ScriptModal: React.FC = () => {
   const { selectedPackage, setSelectedPackage, navigate } = useStore();
@@ -18,6 +19,7 @@ export const ScriptModal: React.FC = () => {
   const [mediaTab, setMediaTab] = useState<'image' | 'video'>('image');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const [inGuild, setInGuild] = useState<boolean | null>(null);
   const [isCheckingGuild, setIsCheckingGuild] = useState<boolean>(false);
@@ -80,6 +82,17 @@ export const ScriptModal: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedPackage, mediaTab, screenshots.length]);
 
+  const handleShareLink = () => {
+    if (!selectedPackage || typeof window === 'undefined') return;
+    const url = `${window.location.origin}${getScriptUrl(selectedPackage)}`;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(() => {
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2000);
+      }).catch(() => {});
+    }
+  };
+
   const handleClose = () => {
     setIsClosing(true);
     setTimeout(() => {
@@ -110,6 +123,16 @@ export const ScriptModal: React.FC = () => {
   };
 
   const handleFreeDownload = async () => {
+    if (!isLoggedIn) {
+      loginWithDiscord();
+      return;
+    }
+
+    if (inGuild === false) {
+      window.open(TEBEX_CONFIG.discordUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
     if (!selectedPackage) return;
 
     recordHistory({
@@ -167,13 +190,34 @@ export const ScriptModal: React.FC = () => {
             )}
           </div>
 
-          <button
-            onClick={handleClose}
-            className="p-2 rounded-xl text-zinc-400 hover:text-white bg-zinc-900 border border-white/10 transition-colors duration-200 hover:bg-zinc-800 cursor-pointer"
-            aria-label="Close"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleShareLink}
+              className="px-3 py-1.5 rounded-xl text-xs font-mono text-zinc-300 hover:text-white bg-zinc-900 border border-white/10 hover:border-white/20 transition-all duration-200 flex items-center gap-1.5 cursor-pointer active:scale-95"
+              title="Copy direct product link"
+              aria-label="Copy direct product link"
+            >
+              {copiedLink ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-emerald-300 font-semibold">Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-3.5 h-3.5 text-zinc-400" />
+                  <span className="hidden sm:inline">Share</span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handleClose}
+              className="p-2 rounded-xl text-zinc-400 hover:text-white bg-zinc-900 border border-white/10 transition-colors duration-200 hover:bg-zinc-800 cursor-pointer"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <div className="p-6 md:p-8 space-y-6">

@@ -1,7 +1,32 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { FilterState, Framework, TebexAccount, TebexCategory, TebexPackage } from '../types';
 import { TebexService } from '../services/tebex';
 import { TEBEX_CONFIG } from '../config/tebex';
+import { SAMPLE_PACKAGES } from '../services/sampleData';
+import { getScriptUrl, matchesScriptSlug } from '../utils/slug';
+import { updateProductSEO, restoreDefaultSEO } from '../utils/seo';
+
+function findPackageFromPath(pathname: string, availablePackages: TebexPackage[]): TebexPackage | null {
+  if (!pathname || pathname === '/' || !availablePackages || availablePackages.length === 0) {
+    return null;
+  }
+  const cleanPath = pathname.toLowerCase().split('?')[0].split('#')[0];
+  if (cleanPath.startsWith('/admin') || cleanPath.startsWith('/devtools') || cleanPath.startsWith('/docs')) {
+    return null;
+  }
+
+  let slug = '';
+  if (cleanPath.startsWith('/store/')) {
+    slug = cleanPath.slice('/store/'.length).split('/')[0];
+  } else if (cleanPath.startsWith('/scripts/')) {
+    slug = cleanPath.slice('/scripts/'.length).split('/')[0];
+  } else {
+    slug = cleanPath.replace(/^\/+/, '').split('/')[0];
+  }
+
+  if (!slug) return null;
+  return availablePackages.find(p => matchesScriptSlug(p, slug)) || null;
+}
 
 interface StoreContextType {
   account: TebexAccount | null;
@@ -41,7 +66,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [categories, setCategories] = useState<TebexCategory[]>([]);
   const [packages, setPackages] = useState<TebexPackage[]>([]);
   const [filters, setFilters] = useState<FilterState>(initialFilters);
-  const [selectedPackage, setSelectedPackage] = useState<TebexPackage | null>(null);
+  const packagesRef = useRef<TebexPackage[]>(SAMPLE_PACKAGES);
+
+  const [selectedPackage, _setSelectedPackage] = useState<TebexPackage | null>(() => {
+    if (typeof window !== 'undefined') {
+      const match = findPackageFromPath(window.location.pathname, SAMPLE_PACKAGES);
+      if (match) {
+        updateProductSEO(match);
+        return match;
+      }
+    }
+    return null;
+  });
+
   const [isLive, setIsLive] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isWheelOpen, setIsWheelOpen] = useState<boolean>(false);
@@ -56,6 +93,29 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return '/';
   });
 
+  const setSelectedPackage = (pkg: TebexPackage | null) => {
+    _setSelectedPackage(pkg);
+    if (typeof window !== 'undefined') {
+      if (pkg) {
+        const targetUrl = getScriptUrl(pkg);
+        if (window.location.pathname.toLowerCase() !== targetUrl.toLowerCase()) {
+          window.history.pushState({ modalOpen: true, packageId: pkg.id }, '', targetUrl);
+        }
+        updateProductSEO(pkg);
+      } else {
+        const currentPath = window.location.pathname.toLowerCase();
+        if (
+          currentPath.startsWith('/store/') ||
+          currentPath.startsWith('/scripts/') ||
+          findPackageFromPath(window.location.pathname, packagesRef.current)
+        ) {
+          window.history.pushState({}, '', '/');
+        }
+        restoreDefaultSEO();
+      }
+    }
+  };
+
   const navigate = (path: string) => {
     const lower = path.toLowerCase();
     let target = '/';
@@ -69,6 +129,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const fullTarget = lower.startsWith('/docs') && path.includes('?') ? path : target;
 
+    if (target !== '/') {
+      _setSelectedPackage(null);
+      restoreDefaultSEO();
+    }
+
     if (window.location.pathname + window.location.search !== fullTarget) {
       window.history.pushState({}, '', fullTarget);
     }
@@ -81,12 +146,26 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const path = window.location.pathname.toLowerCase();
       if (path.startsWith('/admin')) {
         setCurrentRoute('/admin');
+        _setSelectedPackage(null);
+        restoreDefaultSEO();
       } else if (path.startsWith('/devtools')) {
         setCurrentRoute('/devtools');
+        _setSelectedPackage(null);
+        restoreDefaultSEO();
       } else if (path.startsWith('/docs')) {
         setCurrentRoute('/docs');
+        _setSelectedPackage(null);
+        restoreDefaultSEO();
       } else {
         setCurrentRoute('/');
+        const matched = findPackageFromPath(window.location.pathname, packagesRef.current);
+        if (matched) {
+          _setSelectedPackage(matched);
+          updateProductSEO(matched);
+        } else {
+          _setSelectedPackage(null);
+          restoreDefaultSEO();
+        }
       }
     };
     window.addEventListener('popstate', onPop);
@@ -96,18 +175,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (typeof window !== 'undefined') {
       if (currentRoute === '/') {
-        document.title = 'MD Development | FiveM Scripts & Free FiveM Developer Tools Hub';
-        const canonicalEl = document.querySelector<HTMLLinkElement>("link[rel='canonical']");
-        if (canonicalEl) canonicalEl.setAttribute('href', 'https://www.mddevelopment.store/');
-        const ogUrl = document.querySelector<HTMLMetaElement>("meta[property='og:url']");
-        if (ogUrl) ogUrl.setAttribute('content', 'https://www.mddevelopment.store/');
+        if (!selectedPackage) {
+          document.title = 'MD Development | FiveM Scripts & Free FiveM Developer Tools Hub';
+          const canonicalEl = document.querySelector<HTMLLinkElement>("link[rel='canonical']");
+          if (canonicalEl) canonicalEl.setAttribute('href', 'https://www.mddevelopment.store/');
+          const ogUrl = document.querySelector<HTMLMetaElement>("meta[property='og:url']");
+          if (ogUrl) ogUrl.setAttribute('content', 'https://www.mddevelopment.store/');
+        }
       } else if (currentRoute === '/admin') {
         document.title = 'Admin Analytics Dashboard | MD Development';
       } else if (currentRoute === '/docs') {
         document.title = 'Documentation Hub | MD Development';
       }
     }
-  }, [currentRoute]);
+  }, [currentRoute, selectedPackage]);
 
   const loadData = async (silent = false) => {
     if (!silent) setIsLoading(true);
@@ -116,6 +197,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setAccount(data.account);
       setCategories(data.categories);
       setPackages(data.packages);
+      packagesRef.current = data.packages.length > 0 ? data.packages : SAMPLE_PACKAGES;
       setIsLive(data.isLive);
     } catch (error) {
       console.error('[Tebex AutoSync] Failed to load store data:', error);
@@ -123,6 +205,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (!silent) setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && packages.length > 0) {
+      const match = findPackageFromPath(window.location.pathname, packages);
+      if (match) {
+        _setSelectedPackage(match);
+        updateProductSEO(match);
+        const canonicalUrl = getScriptUrl(match);
+        if (window.location.pathname.toLowerCase() !== canonicalUrl.toLowerCase()) {
+          window.history.replaceState({ modalOpen: true, packageId: match.id }, '', canonicalUrl);
+        }
+      }
+    }
+  }, [packages]);
 
   useEffect(() => {
     loadData();
