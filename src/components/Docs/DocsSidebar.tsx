@@ -11,7 +11,8 @@ import {
   Layout, 
   X,
   ChevronRight,
-  BookOpen
+  BookOpen,
+  User
 } from 'lucide-react';
 import { DOCS_CATEGORIES } from '../../data/docsData';
 import { DocArticle } from '../../types/docs';
@@ -26,6 +27,7 @@ interface DocsSidebarProps {
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   Rocket: <Rocket className="w-4 h-4" />,
+  User: <User className="w-4 h-4" />,
   Coins: <Coins className="w-4 h-4" />,
   Car: <Car className="w-4 h-4" />,
   Building2: <Building2 className="w-4 h-4" />,

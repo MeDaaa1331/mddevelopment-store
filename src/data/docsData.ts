@@ -9,6 +9,13 @@ export const DOCS_CATEGORIES: DocCategory[] = [
     articles: []
   },
   {
+    id: 'user-profile',
+    name: 'User Profile & MD Points',
+    slug: 'user-profile',
+    icon: 'User',
+    articles: []
+  },
+  {
     id: 'official-scripts',
     name: 'Official FiveM Scripts',
     slug: 'official-scripts',
@@ -225,6 +232,220 @@ ensure md-mdt`
         id: 'support-ticket',
         title: 'Where can I get support or ask pre-sale questions?',
         content: `Join our official Discord server at **https://discord.gg/Ze4m2Uyxjw** and open a support ticket. Our team is active daily and will assist you with setup, bug resolution, or custom inquiries.`
+      }
+    ]
+  },
+
+  // ==========================================
+  // USER PROFILE & MD POINTS LOYALTY SYSTEM
+  // ==========================================
+  {
+    id: 'user-profile-overview',
+    title: 'User Profile & Account Hub',
+    category: 'User Profile & MD Points',
+    categorySlug: 'user-profile',
+    badge: 'Account Guide',
+    description: 'Overview of your MD Development user profile, Discord authentication, account synchronization, and tab navigation.',
+    sections: [
+      {
+        id: 'account-overview',
+        title: 'Account Authentication & Identity',
+        content: `Your MD Development profile is seamlessly connected through **Discord OAuth2**. By logging in with your Discord account, your server activity, loyalty points, and store preferences are instantly synchronized.
+
+**Profile Header Features:**
+- **Discord Avatar & Handle:** Displays your live Discord profile picture, display name, and @username.
+- **Discord Member Badge:** Highlights whether you are verified in the official MD Development Discord guild.
+- **Discord ID Copy:** One-click button to copy your unique Discord SnowFlake ID for support tickets or Tebex whitelist claims.
+- **MD Points Counter:** Always-visible gold badge displaying your active, spendable MD Points balance in real time.`
+      },
+      {
+        id: 'tabs-breakdown',
+        title: 'The 4 Profile Categories',
+        content: `Your profile is organized into four intuitive, dedicated tabs:
+
+1. **MD Points & Rewards:** Track your loyalty balance, complete earning activities (Discord login, server sync, daily wheel, devtools), redeem storewide discount coupons, and purchase extra Daily Wheel spins.
+2. **Gift Card Checker:** An official Tebex-connected gift card validator. Enter any 16-digit card code to inspect remaining balance, validity status, expiration, and redeem directly into your shopping cart.
+3. **Wheel Rewards:** View all discount vouchers won from the Daily Wheel of Fortune, complete with real-time countdown expiration timers and one-click cart application.
+4. **Activity History:** A timestamped audit log of every point transaction, reward redemption, and tool usage linked to your profile.`
+      },
+      {
+        id: 'cloud-synchronization',
+        title: 'Automatic Cloud Synchronization',
+        content: `Because your session is cryptographically linked to your Discord profile:
+- **Persistent Shopping Cart:** Items added to your cart remain saved even if you switch browsers or devices.
+- **Pinned DevTools:** Your favorite FiveM developer utilities stay pinned across sessions.
+- **Secure Loyalty Balances:** Points and wheel spins are protected by server-side verification with anti-cheat protection.`,
+        callout: {
+          type: 'info',
+          title: 'Discord Member Perks',
+          message: 'Signing in with Discord awards an immediate +100 MD Points welcome bonus, and joining the official Discord guild grants an additional +50 MD Points bonus!'
+        }
+      }
+    ]
+  },
+  {
+    id: 'md-points-loyalty-system',
+    title: 'MD Points Earning & Redemption Guide',
+    category: 'User Profile & MD Points',
+    categorySlug: 'user-profile',
+    badge: 'Loyalty System',
+    description: 'Complete breakdown of how MD Points are earned, daily quests, store cashback, and how to redeem exclusive coupons up to 50% OFF.',
+    sections: [
+      {
+        id: 'what-are-points',
+        title: 'What are MD Points?',
+        content: `**MD Points** is MD Development's official community rewards and cashback program. Unlike ordinary store discounts, MD Points can be earned completely free through daily community engagement, developer tool usage, and store purchases.
+
+Points never expire as long as your account remains active, allowing you to save up for major storewide discounts or purchase extra spins on the Daily Wheel of Fortune.`
+      },
+      {
+        id: 'how-to-earn-points',
+        title: 'How to Earn MD Points (Earning Activities)',
+        content: `You can earn points through the following automated activities:`,
+        table: {
+          headers: ['Activity', 'Reward', 'Cooldown / Limit', 'Description'],
+          rows: [
+            ['Discord Login (Sign-in)', '+100 MD Points', 'One-time bonus', 'Sign in to the MD Development store using your Discord account for an instant welcome bonus.'],
+            ['Join Official Discord', '+50 MD Points', 'One-time bonus', 'Join our official Discord community and claim your membership bonus in your profile.'],
+            ['Daily Wheel of Fortune', '+20 MD Points', 'Once per 24 hours', 'Spin the Daily Wheel on the homepage or in your profile to receive free points and discounts.'],
+            ['Use FiveM DevTools', '+20 MD Points', 'Once per 24 hours', 'Perform an action in any of our 15 free developer tools (e.g. Handling Editor, Locales Translator).'],
+            ['Download Free Scripts', '+20 MD Points', 'Per unique script', 'Download any verified free community resource from our store catalog.'],
+            ['Store Purchases (Cashback)', '15 pts per 1.00 €', 'Unlimited on all orders', 'Receive automatic 15 MD Points for every 1 Euro spent on any Tebex script or megapack.']
+          ]
+        },
+        callout: {
+          type: 'tip',
+          title: 'Daily Streak Tip',
+          message: 'Spinning the Daily Wheel (+20 pts) and using any FiveM DevTools utility (+20 pts) yields 40 free MD Points every single day!'
+        }
+      },
+      {
+        id: 'redeeming-points',
+        title: 'Redeeming Points for Store Discounts & Wheel Spins',
+        content: `Once you have accumulated enough MD Points, you can instantly redeem them directly inside your profile for official Tebex coupon codes:`,
+        table: {
+          headers: ['Reward', 'Cost', 'Tier Badge', 'Details & Usage'],
+          rows: [
+            ['10% OFF Storewide', '100 MD Points', 'STARTER', 'Generates an exclusive 10% coupon code valid for all FiveM scripts in your basket.'],
+            ['20% OFF Storewide', '250 MD Points', 'POPULAR', 'Generates an exclusive 20% coupon code applicable to your entire Tebex order.'],
+            ['30% OFF Storewide', '350 MD Points', 'ADVANCED', 'Generates an exclusive 30% coupon code for premium scripts and bundles.'],
+            ['50% OFF Storewide', '500 MD Points', 'BEST VALUE (Jackpot)', 'Unlocks a massive 50% discount on any purchase in the MD Development catalog.'],
+            ['Extra Wheel Spin', '300 MD Points', 'EXTRA SPIN', 'Instantly resets your Daily Wheel cooldown so you can spin again immediately to win up to 100% OFF.']
+          ]
+        }
+      },
+      {
+        id: 'coupon-rules',
+        title: 'Coupon Rules & No Expiration',
+        content: `When you redeem an MD Points reward:
+- **Instant Code Generation:** An official Tebex coupon code is created instantly on the server and added to your profile.
+- **No Expiration (Lifetime Validity):** Unlike Daily Wheel rewards which expire after 24 hours, coupons purchased with MD Points **have no time limit**. They remain permanently in your account until you decide to use them on a checkout.
+- **One-Click Application:** Click the **Apply to Cart** button in your profile to automatically attach the discount to your basket.
+- **Single Use:** Each redeemed coupon code can be redeemed once on your account.`,
+        callout: {
+          type: 'tip',
+          title: 'Save for Big Releases',
+          message: 'Because coupons redeemed with MD Points never expire, you can safely accumulate points and save your 50% OFF Jackpot coupon for major script releases or bundles!'
+        }
+      }
+    ]
+  },
+  {
+    id: 'gift-card-checker-guide',
+    title: 'Tebex Gift Card Checker & Usage',
+    category: 'User Profile & MD Points',
+    categorySlug: 'user-profile',
+    badge: 'Tebex Feature',
+    description: 'How to check your official Tebex gift card balance, verify validity in real time, and redeem funds during checkout.',
+    sections: [
+      {
+        id: 'how-it-works',
+        title: 'Direct Tebex Plugin API Integration',
+        content: `The **Gift Card Checker** in your user profile connects directly to the official **Tebex Plugin API**. When you enter your 16-digit card code, the system performs a live lookup on the Tebex server to verify the card authenticity and exact available balance.`
+      },
+      {
+        id: 'how-to-check',
+        title: 'How to Check your Gift Card Balance',
+        steps: [
+          {
+            number: 1,
+            title: 'Open your User Profile',
+            desc: 'Click on your Discord avatar or profile button in the top navigation bar to open the profile modal.'
+          },
+          {
+            number: 2,
+            title: 'Select "Gift Card Checker"',
+            desc: 'Click on the Gift Card Checker tab in the navigation bar.'
+          },
+          {
+            number: 3,
+            title: 'Enter your 16-Digit Code',
+            desc: 'Type or paste your gift card code into the input field (e.g. 0031408887191979 or 0031-4088-8719-1979).'
+          },
+          {
+            number: 4,
+            title: 'Click "Check Balance"',
+            desc: 'The system queries Tebex in real time and updates the virtual gift card display with your live available balance, initial credit, card status, and custom notes.'
+          }
+        ]
+      },
+      {
+        id: 'card-statuses',
+        title: 'Understanding Card Statuses',
+        content: `The Gift Card Checker will report one of the following states:
+- **ACTIVE (Green):** The card is valid and has funds ready to be spent.
+- **REDEEMED / DEPLETED (Gray):** The gift card is valid, but the entire balance (0.00 EUR) has already been spent.
+- **VOIDED (Red):** The gift card was disabled or cancelled by the store administrator.
+- **EXPIRED (Amber):** The card has passed its designated expiration date.
+- **NOT FOUND (Red):** The code does not match any card issued on our Tebex store.`
+      },
+      {
+        id: 'redemption-rules',
+        title: 'Redeeming Your Card & Partial Balances',
+        content: `**How to Redeem:**
+- **In-App:** Click the **Redeem in Cart** button on the result card to automatically apply the code to your cart.
+- **Tebex Checkout:** During final checkout on Tebex, paste the 16-digit code into the "Coupons / Gift Cards" input field.
+
+**Partial Balances Supported:**
+You are never required to spend the entire gift card balance in a single transaction. Any remaining funds stay securely tied to your code and can be used on future script releases. If your basket total exceeds your card balance, you can pay the remaining difference using Credit Card, PayPal, Apple Pay, or any supported gateway.`,
+        callout: {
+          type: 'tip',
+          title: 'Giveaway Gift Cards',
+          message: 'If you won a gift card in our Discord giveaways, simply enter the code here to confirm your credit before shopping!'
+        }
+      }
+    ]
+  },
+  {
+    id: 'wheel-rewards-and-history',
+    title: 'Wheel Rewards & Activity Audit Log',
+    category: 'User Profile & MD Points',
+    categorySlug: 'user-profile',
+    badge: 'Account Audit',
+    description: 'How to manage your Daily Wheel of Fortune discounts, countdown timers, and review your complete account history.',
+    sections: [
+      {
+        id: 'wheel-rewards-tab',
+        title: 'Wheel Rewards Tab',
+        content: `Every time you spin the **Daily Wheel of Fortune**, any discount coupons you win (10%, 20%, 30%, 50%, or 100% OFF) are automatically deposited into the **Wheel Rewards** tab.
+
+**Key Features:**
+- **Active Countdown Timers:** Each coupon card displays a live countdown timer showing the hours remaining before expiration (coupons are valid for 24 hours).
+- **One-Click Copy:** Copy the unique discount code with a single click.
+- **One-Click Apply:** Directly inject the coupon into your active basket so you never miss a discount.`
+      },
+      {
+        id: 'activity-history-tab',
+        title: 'Activity History & Points Audit',
+        content: `The **Activity History** tab maintains a transparent, chronological ledger of all actions taken on your account:
+
+**Recorded Events Include:**
+- **Points Earned:** Daily check-ins, wheel spins, Discord bonuses, and store purchase cashbacks.
+- **Points Spent:** Coupon tier redemptions and extra wheel spin purchases.
+- **FiveM DevTools Usage:** Timestamped logs of tools utilized (Handling Editor, Locales Translator, etc.).
+- **Free Script Downloads:** History of community resources claimed.
+
+You can filter the history using the category chips: **All**, **MD Points**, or **DevTools**.`
       }
     ]
   },
