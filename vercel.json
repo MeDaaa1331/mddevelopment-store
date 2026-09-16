@@ -38,6 +38,10 @@
       "destination": "/api/points?action=:action*"
     },
     {
+      "source": "/api/giftcard",
+      "destination": "/api/coupons?action=giftcard"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

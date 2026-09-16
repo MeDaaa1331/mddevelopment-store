@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => {
                 '/api/points': '/api/points.ts',
                 '/api/wheel': '/api/wheel.ts',
                 '/api/coupons': '/api/coupons.ts',
+                '/api/giftcard': '/api/coupons.ts',
                 '/api/recent-payments': '/api/recent-payments.ts',
                 '/api/stats': '/api/stats.ts',
                 '/api/track': '/api/track.ts',

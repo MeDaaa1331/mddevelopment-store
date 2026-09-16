@@ -9,6 +9,8 @@ export default async function handler(req: any, res: any) {
 
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const rawCode = (url.searchParams.get('code') || req.query?.code || '').toString().trim();
+  const isGiftCard = url.pathname.toLowerCase().includes('giftcard');
+  const action = (url.searchParams.get('action') || req.query?.action || url.searchParams.get('type') || req.query?.type || (isGiftCard ? 'giftcard' : '')).toString().toLowerCase();
   const secret = process.env.TEBEX_SECRET_KEY || process.env.VITE_TEBEX_SECRET_KEY;
 
   if (!secret) {
@@ -20,6 +22,99 @@ export default async function handler(req: any, res: any) {
 
   if (!rawCode) {
     return res.status(400).json({ error: 'Query parameter "code" is required.' });
+  }
+
+  if (action === 'giftcard') {
+    const cleanCode = rawCode.replace(/\s+/g, '').toUpperCase();
+    try {
+      let foundCard: any = null;
+
+      // 1. Try direct lookup by code
+      try {
+        const lookupRes = await fetch(`https://plugin.tebex.io/gift-cards/lookup/${encodeURIComponent(cleanCode)}`, {
+          headers: {
+            'X-Tebex-Secret': secret,
+            'Accept': 'application/json'
+          }
+        });
+        if (lookupRes.ok) {
+          const data = await lookupRes.json();
+          foundCard = data?.data || data;
+        }
+      } catch (err) {
+        console.warn('[GiftCard API] Lookup by code error:', err);
+      }
+
+      // 2. If not found by direct lookup, search in full list
+      if (!foundCard) {
+        const listRes = await fetch('https://plugin.tebex.io/gift-cards', {
+          headers: {
+            'X-Tebex-Secret': secret,
+            'Accept': 'application/json'
+          }
+        });
+        if (listRes.ok) {
+          const listData = await listRes.json();
+          const cards = Array.isArray(listData) ? listData : (listData?.data || []);
+          foundCard = cards.find((c: any) => {
+            const code = (c.code || c.number || '').toString().trim().toUpperCase();
+            return (
+              code === cleanCode ||
+              code.replace(/[^A-Z0-9]/g, '') === cleanCode.replace(/[^A-Z0-9]/g, '')
+            );
+          });
+        }
+      }
+
+      if (!foundCard) {
+        return res.status(404).json({
+          valid: false,
+          message: 'Gift card not found. Please verify the code and try again.'
+        });
+      }
+
+      const starting = Number(foundCard.balance?.starting ?? foundCard.starting_balance ?? foundCard.amount ?? foundCard.balance ?? 0);
+      const remaining = Number(foundCard.balance?.remaining ?? foundCard.remaining_balance ?? foundCard.balance ?? 0);
+      const currency = foundCard.balance?.currency || foundCard.currency || 'EUR';
+      const isVoid = Boolean(foundCard.void || foundCard.is_void || foundCard.status === 'void');
+      const expiresAt = foundCard.expires_at || foundCard.expire?.date || null;
+      const createdAt = foundCard.created_at || null;
+      const isExpired = expiresAt ? new Date(expiresAt).getTime() < Date.now() : false;
+
+      let status: 'active' | 'void' | 'expired' | 'depleted' = 'active';
+      let message = `Gift card is active with balance of ${remaining.toFixed(2)} ${currency}.`;
+
+      if (isVoid) {
+        status = 'void';
+        message = 'This gift card has been voided or disabled.';
+      } else if (isExpired) {
+        status = 'expired';
+        message = `This gift card expired on ${new Date(expiresAt).toLocaleDateString()}.`;
+      } else if (remaining <= 0) {
+        status = 'depleted';
+        message = `This gift card balance is 0.00 ${currency}. All funds have been redeemed.`;
+      }
+
+      return res.status(200).json({
+        valid: status === 'active' || status === 'depleted',
+        status,
+        code: foundCard.code || cleanCode,
+        id: foundCard.id,
+        startingBalance: starting,
+        remainingBalance: remaining,
+        currency,
+        expiresAt,
+        createdAt,
+        note: foundCard.note || undefined,
+        message
+      });
+    } catch (err: any) {
+      console.error('[GiftCard API Error]:', err);
+      return res.status(500).json({
+        error: 'Failed to verify gift card with Tebex API.',
+        message: err.message
+      });
+    }
   }
 
   try {

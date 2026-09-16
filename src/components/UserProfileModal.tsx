@@ -23,7 +23,8 @@ import {
   Award,
   ChevronRight,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  CreditCard
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -55,7 +56,7 @@ export const UserProfileModal: React.FC = () => {
   const { applyCoupon, setIsCartOpen } = useCart();
   const { setIsWheelOpen, navigate } = useStore();
 
-  const [activeTab, setActiveTab] = useState<'points' | 'overview' | 'rewards' | 'history'>('points');
+  const [activeTab, setActiveTab] = useState<'points' | 'giftcard' | 'rewards' | 'history'>('points');
   const [historyFilter, setHistoryFilter] = useState<'all' | 'points' | 'devtools'>('all');
   const [isClosing, setIsClosing] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
@@ -65,6 +66,78 @@ export const UserProfileModal: React.FC = () => {
   const [isClaimingGuild, setIsClaimingGuild] = useState<boolean>(false);
   const [redeemSuccessMsg, setRedeemSuccessMsg] = useState<string | null>(null);
   const [redeemErrorMsg, setRedeemErrorMsg] = useState<string | null>(null);
+
+  // Gift Card Checker State
+  const [giftCardInput, setGiftCardInput] = useState('');
+  const [isCheckingCard, setIsCheckingCard] = useState(false);
+  const [copiedGiftCode, setCopiedGiftCode] = useState(false);
+  const [cardResult, setCardResult] = useState<{
+    valid: boolean;
+    status: 'active' | 'void' | 'expired' | 'depleted' | 'not_found';
+    code: string;
+    id?: number;
+    startingBalance?: number;
+    remainingBalance?: number;
+    currency?: string;
+    expiresAt?: string | null;
+    createdAt?: string | null;
+    note?: string;
+    message: string;
+  } | null>(null);
+
+  const handleCheckGiftCard = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const clean = giftCardInput.trim().replace(/\s+/g, '');
+    if (!clean) return;
+
+    setIsCheckingCard(true);
+    setCardResult(null);
+
+    try {
+      const res = await fetch(`/api/giftcard?code=${encodeURIComponent(clean)}`);
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data) {
+        setCardResult({
+          valid: Boolean(data.valid),
+          status: data.status || (data.valid ? 'active' : 'void'),
+          code: data.code || clean,
+          id: data.id,
+          startingBalance: typeof data.startingBalance === 'number' ? data.startingBalance : 0,
+          remainingBalance: typeof data.remainingBalance === 'number' ? data.remainingBalance : 0,
+          currency: data.currency || 'EUR',
+          expiresAt: data.expiresAt,
+          createdAt: data.createdAt,
+          note: data.note,
+          message: data.message || 'Gift card found.'
+        });
+      } else {
+        setCardResult({
+          valid: false,
+          status: 'not_found',
+          code: clean,
+          message: data?.message || 'Gift card not found. Please verify the code and try again.'
+        });
+      }
+    } catch (err: any) {
+      setCardResult({
+        valid: false,
+        status: 'not_found',
+        code: clean,
+        message: 'Could not connect to Tebex API. Please check your connection and try again.'
+      });
+    } finally {
+      setIsCheckingCard(false);
+    }
+  };
+
+  const handleCopyGiftCode = (code: string) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(code).then(() => {
+        setCopiedGiftCode(true);
+        setTimeout(() => setCopiedGiftCode(false), 2000);
+      });
+    }
+  };
 
   const handleClose = () => {
     setIsClosing(true);
@@ -324,15 +397,15 @@ export const UserProfileModal: React.FC = () => {
             </span>
           </button>
           <button
-            onClick={() => setActiveTab('overview')}
+            onClick={() => setActiveTab('giftcard')}
             className={`px-3.5 py-2.5 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-              activeTab === 'overview'
-                ? 'border-white text-white shadow-sm'
+              activeTab === 'giftcard'
+                ? 'border-emerald-400 text-emerald-300 shadow-sm'
                 : 'border-transparent text-zinc-400 hover:text-zinc-200'
             }`}
           >
-            <Cloud className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Overview & Sync</span>
+            <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Gift Card Checker</span>
           </button>
           <button
             onClick={() => setActiveTab('rewards')}
@@ -861,54 +934,247 @@ export const UserProfileModal: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 2: OVERVIEW */}
-          {activeTab === 'overview' && (
-            <div className="space-y-4 animate-fadeIn transition-opacity duration-300">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/10 flex items-start gap-3 hover:border-white/20 transition-all group">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 group-hover:scale-110 transition-transform">
-                    <CheckCircle2 className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <span className="font-bold text-xs text-white block">Cart Cloud Sync</span>
-                    <span className="text-[11px] text-zinc-400 block mt-0.5 leading-relaxed">
-                      Your shopping cart items are saved to your account and synced across all your devices.
-                    </span>
-                  </div>
-                </div>
+          {/* TAB 2: GIFT CARD CHECKER */}
+          {activeTab === 'giftcard' && (
+            <div className="space-y-5 animate-fadeIn transition-opacity duration-300">
+              {/* Virtual Glassmorphism Gift Card Visual */}
+              <div className="relative overflow-hidden rounded-3xl p-6 sm:p-7 bg-gradient-to-br from-zinc-950 via-[#0e0e17] to-zinc-950 border border-white/15 shadow-[0_15px_40px_rgba(0,0,0,0.6)] group">
+                <div className="absolute top-0 right-0 w-72 h-72 bg-gradient-to-bl from-emerald-500/15 via-purple-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute bottom-0 left-0 w-56 h-56 bg-gradient-to-tr from-amber-500/10 via-cyan-500/10 to-transparent rounded-full blur-2xl pointer-events-none" />
+                
+                <div className="relative z-10 flex flex-col justify-between min-h-[170px]">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-white/10 border border-white/15 flex items-center justify-center text-white">
+                          <CreditCard className="w-4 h-4 text-emerald-400" />
+                        </div>
+                        <span className="font-display font-black text-sm tracking-wider text-white uppercase">MD DEVELOPMENT</span>
+                      </div>
+                      <span className="text-[10px] font-mono tracking-widest text-zinc-400 uppercase mt-0.5 block">OFFICIAL STORE GIFT CARD</span>
+                    </div>
 
-                <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/10 flex items-start gap-3 hover:border-white/20 transition-all group">
-                  <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 group-hover:scale-110 transition-transform">
-                    <Star className="w-5 h-5 fill-amber-400" />
+                    {cardResult ? (
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold flex items-center gap-1.5 border shadow-sm ${
+                        cardResult.status === 'active'
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
+                          : cardResult.status === 'depleted'
+                          ? 'bg-zinc-800 text-zinc-300 border-white/15'
+                          : cardResult.status === 'void'
+                          ? 'bg-red-500/20 text-red-300 border-red-500/40'
+                          : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          cardResult.status === 'active' ? 'bg-emerald-400 animate-pulse' : cardResult.status === 'void' ? 'bg-red-400' : 'bg-amber-400'
+                        }`} />
+                        {cardResult.status === 'active' ? 'ACTIVE' : cardResult.status === 'depleted' ? 'REDEEMED' : cardResult.status === 'void' ? 'VOIDED' : 'EXPIRED'}
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-mono text-zinc-400 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-500" />
+                        AWAITING CODE
+                      </span>
+                    )}
                   </div>
-                  <div>
-                    <span className="font-bold text-xs text-white block">Favorite DevTools</span>
-                    <span className="text-[11px] text-zinc-400 block mt-0.5 leading-relaxed">
-                      Pinned developer tools are securely bound to your Discord profile.
+
+                  {/* Balance Display on Card */}
+                  <div className="my-4">
+                    <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 block mb-1">
+                      {cardResult ? 'Available Balance' : 'Card Balance'}
                     </span>
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-mono text-3xl sm:text-4xl font-black text-white tracking-tight">
+                        {cardResult ? `${cardResult.remainingBalance?.toFixed(2)}` : '—.——'}
+                      </span>
+                      <span className="font-mono text-lg font-bold text-emerald-400">
+                        {cardResult?.currency || 'EUR'}
+                      </span>
+                      {cardResult && typeof cardResult.startingBalance === 'number' && cardResult.startingBalance > (cardResult.remainingBalance ?? 0) && (
+                        <span className="text-xs font-mono text-zinc-500 ml-2">
+                          (Initial: €{cardResult.startingBalance.toFixed(2)})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Card Number / Code Display */}
+                  <div className="flex items-center justify-between gap-2 pt-3 border-t border-white/10 text-xs font-mono">
+                    <span className="text-zinc-300 tracking-wider">
+                      {cardResult ? cardResult.code : '•••• •••• •••• ••••'}
+                    </span>
+                    {cardResult && (
+                      <button
+                        type="button"
+                        onClick={() => handleCopyGiftCode(cardResult.code)}
+                        className="text-[11px] text-zinc-400 hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
+                      >
+                        {copiedGiftCode ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-400" />
+                            <span className="text-emerald-300">Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3 text-zinc-400" />
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
 
-              <div className="p-5 rounded-2xl bg-gradient-to-r from-[#5865F2]/20 to-purple-600/10 border border-[#5865F2]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:border-[#5865F2]/60">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4 text-[#8ea1ff]" />
-                    <span className="font-bold text-sm text-white">Join Official Discord (+50 MD Points)</span>
+              {/* Form Input Area */}
+              <form onSubmit={handleCheckGiftCard} className="space-y-3">
+                <label className="text-xs font-bold text-zinc-200 block">
+                  Check Gift Card Balance
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2.5">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={giftCardInput}
+                      onChange={(e) => setGiftCardInput(e.target.value)}
+                      placeholder="Enter 16-digit code (e.g. 0031408887191979)"
+                      className="w-full px-4 py-3 rounded-xl bg-zinc-900/90 border border-white/10 focus:border-emerald-400/80 focus:ring-2 focus:ring-emerald-400/20 text-white font-mono text-sm placeholder:text-zinc-600 outline-none transition-all"
+                    />
+                    {giftCardInput && (
+                      <button
+                        type="button"
+                        onClick={() => { setGiftCardInput(''); setCardResult(null); }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white text-xs cursor-pointer p-1"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
-                  <p className="text-xs text-zinc-300 mt-1 max-w-sm leading-relaxed">
-                    Get access to customer support, real-time script updates, free release notifications & customer role.
+
+                  <button
+                    type="submit"
+                    disabled={isCheckingCard || !giftCardInput.trim()}
+                    className="px-6 py-3 rounded-xl bg-white hover:bg-zinc-200 text-black font-extrabold text-xs flex items-center justify-center gap-2 transition-all shadow-glow-sm disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0 active:scale-95"
+                  >
+                    {isCheckingCard ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-black" />
+                        <span>Verifying with Tebex...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="w-4 h-4 text-black" />
+                        <span>Check Balance</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+
+              {/* Result Details Callout */}
+              {cardResult && (
+                <div className={`p-4 sm:p-5 rounded-2xl border transition-all animate-fadeIn ${
+                  cardResult.status === 'active'
+                    ? 'bg-emerald-950/20 border-emerald-500/30'
+                    : cardResult.status === 'depleted'
+                    ? 'bg-zinc-900/60 border-white/10'
+                    : cardResult.status === 'void'
+                    ? 'bg-red-950/20 border-red-500/30'
+                    : cardResult.status === 'expired'
+                    ? 'bg-amber-950/20 border-amber-500/30'
+                    : 'bg-red-950/20 border-red-500/30'
+                }`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                      cardResult.status === 'active'
+                        ? 'bg-emerald-500/20 text-emerald-400'
+                        : cardResult.status === 'depleted'
+                        ? 'bg-zinc-800 text-zinc-400'
+                        : 'bg-red-500/20 text-red-400'
+                    }`}>
+                      {cardResult.status === 'active' ? (
+                        <CheckCircle2 className="w-5 h-5" />
+                      ) : (
+                        <AlertCircle className="w-5 h-5" />
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="font-bold text-sm text-white block">
+                          {cardResult.status === 'active'
+                            ? `Valid Gift Card — €${cardResult.remainingBalance?.toFixed(2)} Available`
+                            : cardResult.status === 'depleted'
+                            ? 'Gift Card Depleted (0.00 EUR)'
+                            : cardResult.status === 'void'
+                            ? 'Gift Card Voided'
+                            : cardResult.status === 'expired'
+                            ? 'Gift Card Expired'
+                            : 'Gift Card Not Found'}
+                        </span>
+                        {cardResult.note && (
+                          <span className="px-2 py-0.5 rounded bg-white/10 text-[10px] font-mono text-zinc-300">
+                            {cardResult.note}
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                        {cardResult.message}
+                      </p>
+
+                      {cardResult.status === 'active' && (
+                        <div className="mt-4 flex items-center gap-2.5 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => handleCopyGiftCode(cardResult.code)}
+                            className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-mono font-bold text-white flex items-center gap-1.5 transition-all cursor-pointer"
+                          >
+                            {copiedGiftCode ? (
+                              <>
+                                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                <span className="text-emerald-300">Code Copied!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3.5 h-3.5 text-zinc-400" />
+                                <span>Copy Code ({cardResult.code})</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              applyCoupon(cardResult.code);
+                              handleClose();
+                              setIsCartOpen(true);
+                            }}
+                            className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] cursor-pointer active:scale-95"
+                          >
+                            <ShoppingCart className="w-3.5 h-3.5 text-black" />
+                            <span>Redeem in Cart</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Information & Instructions Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="p-4 rounded-2xl bg-zinc-900/50 border border-white/10">
+                  <span className="font-bold text-xs text-white block">How to Redeem</span>
+                  <p className="text-[11px] text-zinc-400 mt-1 leading-relaxed">
+                    Paste your 16-digit card code into the coupon or gift card box at checkout. The balance will be automatically deducted from your total.
                   </p>
                 </div>
-                <a
-                  href={TEBEX_CONFIG.discordUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2.5 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] text-white font-extrabold text-xs transition-all shadow-glow-sm flex items-center justify-center gap-1.5 shrink-0 hover:scale-105 active:scale-95 cursor-pointer"
-                >
-                  <span>Connect to Discord</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
+                <div className="p-4 rounded-2xl bg-zinc-900/50 border border-white/10">
+                  <span className="font-bold text-xs text-white block">Multiple Purchases</span>
+                  <p className="text-[11px] text-zinc-400 mt-1 leading-relaxed">
+                    You don't need to spend everything at once. Unused funds remain on your card and can be used on future FiveM script purchases.
+                  </p>
+                </div>
               </div>
             </div>
           )}
