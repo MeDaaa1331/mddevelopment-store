@@ -42,6 +42,31 @@
       "destination": "/api/coupons?action=giftcard"
     },
     {
+      "source": "/(store|scripts)/:slug*",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*([dD]iscord|[tT]witter|[fF]acebook|[fF]acebot|[tT]elegram|[wW]hats[aA]pp|[sS]lack|[bB]ot|[cC]rawl|[sS]pider|[pP]review|[lL]inked[iI]n|[eE]mbed|[pP]interest|[sS]kype|[aA]pplebot|[gG]oogle|[yY]ahoo|[bB]ing|[dD]uck[dD]uck|[bB]aidu|[yY]andex|[vV]k[sS]hare|[wW]get|[cC]url).*"
+        }
+      ],
+      "destination": "/api/embed?slug=:slug*"
+    },
+    {
+      "source": "/(store|scripts)/:slug*",
+      "has": [
+        {
+          "type": "query",
+          "key": "embed"
+        }
+      ],
+      "destination": "/api/embed?slug=:slug*"
+    },
+    {
+      "source": "/api/embed/:slug*",
+      "destination": "/api/embed?slug=:slug*"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

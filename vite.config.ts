@@ -24,7 +24,8 @@ export default defineConfig(({ mode }) => {
                 '/api/tebex-webhook': '/api/tebex-webhook.ts',
                 '/api/auth/discord/sync': '/api/auth/discord/sync.ts',
                 '/api/auth/discord/login': '/api/auth/discord/login.ts',
-                '/api/auth/discord/callback': '/api/auth/discord/callback.ts'
+                '/api/auth/discord/callback': '/api/auth/discord/callback.ts',
+                '/api/embed': '/api/embed.ts'
               };
 
               const handlerPath = API_ROUTES[urlPath];
@@ -66,6 +67,9 @@ export default defineConfig(({ mode }) => {
                     json: (data: any) => {
                       res.setHeader('Content-Type', 'application/json');
                       res.end(JSON.stringify(data));
+                    },
+                    send: (data: any) => {
+                      res.end(data);
                     },
                     redirect: (codeOrUrl: any, maybeUrl?: any) => {
                       const status = typeof codeOrUrl === 'number' ? codeOrUrl : 302;
